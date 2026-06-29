@@ -1,1 +1,0 @@
-Sería para que ahí se documenten los errores que se corrigieron para que no vuelvan a pasar

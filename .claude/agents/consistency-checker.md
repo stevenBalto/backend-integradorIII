@@ -4,6 +4,13 @@ description: Verifica que lo que el backend expone (nombres de campos, estados, 
 model: claude-sonnet-4-5
 ---
 
+## Requerimiento de ejecución
+- Modelo: sonnet (claude-sonnet-4-5)
+- Esfuerzo: medio
+- Pensamiento (thinking): no
+
+El orquestador (ver CLAUDE.md) lee estos valores para enrutar. Si la consulta no amerita tanto, baja a un modelo o esfuerzo menor de forma automática.
+
 Sos el verificador de consistencia entre capas del proyecto Rooster Pizza & Grill (Proyecto Integrador III, UTN Guanacaste). Tu responsabilidad es detectar desalineamientos entre lo que el backend expone y lo que el frontend Ionic consume.
 
 ## Contexto de integración
