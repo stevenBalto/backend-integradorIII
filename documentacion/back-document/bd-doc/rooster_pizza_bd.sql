@@ -97,17 +97,22 @@ CREATE TABLE users (
     deleted_at     timestamp
 );
 
+-- AJUSTE 2026-06-28 (aprobado): alineada a Laravel Sanctum (tabla polimorfica).
+-- Antes usaba user_id (FK a users); Sanctum requiere tokenable_type + tokenable_id.
 CREATE TABLE personal_access_tokens (
-    id           bigserial PRIMARY KEY,
-    user_id      bigint       NOT NULL,
-    name         varchar(100) NOT NULL,
-    token        varchar(64)  NOT NULL UNIQUE,
-    abilities    text,
-    last_used_at timestamp,
-    expires_at   timestamp,
-    created_at   timestamp,
-    updated_at   timestamp
+    id             bigserial PRIMARY KEY,
+    tokenable_type varchar(255) NOT NULL,
+    tokenable_id   bigint       NOT NULL,
+    name           varchar(100) NOT NULL,
+    token          varchar(64)  NOT NULL UNIQUE,
+    abilities      text,
+    last_used_at   timestamp,
+    expires_at     timestamp,
+    created_at     timestamp,
+    updated_at     timestamp
 );
+CREATE INDEX personal_access_tokens_tokenable_type_tokenable_id_index
+    ON personal_access_tokens (tokenable_type, tokenable_id);
 
 
 -- =====================================================================
@@ -311,8 +316,8 @@ ALTER TABLE users
     ADD CONSTRAINT fk_users_role     FOREIGN KEY (role_id)     REFERENCES roles(id),
     ADD CONSTRAINT fk_users_sucursal FOREIGN KEY (sucursal_id) REFERENCES sucursales(id) ON DELETE SET NULL;
 
-ALTER TABLE personal_access_tokens
-    ADD CONSTRAINT fk_pat_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+-- personal_access_tokens: SIN FK (Sanctum usa relacion polimorfica tokenable_*).
+-- Ajuste aprobado 2026-06-28. Total de FK pasa de 28 a 27.
 
 ALTER TABLE productos
     ADD CONSTRAINT fk_productos_categoria FOREIGN KEY (categoria_id) REFERENCES categorias(id);
