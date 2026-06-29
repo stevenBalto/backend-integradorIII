@@ -13,4 +13,8 @@ Formato sugerido por entrada:
 - Fecha: YYYY-MM-DD
 ```
 
-*(Vacío por ahora. Se llena con su dinámica.)*
+### EB-01 — personal_access_tokens debe ser polimórfica (Sanctum)
+- Qué pasó: el esquema reconstruido tenía `personal_access_tokens.user_id` (FK a `users`), pero Laravel Sanctum requiere columnas polimórficas `tokenable_type` + `tokenable_id`. Con `user_id`, `createToken()` falla.
+- Causa: la tabla del ERD no siguió el formato estándar de Sanctum (polimórfico).
+- Regla: para auth con Sanctum, `personal_access_tokens` SIEMPRE va polimórfica (`tokenable_type`/`tokenable_id`, sin FK a `users`). No modelarla con `user_id`.
+- Fecha: 2026-06-28 (migración en `bd-doc/migracion_2026-06-28_sanctum_personal_access_tokens.sql`)

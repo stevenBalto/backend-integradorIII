@@ -62,15 +62,20 @@ Sucursales: **una sola** en esta versión, pero el diseño debe ser **escalable 
 - Kiosko: paleta cálida coherente con la app cliente, alta visibilidad.
 - Detalle (colores exactos, logos, reglas UX): `front-document/ReglasUX.md` y `front-document/guiaMDFrontend.md`.
 
+## Estado de módulos
+- **Módulo 1 — Autenticación (registro + login): FUNCIONAL.** Backend (Laravel + Sanctum) y frontend (Ionic) conectados y probados end-to-end. Cómo levantarlo y probarlo: `COMO-CORRER.md`.
+- Próximos: Home real del cliente (reemplaza placeholder `/tabs/tab1`), "Continuar con Google" (fast-follow), "Olvidé mi contraseña". Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
+
 ## Propósito de esta documentación
 Tener referencia documentada (paleta, logos, reglas, base de datos, decisiones) para que los subagentes respondan sin escanear todo el código, ahorrando tokens y trabajando optimizado. Mantener al día vía `doc-updater`.
 
 ## Mapa de la documentación
 - `ContextoGeneral.md` — este archivo (visión general).
+- `COMO-CORRER.md` — pasos para levantar BD + backend + frontend y probar el módulo auth.
 - `CLAUDE.md` — protocolo de enrutamiento y matriz de subagentes.
 - `Subgantes-Doc.md` — qué hace cada subagente.
 - `EXPLICACION.md` — explicación de carpetas y archivos.
 - `back-document/` — ARQUITECTURA, AntierroresBack, HiloActualBack, `bd-doc/`.
 - `front-document/` — ARQUITECTURA, ReglasUX, guiaMDFrontend, AntierroresFront, HiloActualFront.
 
-*Última actualización: 2026-06-28.*
+*Última actualización: 2026-06-29.*
