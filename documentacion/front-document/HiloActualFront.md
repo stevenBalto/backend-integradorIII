@@ -57,3 +57,33 @@ Formato sugerido:
   - Buscador y filtro por categoría en `pedir.page.ts` (hoy es solo maquetado, sin filtrado real).
   - Confirmar si los precios deben ir en colones o dólares.
 - NO TOCAR / nota: las 4 páginas nuevas son solo maquetado visual — cualquiera que le agregue lógica primero debe revisar que no rompa el diseño. No se tocó ningún `.ts`/`.module.ts` en esta sesión.
+
+## Sesión 2026-07-03 — Base panel admin
+- Hecho:
+  - Portada la BASE VISUAL del panel de administrador desde el prototipo React/Tailwind (`prototipoFrontend-main/src/app/App.tsx`, sección admin) a Angular+Ionic+SCSS. Solo maquetado estático, fiel al prototipo, SIN lógica de negocio ni conexión a API (eso viene con `api-integration-helper`).
+  - **Estructura nueva** `src/app/admin/`:
+    - `admin-shell/` — layout persistente (sidebar colapsable + header + `<ion-router-outlet>`). Sidebar fija de 220px en desktop; en móvil se oculta y se abre como overlay con backdrop (toggle `sidebarOpen`, breakpoint 1024px). Registra las rutas hijas y redirect `'' → dashboard`. Botón "Salir al app" navega a `/login` (replaceUrl, sin tocar token).
+    - `shared/` — `AdminSharedModule` con 14 componentes de UI reutilizables (`@Input`): `admin-kpi-card`, `admin-section-card`, `admin-page-header`, `admin-btn`, `filter-tab`, `status-badge`, `modality-pill`, `admin-search-input`, `dropdown-btn`, `progress-bar`, `donut-chart`, `mini-bar`, `bar-chart`, `area-chart`. Los charts son SVG/CSS calculados en TS (paths, conic-gradient) con los datos estáticos del prototipo.
+    - 9 páginas (una carpeta c/u, `standalone: false`, lazy-loaded): `dashboard`, `pedidos`, `menu`, `ofertas`, `usuarios`, `analiticas`, `notificaciones`, `resenas`, `configuracion`.
+  - **Modales** (toggle visual mostrar/ocultar, sin lógica real): detalle de pedido en `pedidos`, crear usuario en `usuarios` (con selector de rol que muestra/oculta "Sucursal").
+  - **Tokens de tema**: agregadas variables `--admin-*` (panel/card/border/text/text-muted/text-soft/sidebar/accent/green/amber/red-alt + neutrals) en `theme/variables.scss`. Esquema neutral 70-20-10 con rojo de marca como acento.
+  - **Estilos compartidos** en `global.scss`: `.admin-page`/`.admin-page-content` (wrapper con scroll), grids `.admin-grid-4`/`.admin-grid-3`, `.admin-table*` y `.admin-pagination*`.
+  - **Ruteo**: nueva ruta top-level `path: 'admin'` en `app-routing.module.ts` (lazy → `admin-shell`). Acceso temporal: en el login normal, ingresar usuario `admin` / contraseña `123` navega a `/admin` en vez de llamar al backend (chequeo al inicio de `login()` en `login.page.ts`, antes de la validación del formulario — igual que el mock del prototipo). Sin botón ni link visible.
+  - Datos hardcodeados idénticos al prototipo (mismos textos/números, montos en ₡). Se usó `*ngFor` sobre arrays locales de cada `.page.ts` para las tablas/listas (más limpio que duplicar HTML; sigue siendo 100% estático, sin binding de API).
+  - Iconos: `ion-icon` (mapeo lucide→ionicons), sin agregar `lucide-react`. Fuentes Nunito/Playfair ya cargadas globalmente.
+  - Verificado con `ng build --configuration development`: compila sin errores (strictTemplates + strict TS OK). El único warning es el preexistente de `localforage`.
+- Pendiente:
+  - Conectar datos reales vía `api-integration-helper` (pedidos, menú, cupones/ofertas, usuarios, reseñas, KPIs, notificaciones) — hoy todo es hardcode del prototipo.
+  - Guard de rol real para `/admin` (cuando se conecte `role_id` del backend). Hoy el acceso es libre/temporal.
+  - Lógica real de: filtros de tablas (los tabs solo cambian el resaltado, no filtran filas), toggles de disponibilidad/config, paginación, "marcar como leídas", buscadores, y acciones de los modales (guardar/crear).
+  - Revisar/coordinar con `ui-verifier` la fidelidad de colores/layout si se requiere validación visual formal.
+- NO TOCAR / nota:
+  - La ruta `/admin` y el atajo `admin`/`123` en el login son TEMPORALES (placeholder hasta tener guard de rol real con `role_id`).
+  - Todo `src/app/admin/` es solo maquetado visual — quien agregue lógica debe cuidar no romper el diseño.
+  - De la app cliente solo se tocó `login.page.ts` (atajo admin/123, sin UI extra). No se modificó home/pedir/ofertas/mi-cuenta/register.
+  - Desviación menor vs. prototipo: los modales se centran sobre el área de contenido (no cubren sidebar/header) por el `contain` del `.ion-page` de Ionic; funcionalmente equivalente. El componente `mini-bar` se portó por completitud pero ninguna página lo usa aún.
+
+## Sesión 2026-07-03 (cont.) — Antierror: ionic serve no detecta archivos nuevos
+- Qué pasó: tras crear ~56 archivos nuevos bajo `src/app/admin/` con el dev server (`ionic serve`) ya corriendo, la recompilación incremental tiraba `TS2307: Cannot find module` para todos los módulos nuevos, indefinidamente.
+- Causa: el watcher incremental de `ngtools/webpack` no re-escanea el `include` de `tsconfig` cuando aparecen muchos archivos nuevos de golpe mientras el server ya está arriba.
+- Regla: si un subagente/tarea crea módulos/archivos nuevos con `ionic serve` corriendo, matar el proceso y levantarlo en frío (no alcanza con esperar el rebuild incremental). Ver `AntierroresFront.md` EF-02.

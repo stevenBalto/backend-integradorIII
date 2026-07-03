@@ -78,8 +78,8 @@ Con backend + frontend arriba:
 2. **Crear cuenta**: nombre, email y password **12+ caracteres con mayúscula,
    minúscula, número y símbolo** (ej. `Rooster#2026!`). Al enviar:
    - se crea el cliente en la tabla `users` (rol `cliente`, password hasheada),
-   - se emite un token Sanctum y entra a `/tabs/tab1` (placeholder temporal).
-3. En `tab1` hay un botón rojo **"Cerrar sesión (temporal)"** (hasta tener el Home real).
+   - se emite un token Sanctum y entra a `/tabs/home` (Home real del cliente).
+3. En **Mi cuenta** (tab inferior) hay una fila roja **"Cerrar sesión"** conectada.
 4. Volver al login e iniciar sesión con esas credenciales.
 
 Endpoints del módulo:
@@ -92,20 +92,33 @@ Endpoints del módulo:
 
 ---
 
-## 5. Problemas comunes
+## 5. Recorrer la base visual (app cliente + panel admin)
+Ambas son solo maquetado estático (hardcodeado, sin conectar a la API todavía):
+- **App cliente**: tabs inferiores Home / Pedir / Ofertas / Mi cuenta (tras login).
+- **Panel admin**: desde el login, ingresar usuario `admin` / contraseña `123`
+  (atajo TEMPORAL, sin guard de rol real) → entra a `/admin`. Sidebar con 9
+  módulos: Dashboard, Pedidos, Menú, Ofertas y cupones, Usuarios y roles,
+  Analíticas, Notificaciones, Reseñas, Configuración. "Salir al app" vuelve al login.
+
+---
+
+## 6. Problemas comunes
 - **`Undefined table: sessions` en `/`** → `SESSION_DRIVER=file` + `php artisan config:clear`.
 - **`fe_sendauth: no password supplied`** → falta `DB_PASSWORD` en `.env` (o el user postgres no tiene clave; fijala en pgAdmin con `ALTER USER postgres PASSWORD '...';`).
 - **El front no conecta** → el backend debe estar en `127.0.0.1:8000`; revisar `environment.ts` y que `php artisan serve` esté corriendo.
 - **Login/Register se ven cortados o no centran** → es responsive por alto (zoom/escala alta reduce el viewport). Ver `front-document/AntierroresFront.md` EF-01.
+- **`ionic serve` no encuentra módulos recién creados (`TS2307`)** → matar el proceso y levantarlo en frío. Ver `front-document/AntierroresFront.md` EF-02.
 
 ---
 
-## 6. Siguiente paso (para exponer y seguir)
+## 7. Siguiente paso (para exponer y seguir)
 1. Levantar BD + backend + frontend (secciones 1-3) y probar auth (sección 4).
-2. Próximos pendientes (detalle en `back-document/HiloActualBack.md` y
+2. Recorrer la base visual cliente + admin (sección 5).
+3. Próximos pendientes (detalle en `back-document/HiloActualBack.md` y
    `front-document/HiloActualFront.md`):
-   - Reemplazar el placeholder `/tabs/tab1` por el **Home real** del cliente.
+   - Conectar datos reales de ambos lados (cliente y admin) vía `api-integration-helper`.
+   - Guard de rol real para `/admin` (reemplaza el atajo `admin`/`123`).
    - **"Continuar con Google"** (fast-follow; mapeo aprobado con columnas `google_id` + `auth_provider`).
    - "Olvidé mi contraseña" y localizar a español los mensajes de complejidad de password.
 
-*Última actualización: 2026-06-29.*
+*Última actualización: 2026-07-03.*

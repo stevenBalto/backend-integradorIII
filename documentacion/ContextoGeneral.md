@@ -64,7 +64,9 @@ Sucursales: **una sola** en esta versión, pero el diseño debe ser **escalable 
 
 ## Estado de módulos
 - **Módulo 1 — Autenticación (registro + login): FUNCIONAL.** Backend (Laravel + Sanctum) y frontend (Ionic) conectados y probados end-to-end. Cómo levantarlo y probarlo: `COMO-CORRER.md`.
-- Próximos: Home real del cliente (reemplaza placeholder `/tabs/tab1`), "Continuar con Google" (fast-follow), "Olvidé mi contraseña". Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
+- **App cliente (base visual): lista.** Home, Pedir, Ofertas, Mi cuenta — maquetado fiel al prototipo, hardcodeado (sin conectar a API todavía).
+- **Panel admin (base visual): lista.** Shell con sidebar + 9 módulos (Dashboard, Pedidos, Menú, Ofertas y cupones, Usuarios y roles, Analíticas, Notificaciones, Reseñas, Configuración) en `frotend-integradorIII/src/app/admin/`, maquetado fiel al prototipo, hardcodeado. Acceso temporal desde el login: usuario `admin` / contraseña `123` (sin guard de rol real todavía).
+- Próximos: conectar datos reales de ambos lados vía `api-integration-helper`, guard de rol real para `/admin`, "Continuar con Google" (fast-follow), "Olvidé mi contraseña". Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
 
 ## Propósito de esta documentación
 Tener referencia documentada (paleta, logos, reglas, base de datos, decisiones) para que los subagentes respondan sin escanear todo el código, ahorrando tokens y trabajando optimizado. Mantener al día vía `doc-updater`.
@@ -78,4 +80,4 @@ Tener referencia documentada (paleta, logos, reglas, base de datos, decisiones) 
 - `back-document/` — ARQUITECTURA, AntierroresBack, HiloActualBack, `bd-doc/`.
 - `front-document/` — ARQUITECTURA, ReglasUX, guiaMDFrontend, AntierroresFront, HiloActualFront.
 
-*Última actualización: 2026-06-29.*
+*Última actualización: 2026-07-03.*

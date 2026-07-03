@@ -39,3 +39,9 @@ Formato sugerido por entrada:
   - El contenido del card debe caber en un viewport típico para que el centrado sea visible: logo ~120px (no 180), espaciados moderados (~16–24px). En pantallas bajas hace scroll sin recortar (los `margin:auto` colapsan).
   - Antes de culpar al cache/refresh: verificar el CSS realmente servido con `curl http://localhost:8100/styles.css` (grep de la regla). Si la regla está servida, el problema es de layout, no de build.
 - Fecha: 2026-06-29
+
+### EF-02 — ionic serve no detecta módulos nuevos creados en caliente
+- Qué pasó: al crear ~56 archivos nuevos (`src/app/admin/`) con `ionic serve` corriendo, el rebuild incremental tiraba `TS2307: Cannot find module` para todos los módulos/páginas nuevas, de forma persistente (no se autocorregía con más rebuilds).
+- Causa: el watcher incremental de `@ngtools/webpack` no vuelve a escanear el `include` de `tsconfig.json` cuando aparecen muchos archivos nuevos de golpe mientras el dev server ya está arriba (limitación conocida de compilación incremental, no un error en el código).
+- Regla: si una tarea (propia o de un subagente) crea módulos/archivos NUEVOS con `ionic serve`/`ng serve` ya corriendo, matar el proceso (`taskkill` sobre el árbol, o Ctrl+C) y levantarlo de nuevo en frío. No esperar a que el rebuild incremental lo resuelva solo. Verificar el output del server tras el reinicio (`Compiled successfully`) antes de dar el cambio por bueno.
+- Fecha: 2026-07-03
