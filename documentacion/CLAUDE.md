@@ -6,6 +6,18 @@ Resources) sobre PostgreSQL (21 tablas, 28 FK, todas 1-M). El repo hermano
 `frotend-integradorIII` es Ionic y se comunica con este backend solo por
 API REST — no comparten subagentes.
 
+## Protocolo de sesión (OBLIGATORIO)
+1. **Antes de empezar cualquier desarrollo**: revisar AMBOS repos (`backend-integradorIII`
+   y `frotend-integradorIII`) por pulls pendientes (`git fetch origin` + comparar contra
+   `origin/main`). Si hay commits nuevos, hacer `pull` (y resolver conflictos si aplica)
+   ANTES de tocar código. No arrancar una tarea con un pull pendiente sin hacer.
+2. **Al empezar sesión**: leer los `.md` de `documentacion/` (`ContextoGeneral.md`,
+   `HiloActualBack.md`/`HiloActualFront.md`, `AntierroresBack.md`/`AntierroresFront.md`,
+   `COMO-CORRER.md`) para ponerse al día antes de actuar.
+3. **Al cerrar sesión**: no dar la tarea/sesión por terminada sin antes actualizar los
+   `.md` pertinentes (como mínimo el `HiloActual*` de lo que se tocó; `Antierrores*` si
+   se aprendió algo nuevo; `ContextoGeneral.md` si cambió el estado de un módulo).
+
 ## Protocolo de enrutamiento
 El enrutamiento es automático en cada turno (lo hace el hilo principal con esta
 matriz; el protocolo global está en `~/.claude/CLAUDE.md`). Antes de delegar o
