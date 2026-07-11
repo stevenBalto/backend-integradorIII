@@ -87,3 +87,23 @@ Formato sugerido:
 - Qué pasó: tras crear ~56 archivos nuevos bajo `src/app/admin/` con el dev server (`ionic serve`) ya corriendo, la recompilación incremental tiraba `TS2307: Cannot find module` para todos los módulos nuevos, indefinidamente.
 - Causa: el watcher incremental de `ngtools/webpack` no re-escanea el `include` de `tsconfig` cuando aparecen muchos archivos nuevos de golpe mientras el server ya está arriba.
 - Regla: si un subagente/tarea crea módulos/archivos nuevos con `ionic serve` corriendo, matar el proceso y levantarlo en frío (no alcanza con esperar el rebuild incremental). Ver `AntierroresFront.md` EF-02.
+
+## Sesión 2026-07-10 — Menú/Catálogo conectado a la API + detalle + Cloudinary
+- Hecho:
+  - **Admin → Menú/Catálogo** (`src/app/admin/menu/`) conectado a la API real: reemplazado el array estático por `ProductoService`/`CategoriaService` (`core/services/`, `core/models/producto.model.ts`). Listado, filtro por categoría (ahora sí funcional, antes solo cambiaba el resaltado), crear/editar con formulario reactivo (incluye subida de foto con preview, `FormData`), eliminar (soft delete, confirmado que persiste en BD).
+  - **Home del cliente** (`src/app/home/`): categorías y "Platillos populares" ya no son hardcode — vienen de `GET /productos` (solo `disponible=true`) y `GET /categorias`. Estados de carga/error. Precio pasado de `$` (dólares, resabio del prototipo) a `₡` real.
+  - **Pipe compartido `crcCurrency`** (`src/app/shared/pipes/crc-currency.pipe.ts`, standalone, `Intl.NumberFormat('es-CR', {currency:'CRC'})`) — usado en admin y home, único punto de formato de moneda.
+  - **Modal de detalle de producto**: en admin (click en fila de la tabla → foto/categoría/descripción/precio/estado, con atajo a "Editar"), y en home (click en tarjeta → mismo detalle + botón "Añadir al carrito", que hoy solo muestra un toast placeholder porque el módulo de Carrito real no existe todavía).
+  - **Fix de login**: `login.page.ts` ya no tiene el atajo `admin`/`123` (bypaseaba el backend por completo, sin token real — causaba que cualquier llamada protegida del admin devolviera 401 y el interceptor global expulsara al usuario a `/login`, sensación de "me echa"). Ahora el login real redirige a `/admin` o `/tabs/home` según el `rol` que devuelve el backend. Ver `AntierroresFront.md` EF-03.
+  - **Tab "Pedir" → "Carrito"**: label e ícono (`cart-outline`) corregidos en `tabs.page.html` para calzar con el prototipo de Figma (antes decía "Pedir" con ícono de restaurante).
+- Pendiente:
+  - Conectar el botón "Añadir al carrito" del modal de detalle cuando exista el módulo de Carrito real (hoy la tab dice "Carrito" pero sigue cargando la página `pedir/` sin lógica de carrito).
+  - Guard de rol real para `/admin` (sigue sin guard — cualquiera que navegue directo a la URL entra al shell visualmente, aunque las llamadas a la API van a fallar con 401/403 si no hay sesión de admin real).
+  - Labels de tabs pendientes de alinear con `ContextoGeneral.md` (Home→"Inicio", Ofertas→"Cupones") — no se tocaron porque no se pidió explícitamente.
+- NO TOCAR / nota: `src/app/tabs/pedir/` sigue siendo la página que carga bajo la tab "Carrito" (no se renombró el módulo/ruta, solo el label+ícono del tab bar) — cuando se construya el Carrito real, decidir si se reusa esa carpeta o se crea una nueva.
+
+### EF-03 — Atajo admin/123 causaba expulsión silenciosa del panel
+- Qué pasó: al entrar al admin con el atajo `admin`/`123` (login.page.ts), el frontend navegaba directo a `/admin` sin llamar al backend — no había token real. Al primer request protegido (ej. `GET /admin/productos`), el backend devolvía 401 y el `AuthInterceptor` global limpiaba la sesión y redirigía a `/login`, sensación de "me expulsó".
+- Causa: atajo temporal (placeholder previo al guard de rol real) que nunca autenticaba de verdad contra el backend, dejado activo después de que el CRUD real empezó a depender de tener un token válido.
+- Regla: cualquier atajo/mock de acceso temporal a una sección protegida por API debe eliminarse en cuanto esa sección empiece a consumir endpoints reales protegidos — si no, el interceptor de 401 lo va a interpretar como sesión inválida y expulsar al usuario de forma confusa. Login real ahora redirige por `rol` (`super_admin`/`admin_sede` → `/admin`, `cliente` → `/tabs/home`).
+- Fecha: 2026-07-10

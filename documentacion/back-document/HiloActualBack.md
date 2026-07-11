@@ -34,3 +34,18 @@ Formato sugerido:
   - Módulo 1 (auth) verificado end-to-end desde el navegador: registro → cliente en BD → login → logout.
 - Pendiente: igual que la sesión anterior (localizar mensajes de password a español; "Olvidé mi contraseña"; Google OAuth fast-follow con columnas `google_id`+`auth_provider` ya pre-aprobadas; seed de admin de prueba).
 - NO TOCAR / nota: `.env` está gitignored (clave de BD nunca se commitea). `SESSION_DRIVER` debe quedar en `file`.
+
+## Sesión 2026-07-10 — Módulo 2: Catálogo de productos (CRUD + roles + Cloudinary)
+- Hecho:
+  - **CRUD completo de productos**, patrón Controller-Service-Repository + DTOs + Resources (mismo estilo que Auth): `Producto`/`Categoria` (modelos, `Producto` con `SoftDeletes`), `ProductoRepository`/`CategoriaRepository`, `ProductoService`, `ProductoController`/`CategoriaController`, `CrearProductoDTO`/`ActualizarProductoDTO`, `ProductoResource`/`CategoriaResource`, `StoreProductoRequest`/`UpdateProductoRequest`.
+  - **Sin migraciones nuevas**: `productos`/`categorias` ya existían en el SQL base (`rooster_pizza_bd.sql`) con exactamente los campos que pedía la tarea (incluido `imagen_url` nullable, ya contemplado como placeholder). Se construyó directo contra el esquema existente.
+  - **Middleware de rol** `EnsureUserHasRole` (alias `role`, registrado en `bootstrap/app.php`, Laravel 11 sin `Kernel.php`). Reutiliza `esSuperAdmin()`/`esAdminSede()`/`esCliente()` de `User`, no compara strings sueltos.
+  - **Rutas**: `GET /api/productos` y `/api/categorias` públicos (filtran `disponible`/`activa`). `GET/POST/PUT|PATCH/DELETE /api/admin/productos[...]` bajo `auth:sanctum` + `role:super_admin,admin_sede`.
+  - **Cloudinary**: cuenta nueva y dedicada al proyecto (decisión: separada de cuentas personales, para poder transferirla al cliente después). Paquete `cloudinary/cloudinary_php`. `CloudinaryService` sube la imagen del producto (`folder: rooster-pizza/productos`) y devuelve `secure_url`. Subida vía backend (signed), no unsigned desde el frontend — reutiliza la protección por rol ya existente. Credenciales en `config/services.php` + `.env` (gitignored) + placeholders en `.env.example`. Al editar sin adjuntar imagen nueva, se conserva la `imagen_url` existente (no se pisa con null).
+  - **`AdminTestUserSeeder`** (idempotente, `updateOrCreate`) — reemplaza el usuario admin creado a mano por tinker en una sesión anterior. Registrado en `DatabaseSeeder`. Credenciales de prueba: `admin@rooster.com` / `admin123456`, rol `super_admin`, acceso total (sin mínimo privilegio por módulo todavía — queda para cuando se trabaje Usuarios y roles).
+  - Verificado end-to-end por curl y desde el navegador: crear/editar/eliminar (soft delete, `deleted_at` confirmado en BD) producto con y sin imagen, filtro por categoría, Home del cliente consumiendo `GET /productos` con imágenes reales.
+- Pendiente:
+  - Modal de detalle de producto (admin y home) ya construido en el front, pero **falta conectar el botón "Añadir al carrito"** — no hay módulo de Carrito/Pedir real todavía (hoy muestra un toast placeholder).
+  - Guard de rol real para la ruta `/admin` en el frontend (sigue sin guard; ver `HiloActualFront.md`).
+  - Mínimo privilegio por módulo para roles (hoy `admin_sede` tiene el mismo acceso que `super_admin` en productos) — deferido a cuando se trabaje Usuarios y roles.
+- NO TOCAR / nota: la BD se sigue manteniendo por SQL, no por `php artisan migrate` (ver AntierroresBack EB-02). Las credenciales de Cloudinary viven solo en `.env` de cada máquina — cada dev que clone el repo necesita pedirlas y completarlas a mano (no están en `.env.example` con valor real).

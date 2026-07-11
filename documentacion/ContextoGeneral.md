@@ -64,9 +64,11 @@ Sucursales: **una sola** en esta versión, pero el diseño debe ser **escalable 
 
 ## Estado de módulos
 - **Módulo 1 — Autenticación (registro + login): FUNCIONAL.** Backend (Laravel + Sanctum) y frontend (Ionic) conectados y probados end-to-end. Cómo levantarlo y probarlo: `COMO-CORRER.md`.
-- **App cliente (base visual): lista.** Home, Pedir, Ofertas, Mi cuenta — maquetado fiel al prototipo, hardcodeado (sin conectar a API todavía).
-- **Panel admin (base visual): lista.** Shell con sidebar + 9 módulos (Dashboard, Pedidos, Menú, Ofertas y cupones, Usuarios y roles, Analíticas, Notificaciones, Reseñas, Configuración) en `frotend-integradorIII/src/app/admin/`, maquetado fiel al prototipo, hardcodeado. Acceso temporal desde el login: usuario `admin` / contraseña `123` (sin guard de rol real todavía).
-- Próximos: conectar datos reales de ambos lados vía `api-integration-helper`, guard de rol real para `/admin`, "Continuar con Google" (fast-follow), "Olvidé mi contraseña". Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
+- **Módulo 2 — Catálogo de productos (Menú admin + Home cliente): FUNCIONAL.** CRUD completo (Controller-Service-Repository + DTOs + Resources) protegido por rol (`super_admin`/`admin_sede`), con subida de fotos a Cloudinary (cuenta dedicada al proyecto, subida vía backend). Admin: listar/filtrar/crear/editar/eliminar (soft delete) + modal de detalle. Home: consume el mismo catálogo (`GET /productos`, solo `disponible=true`) con modal de detalle y botón "Añadir al carrito" (placeholder, sin lógica todavía). Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
+- **App cliente (resto): base visual lista.** Pedir, Ofertas, Mi cuenta — maquetado fiel al prototipo, hardcodeado (sin conectar a API todavía). Home ya migrado (ver Módulo 2).
+- **Panel admin (resto): base visual lista.** Shell con sidebar + 9 módulos en `frotend-integradorIII/src/app/admin/`. Menú ya conectado (ver Módulo 2); Dashboard, Pedidos, Ofertas y cupones, Usuarios y roles, Analíticas, Notificaciones, Reseñas, Configuración siguen maquetado estático. El atajo temporal `admin`/`123` en el login YA NO EXISTE — el acceso a `/admin` ahora depende del rol real devuelto por el backend (aunque la ruta en sí sigue sin guard de Angular).
+- **Cloudinary**: cuenta gratuita dedicada al proyecto (no mezclada con cuentas personales de ningún dev), subida de imágenes firmada desde el backend (`CloudinaryService`), credenciales solo en `.env` local de cada dev (pedirlas al equipo, no están versionadas).
+- Próximos: conectar Carrito/Pedir real (el botón "Añadir al carrito" del Home ya está maquetado pero sin lógica), guard de rol real en Angular para `/admin`, resto de módulos del admin (pedidos, ofertas, usuarios, etc.) vía `api-integration-helper`, "Continuar con Google" (fast-follow), "Olvidé mi contraseña". Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
 
 ## Propósito de esta documentación
 Tener referencia documentada (paleta, logos, reglas, base de datos, decisiones) para que los subagentes respondan sin escanear todo el código, ahorrando tokens y trabajando optimizado. Mantener al día vía `doc-updater`.
@@ -80,4 +82,4 @@ Tener referencia documentada (paleta, logos, reglas, base de datos, decisiones) 
 - `back-document/` — ARQUITECTURA, AntierroresBack, HiloActualBack, `bd-doc/`.
 - `front-document/` — ARQUITECTURA, ReglasUX, guiaMDFrontend, AntierroresFront, HiloActualFront.
 
-*Última actualización: 2026-07-03.*
+*Última actualización: 2026-07-10.*
