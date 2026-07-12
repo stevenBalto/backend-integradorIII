@@ -49,3 +49,23 @@ Formato sugerido:
   - Guard de rol real para la ruta `/admin` en el frontend (sigue sin guard; ver `HiloActualFront.md`).
   - Mínimo privilegio por módulo para roles (hoy `admin_sede` tiene el mismo acceso que `super_admin` en productos) — deferido a cuando se trabaje Usuarios y roles.
 - NO TOCAR / nota: la BD se sigue manteniendo por SQL, no por `php artisan migrate` (ver AntierroresBack EB-02). Las credenciales de Cloudinary viven solo en `.env` de cada máquina — cada dev que clone el repo necesita pedirlas y completarlas a mano (no están en `.env.example` con valor real).
+
+## Sesion 2026-07-12 — Modulo 3: Ofertas y Cupones (CRUD admin)
+- Hecho:
+  - **CRUD completo de Ofertas y Cupones**, patron Controller-Service-Repository + DTOs + Resources (mismo estilo que Productos y Auth):
+    - Modelos: `Oferta` (relacion M-N con `productos` via pivote `oferta_producto`), `Cupon`. **Sin SoftDeletes** en ambos — el borrado es fisico real (DELETE), no soft delete (las tablas no tienen columna `deleted_at`).
+    - Repositories: `OfertaRepository` (con `sync()` para productos asociados), `CuponRepository` (con `buscarPorCodigo()` para validar unicidad).
+    - Services: `OfertaService` (valida fechas, valida que producto_ids existan), `CuponService` (valida fechas, fuerza codigo a mayusculas, valida unicidad de codigo).
+    - DTOs: `CrearOfertaDTO`/`ActualizarOfertaDTO` (incluye `productoIds`), `CrearCuponDTO`/`ActualizarCuponDTO` (aplica `strtoupper` al codigo).
+    - Form Requests: `StoreOfertaRequest`/`UpdateOfertaRequest`, `StoreCuponRequest`/`UpdateCuponRequest`. Validaciones completas: tipo_descuento in ['porcentaje','precio_fijo'], valor max:100 condicional (solo si tipo_descuento='porcentaje'), unicidad de codigo cupon, fechas validas. Mensajes en espanol.
+    - Resources: `OfertaResource` (con `productos` via `whenLoaded` y `productos_count`), `CuponResource`.
+    - Controllers: `OfertaController`, `CuponController` — metodos `indexAdmin`, `show`, `store`, `update`, `destroy`. Sin endpoints publicos (solo admin).
+    - Rutas: `GET/POST/PUT|PATCH/DELETE /api/admin/ofertas[/{id}]` y `/api/admin/cupones[/{id}]` bajo `auth:sanctum` + `role:super_admin,admin_sede`.
+  - **Sin migraciones nuevas**: `ofertas`, `oferta_producto` y `cupones` ya existian en el SQL base (`rooster_pizza_bd.sql`). Construido directo contra el esquema existente.
+  - **Sin Cloudinary**: estos endpoints no manejan imagenes, van con JSON normal (no multipart/form-data).
+  - Verificado end-to-end por curl: crear/editar/eliminar oferta y cupon, validaciones de fechas, validacion de porcentaje max 100, unicidad de codigo, conversion a mayusculas. **Borrado fisico confirmado** — despues de DELETE, las filas ya no existen en BD (no quedaron con deleted_at).
+- Pendiente:
+  - Conectar ofertas con productos reales cuando se pruebe con datos (hoy Cloudinary falla en el endpoint publico de productos por falta de credenciales, pero el CRUD de ofertas funciona independiente).
+  - Modal de aplicacion de ofertas/cupones al carrito (frontend) — no hay modulo de Carrito todavia.
+  - Endpoint publico para validar un cupon en el checkout (futuro modulo Pedidos).
+- NO TOCAR / nota: la BD se sigue manteniendo por SQL, no por `php artisan migrate`. No agregar columna `deleted_at` a ofertas/cupones — el diseño actual es borrado fisico intencional.
