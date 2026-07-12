@@ -107,3 +107,30 @@ Formato sugerido:
 - Causa: atajo temporal (placeholder previo al guard de rol real) que nunca autenticaba de verdad contra el backend, dejado activo después de que el CRUD real empezó a depender de tener un token válido.
 - Regla: cualquier atajo/mock de acceso temporal a una sección protegida por API debe eliminarse en cuanto esa sección empiece a consumir endpoints reales protegidos — si no, el interceptor de 401 lo va a interpretar como sesión inválida y expulsar al usuario de forma confusa. Login real ahora redirige por `rol` (`super_admin`/`admin_sede` → `/admin`, `cliente` → `/tabs/home`).
 - Fecha: 2026-07-10
+
+## Sesión 2026-07-12 — Ofertas/Cupones rediseñada con la paleta del proyecto
+- Hecho:
+  - Terminada la pestaña **Cupones** del módulo **Ofertas y cupones** en `src/app/ofertas/` manteniendo el estilo y paleta ya definidos en el proyecto.
+  - La vista quedó con tabs reales entre **Ofertas** y **Cupones**, usando datos hardcodeados locales para ambas secciones.
+  - Se reemplazaron los SVGs inline repetidos por `ion-icon` reutilizables para mejorar mantenibilidad sin romper el look del prototipo.
+  - Se respetaron los colores base del proyecto: rojo, naranja, dorado y tan, evitando introducir una paleta nueva.
+- Pendiente:
+  - Conectar ofertas y cupones a datos reales cuando exista el endpoint correspondiente.
+  - Revisar si el módulo admin de ofertas/cupons va a reutilizar el mismo patrón visual o si requiere su propia versión.
+- NO TOCAR / nota: la lógica actual es de maquetado visual; si se agregan datos reales después, cuidar no romper la estructura y estilos existentes.
+
+## Sesión 2026-07-12 (cont.) — Admin: Ofertas y cupones conectado a la API real
+- Hecho:
+  - Conectado el módulo **admin → Ofertas y cupones** (`src/app/admin/ofertas/`) a la API real: `GET/POST/PUT/DELETE /admin/ofertas` y `/admin/cupones`, JSON normal (sin `FormData`, a diferencia de Menú que sube foto).
+  - Modelos nuevos: `core/models/oferta.model.ts` (`OfertaProducto`, `Oferta`, `OfertaPayload`, reutiliza `ApiCollection<T>`/`ApiResource<T>` de `producto.model.ts`) y `core/models/cupon.model.ts` (`Cupon`, `CuponPayload`).
+  - Servicios nuevos: `core/services/oferta.service.ts` y `core/services/cupon.service.ts`, ambos con `listarTodos()` / `crear()` / `actualizar()` / `eliminar()`.
+  - `admin/ofertas/ofertas.page.ts`: arrays hardcodeados reemplazados por datos reales; carga ofertas/cupones/productos en `ngOnInit`; KPIs (total/activas/por vencer en 7 días/vencidas para ofertas; total/activos/usos totales/agotados para cupones) calculados en TS; badges de estado dinámicos; dos modales reactivos (`FormGroup`) — el de oferta con multi-select de productos; guardar/eliminar con `window.confirm`.
+  - `admin/ofertas/ofertas.page.html`: bindings a datos reales, handlers de click (editar/eliminar/nueva oferta/nuevo cupón), estados de loading/error, modales al final del template.
+  - `admin/ofertas/ofertas.page.scss`: bloques de modal/formulario nuevos reutilizando variables `--rooster-*` existentes, sin cambiar paleta ni layout.
+  - `admin/ofertas/ofertas.module.ts`: agregado `ReactiveFormsModule`.
+  - Patrón replicado de `admin/menu/` (módulo ya funcional conectado al backend real), adaptado a JSON plano en vez de `FormData`.
+  - Verificado con `ng build --configuration=development`: compila sin errores.
+- Pendiente:
+  - Verificación visual manual en navegador (`ionic serve`) de crear/editar/eliminar oferta y cupón en `/admin/ofertas` — no se corrió por restricción de permisos del agente que hizo la implementación.
+  - Guard de rol real para `/admin` (pendiente conocido, arrastrado de sesiones anteriores).
+- NO TOCAR / nota: fuera de alcance de esta sesión, sin tocar: `src/app/ofertas/` (vista cliente, sigue con datos hardcodeados de la sesión anterior).
