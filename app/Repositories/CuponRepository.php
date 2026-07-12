@@ -20,6 +20,26 @@ final class CuponRepository
             ->get();
     }
 
+    /** @return Collection<int, Cupon> */
+    public function listarActivos(): Collection
+    {
+        $hoy = now()->toDateString();
+
+        return Cupon::query()
+            ->where('activo', true)
+            ->whereDate('fecha_inicio', '<=', $hoy)
+            ->where(function ($query) use ($hoy): void {
+                $query->whereNull('fecha_fin')
+                    ->orWhereDate('fecha_fin', '>=', $hoy);
+            })
+            ->where(function ($query): void {
+                $query->whereNull('usos_max')
+                    ->orWhereColumn('usos_actuales', '<', 'usos_max');
+            })
+            ->orderBy('codigo')
+            ->get();
+    }
+
     public function buscarPorId(int $id): ?Cupon
     {
         return Cupon::query()->find($id);

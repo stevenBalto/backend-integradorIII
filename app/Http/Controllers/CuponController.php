@@ -22,6 +22,13 @@ final class CuponController extends Controller
     ) {
     }
 
+    /** GET /api/cupones — listado publico de cupones activos. */
+    public function indexPublic(): JsonResponse
+    {
+        return CuponResource::collection($this->cupones->listarActivos())
+            ->response();
+    }
+
     /** GET /api/admin/cupones — listado completo para administracion. */
     public function indexAdmin(): JsonResponse
     {

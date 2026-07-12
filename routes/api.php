@@ -21,6 +21,8 @@ Route::middleware('auth:sanctum')->group(function () {
 // ── Catalogo (publico, solo disponibles) ────────────────────────────────────
 Route::get('/productos', [ProductoController::class, 'index']);
 Route::get('/categorias', [CategoriaController::class, 'index']);
+Route::get('/ofertas', [OfertaController::class, 'indexPublic']);
+Route::get('/cupones', [CuponController::class, 'indexPublic']);
 
 // ── Catalogo (administracion) ───────────────────────────────────────────────
 Route::middleware(['auth:sanctum', 'role:super_admin,admin_sede'])

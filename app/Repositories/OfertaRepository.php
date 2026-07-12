@@ -21,6 +21,23 @@ final class OfertaRepository
             ->get();
     }
 
+    /** @return Collection<int, Oferta> */
+    public function listarActivas(): Collection
+    {
+        $hoy = now()->toDateString();
+
+        return Oferta::query()
+            ->with('productos')
+            ->where('activa', true)
+            ->whereDate('fecha_inicio', '<=', $hoy)
+            ->where(function ($query) use ($hoy): void {
+                $query->whereNull('fecha_fin')
+                    ->orWhereDate('fecha_fin', '>=', $hoy);
+            })
+            ->orderBy('nombre')
+            ->get();
+    }
+
     public function buscarPorId(int $id): ?Oferta
     {
         return Oferta::query()->with('productos')->find($id);

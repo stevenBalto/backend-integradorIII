@@ -22,6 +22,13 @@ final class OfertaController extends Controller
     ) {
     }
 
+    /** GET /api/ofertas — listado publico de ofertas activas. */
+    public function indexPublic(): JsonResponse
+    {
+        return OfertaResource::collection($this->ofertas->listarActivas())
+            ->response();
+    }
+
     /** GET /api/admin/ofertas — listado completo para administracion. */
     public function indexAdmin(): JsonResponse
     {

@@ -29,6 +29,12 @@ final class OfertaService
         return $this->ofertas->listarTodos();
     }
 
+    /** @return Collection<int, Oferta> */
+    public function listarActivas(): Collection
+    {
+        return $this->ofertas->listarActivas();
+    }
+
     public function buscarPorId(int $id): Oferta
     {
         $oferta = $this->ofertas->buscarPorId($id);

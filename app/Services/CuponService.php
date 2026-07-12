@@ -27,6 +27,12 @@ final class CuponService
         return $this->cupones->listarTodos();
     }
 
+    /** @return Collection<int, Cupon> */
+    public function listarActivos(): Collection
+    {
+        return $this->cupones->listarActivos();
+    }
+
     public function buscarPorId(int $id): Cupon
     {
         $cupon = $this->cupones->buscarPorId($id);
