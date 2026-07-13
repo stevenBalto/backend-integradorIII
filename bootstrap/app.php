@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\EnsurePasswordNoTemporal;
+use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureUserHasRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,6 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
+            'superadmin' => EnsureSuperAdmin::class,
+            'password.valida' => EnsurePasswordNoTemporal::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

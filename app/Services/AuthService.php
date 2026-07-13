@@ -66,6 +66,14 @@ final class AuthService
             ]);
         }
 
+        // Aislamiento multi-tenant: si la instancia no está activa, nadie de ella entra.
+        $user->load('instancia');
+        if ($user->instancia !== null && ! $user->instancia->estaActiva()) {
+            throw ValidationException::withMessages([
+                'email' => ['La instancia asociada está inactiva. Contactá al administrador.'],
+            ]);
+        }
+
         $token = $user->createToken('auth')->plainTextToken;
         $user->load('role');
 

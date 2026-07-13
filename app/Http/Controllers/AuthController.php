@@ -8,8 +8,10 @@ use App\DTOs\Auth\CredencialesDTO;
 use App\DTOs\Auth\RegistrarUsuarioDTO;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Resources\SuperAdminResource;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
+use App\Services\SuperAdminAuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,8 +20,10 @@ use Illuminate\Http\Request;
  */
 final class AuthController extends Controller
 {
-    public function __construct(private readonly AuthService $auth)
-    {
+    public function __construct(
+        private readonly AuthService $auth,
+        private readonly SuperAdminAuthService $superAuth,
+    ) {
     }
 
     /** POST /api/register — crea un cliente y devuelve usuario + token. */
@@ -33,13 +37,29 @@ final class AuthController extends Controller
             ->setStatusCode(201);
     }
 
-    /** POST /api/login — valida credenciales y devuelve usuario + token. */
+    /**
+     * POST /api/login — login UNIFICADO (una sola puerta).
+     * Primero intenta como superadmin (tabla aparte); si no, como usuario normal.
+     * Devuelve `tipo` para que el frontend enrute al panel correcto.
+     */
     public function login(LoginRequest $request): JsonResponse
     {
-        $result = $this->auth->login(CredencialesDTO::fromArray($request->validated()));
+        $creds = CredencialesDTO::fromArray($request->validated());
+
+        // 1. ¿Es un superadmin? (identidad aislada, misma puerta de login)
+        $sa = $this->superAuth->intentarLogin($creds->email, $creds->password);
+        if ($sa !== null) {
+            return (new SuperAdminResource($sa['superadmin']))
+                ->additional(['token' => $sa['token'], 'tipo' => 'superadmin'])
+                ->response()
+                ->setStatusCode(200);
+        }
+
+        // 2. Usuario normal (admin de sede / cliente) — flujo existente.
+        $result = $this->auth->login($creds);
 
         return (new UserResource($result['user']))
-            ->additional(['token' => $result['token']])
+            ->additional(['token' => $result['token'], 'tipo' => 'usuario'])
             ->response()
             ->setStatusCode(200);
     }

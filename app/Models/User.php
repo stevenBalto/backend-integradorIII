@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -27,10 +28,18 @@ class User extends Authenticatable
     protected $fillable = [
         'role_id',
         'sucursal_id',
+        'instancia_id',
         'nombre',
+        'usuario',
         'email',
         'password',
         'telefono',
+        'activo',
+        'password_temporal',
+        'cambio_password_obligatorio',
+        'password_expira_en',
+        'dias_expiracion_password',
+        'ultimo_acceso_en',
     ];
 
     /**
@@ -53,7 +62,17 @@ class User extends Authenticatable
             'password' => 'hashed',
             'activo' => 'boolean',
             'puntos_balance' => 'integer',
+            'password_temporal' => 'boolean',
+            'cambio_password_obligatorio' => 'boolean',
+            'password_expira_en' => 'date',
+            'ultimo_acceso_en' => 'datetime',
         ];
+    }
+
+    /** Modulos del panel a los que este usuario tiene acceso (permisos individuales). */
+    public function modulos(): BelongsToMany
+    {
+        return $this->belongsToMany(Modulo::class, 'usuario_modulo', 'user_id', 'modulo_id');
     }
 
     /** Rol del usuario (super_admin / admin_sede / cliente). */
@@ -66,6 +85,12 @@ class User extends Authenticatable
     public function sucursal(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class);
+    }
+
+    /** Instancia (cuenta independiente) a la que pertenece el usuario. */
+    public function instancia(): BelongsTo
+    {
+        return $this->belongsTo(Instancia::class);
     }
 
     public function esSuperAdmin(): bool
@@ -81,5 +106,18 @@ class User extends Authenticatable
     public function esCliente(): bool
     {
         return $this->role?->nombre === 'cliente';
+    }
+
+    /**
+     * ¿El usuario debe cambiar su contraseña antes de usar el sistema?
+     * (temporal, cambio obligatorio marcado, o contraseña vencida).
+     */
+    public function debeCambiarPassword(): bool
+    {
+        if ($this->password_temporal || $this->cambio_password_obligatorio) {
+            return true;
+        }
+
+        return $this->password_expira_en !== null && $this->password_expira_en->isPast();
     }
 }

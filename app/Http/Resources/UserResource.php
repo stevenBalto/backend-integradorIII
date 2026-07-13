@@ -27,6 +27,7 @@ final class UserResource extends JsonResource
             'puntos_balance' => (int) $this->puntos_balance,
             'sucursal_id'    => $this->sucursal_id,
             'rol'            => $this->whenLoaded('role', fn () => $this->role->nombre),
+            'must_change_password' => $this->debeCambiarPassword(),
         ];
     }
 }

@@ -54,6 +54,9 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // URL del frontend Ionic (para armar el enlace de reset de contraseña).
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:8100'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

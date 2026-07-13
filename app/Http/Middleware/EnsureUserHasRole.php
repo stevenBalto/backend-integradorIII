@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,6 +21,12 @@ class EnsureUserHasRole
 
         if ($user === null) {
             return response()->json(['message' => 'No autenticado.'], 401);
+        }
+
+        // Un superadmin (u otra identidad que no sea User) no tiene roles de este
+        // panel: se rechaza limpio. Aisla el panel admin de otras identidades.
+        if (! $user instanceof User) {
+            return response()->json(['message' => 'No tenés permiso para realizar esta acción.'], 403);
         }
 
         $permitido = collect($roles)->contains(fn (string $rol) => match ($rol) {
