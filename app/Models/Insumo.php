@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\PerteneceAInstancia;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,10 +13,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * Insumo / materia prima del inventario (carnes, queso, harina...). Mapea `insumos`.
  * NO es un producto del menu: controla ingredientes, no pizzas.
+ * Aislado por instancia (multi-tenant) via PerteneceAInstancia.
  */
 class Insumo extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, PerteneceAInstancia, SoftDeletes;
 
     protected $table = 'insumos';
 

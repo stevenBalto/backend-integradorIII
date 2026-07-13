@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\PerteneceAInstancia;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -11,10 +12,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 /**
  * Oferta aplicable a productos (descuento porcentual o precio fijo). Mapea `ofertas`.
  * Sin SoftDeletes: el borrado es fisico (DELETE real).
+ * Aislada por instancia (multi-tenant) via PerteneceAInstancia.
  */
 class Oferta extends Model
 {
-    use HasFactory;
+    use HasFactory, PerteneceAInstancia;
 
     protected $table = 'ofertas';
 

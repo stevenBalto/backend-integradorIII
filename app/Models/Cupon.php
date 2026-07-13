@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\PerteneceAInstancia;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * Cupon de descuento canjeable en pedidos. Mapea `cupones`.
  * Sin SoftDeletes: el borrado es fisico (DELETE real).
+ * Aislado por instancia (multi-tenant) via PerteneceAInstancia.
  */
 class Cupon extends Model
 {
-    use HasFactory;
+    use HasFactory, PerteneceAInstancia;
 
     protected $table = 'cupones';
 
