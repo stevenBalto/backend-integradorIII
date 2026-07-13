@@ -69,3 +69,36 @@ Formato sugerido:
   - Modal de aplicacion de ofertas/cupones al carrito (frontend) — no hay modulo de Carrito todavia.
   - Endpoint publico para validar un cupon en el checkout (futuro modulo Pedidos).
 - NO TOCAR / nota: la BD se sigue manteniendo por SQL, no por `php artisan migrate`. No agregar columna `deleted_at` a ofertas/cupones — el diseño actual es borrado fisico intencional.
+
+## Sesion 2026-07-13 — Modulo 4: Inventario (insumos / materia prima)
+- Hecho:
+  - **CRUD de insumos + toma fisica auditada**, patron Controller-Service-Repository + DTOs + Resources (mismo estilo que Productos/Ofertas/Cupones). Controla materia prima (carnes, queso, harina...), NO productos del menu.
+    - Modelos: `Insumo` (`SoftDeletes`, cast `cantidad_actual`/`stock_minimo` a `decimal:2`, relacion `movimientos()` hasMany, helper `bajoStock()`), `InsumoMovimiento` (log inmutable, **sin SoftDeletes**; la tabla solo tiene `created_at` → `const UPDATED_AT = null`; relaciones `insumo()` y `usuario()` via FK `user_id`).
+    - Repositories: `InsumoRepository` (`listarTodos` sin eliminados orderBy nombre, `buscarPorId`, `crear`, `actualizar` solo nombre/unidad/stock_minimo, `actualizarCantidad` usado solo por el service de toma fisica, `eliminar` soft delete), `InsumoMovimientoRepository` (`crear`, `listarPorInsumo` desc con `usuario`).
+    - Service: `InsumoService` — `crear`/`actualizar`/`eliminar`/`listarTodos`/`buscarPorId` (lanza `ValidationException` "El insumo no existe." si no lo encuentra), `registrarTomaFisica($insumoId,$cantidadContada,$nota,$userId)` (dentro de `DB::transaction`: guarda `cantidad_anterior`, calcula `diferencia`, fija `cantidad_actual = contada`, crea el `InsumoMovimiento` tipo `toma_fisica`; devuelve `['insumo'=>..., 'movimiento'=>...]`), `listarMovimientos`.
+    - DTOs: `CrearInsumoDTO` (cantidad_actual default 0), `ActualizarInsumoDTO` (**SIN cantidad_actual** a proposito).
+    - Form Requests: `StoreInsumoRequest`, `UpdateInsumoRequest` (campos `sometimes`, sin cantidad_actual), `TomaFisicaRequest` (cantidad_contada required numeric min:0, nota nullable max:255). Mensajes en espanol.
+    - Resources: `InsumoResource` (incluye `bajo_stock` bool desde el helper), `InsumoMovimientoResource` (`usuario` via `whenLoaded`, solo id+nombre).
+    - Controller: `InsumoController` — `index`, `show`, `store` (201), `update`, `destroy` (mensaje ES), `tomaFisica` (usa `$request->user()->id`, devuelve `{data:{insumo, movimiento}}` 200), `movimientos`.
+    - Rutas: `GET/POST/PUT|PATCH/DELETE /api/admin/insumos[/{id}]` + `POST /api/admin/insumos/{id}/toma-fisica` + `GET /api/admin/insumos/{id}/movimientos`, todas bajo `auth:sanctum` + `role:super_admin,admin_sede`. **Sin endpoints publicos** (Inventario es 100% admin).
+  - **Decision clave respetada**: `cantidad_actual` NUNCA se edita por PUT/PATCH normal — solo cambia via toma fisica (queda auditado en `insumo_movimientos`). El PUT ignora `cantidad_actual` en silencio (no rompe).
+  - **Sin migraciones nuevas**: `insumos` e `insumo_movimientos` ya estaban aplicadas por SQL (ver `bd-doc/migracion_2026-07-13_insumos.sql`). Construido directo contra el esquema.
+  - Verificado end-to-end por curl (login admin@rooster.com): crear (201, bajo_stock false), toma fisica 50→8 (diferencia -42, bajo_stock pasa a true, movimiento con usuario), PUT con cantidad_actual=999 → **ignorado** (quedo en 8, nombre/stock_minimo si cambiaron, sin error), soft delete (`deleted_at` confirmado en BD, index deja de listarlo, la fila de `insumo_movimientos` **persiste**), 422 validacion en espanol, 422 insumo inexistente, 401 sin auth.
+- En progreso / NO tocar: el **frontend de este modulo lo esta construyendo otro agente en paralelo** (mismo contrato de API). Solo se toco el repo backend — no deberian pisarse.
+- Pendiente:
+  - Otros tipos de movimiento ademas de `toma_fisica` (consumo automatico al vender, entrada por compra) — hoy solo se registra ajuste manual por conteo.
+  - Vincular consumo de insumos con el modulo Pedidos cuando exista (descontar stock al confirmar un pedido).
+  - Filtro/endpoint de "insumos bajo stock" si el front lo necesita (hoy `bajo_stock` viene por insumo en el listado, el front puede filtrar en cliente).
+- NO TOCAR / nota: la BD se sigue manteniendo por SQL, no por `php artisan migrate`. `InsumoMovimiento` es un log inmutable: no agregarle SoftDeletes ni `updated_at`. `cantidad_actual` no debe volverse editable por el PUT normal — esa es la garantia de auditoria del modulo.
+
+## Sesion 2026-07-13 (cont.) — Inventario: refinamiento (conteo de movimientos + validacion stock_minimo)
+- Hecho:
+  - `InsumoRepository::listarTodos()` ahora hace `withCount('movimientos')` (evita N+1) para exponer `tiene_movimientos` en el listado; `InsumoService::buscarPorId()` agrega `loadCount('movimientos')` de respaldo si el atributo no viene ya cargado (cubre show/update/toma-fisica).
+  - `InsumoResource`: nuevo campo `'tiene_movimientos' => ($this->movimientos_count ?? 0) > 0` — el frontend lo usa para mostrar/ocultar el boton de historial por fila.
+  - **Validacion cruzada `stock_minimo` <= `cantidad_actual`** via `withValidator()`:
+    - `StoreInsumoRequest`: compara contra `cantidad_actual` enviada (o 0 si se omite) → "El stock mínimo no puede ser mayor a la cantidad inicial."
+    - `UpdateInsumoRequest`: busca `Insumo::find($this->route('id'))->cantidad_actual` (la real en BD, porque el PUT no la recibe) → "El stock mínimo no puede ser mayor a la cantidad actual."
+  - Verificado por curl (CREATE): `POST /admin/insumos` con `cantidad_actual:100, stock_minimo:150` → 422 con el mensaje esperado.
+- Pendiente:
+  - Correr la prueba equivalente por curl para el path UPDATE (`PUT /admin/insumos/{id}` con `stock_minimo` > `cantidad_actual` real del insumo) — la regla ya esta implementada, falta el curl explicito de confirmacion.
+- NO TOCAR / nota: igual que la sesion anterior — `cantidad_actual` sigue sin ser editable por PUT; la nueva validacion de `stock_minimo` es adicional, no cambia esa garantia.

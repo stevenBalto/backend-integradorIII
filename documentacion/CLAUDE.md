@@ -47,8 +47,9 @@ intención es simple aunque toque un dominio pesado, bajá de tier automáticame
 | Pregunta general, arquitectura, planificación | Respuesta directa (sin agente) | liviano | bajo | no |
 
 ## Reglas del esquema
-- 21 tablas, 28 relaciones, todas 1-M. Ningún agente agrega tablas nuevas
-  sin aprobación explícita del usuario.
+- 23 tablas, 29 relaciones, todas 1-M (21/28 originales del ERD + `insumos`/
+  `insumo_movimientos` del módulo Inventario, aprobado 2026-07-13). Ningún
+  agente agrega tablas nuevas sin aprobación explícita del usuario.
 - No existe tabla `direcciones` (no hay delivery en esta versión).
 - Horarios viven en `configuraciones` (clave-valor), no en tabla separada.
 - Nullability, DEFAULT y ON DELETE deben verificarse contra las migraciones
