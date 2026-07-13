@@ -29,7 +29,10 @@ final class OfertaRepository
         return Oferta::query()
             ->with('productos')
             ->where('activa', true)
-            ->whereDate('fecha_inicio', '<=', $hoy)
+            ->where(function ($query) use ($hoy): void {
+                $query->whereNull('fecha_inicio')
+                    ->orWhereDate('fecha_inicio', '<=', $hoy);
+            })
             ->where(function ($query) use ($hoy): void {
                 $query->whereNull('fecha_fin')
                     ->orWhereDate('fecha_fin', '>=', $hoy);
