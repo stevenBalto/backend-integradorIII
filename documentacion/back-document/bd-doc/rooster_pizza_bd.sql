@@ -2,7 +2,8 @@
 --  ROOSTER PIZZA & GRILL  -  SCRIPT DDL (PostgreSQL)
 --  Proyecto Integrador III  -  Entregable #3
 --  Reconstruido fielmente a partir del ERD (modelo fisico) de pgAdmin.
---  21 tablas | 28 relaciones 1-M (FKs via ALTER TABLE al final).
+--  23 tablas | 29 relaciones 1-M (FKs via ALTER TABLE al final).
+--  (21/28 originales del ERD + 2 tablas/2 FK de Inventario, 2026-07-13.)
 -- =====================================================================
 --
 --  ALCANCE DE LA RECONSTRUCCION
@@ -308,7 +309,40 @@ CREATE TABLE puntos_movimientos (
 
 
 -- =====================================================================
---  LLAVES FORANEAS  -  28 relaciones 1-M
+--  INVENTARIO (insumos/materia prima)
+--  Agregado 2026-07-13. NO controla stock de productos del menu (pizzas,
+--  platillos): controla ingredientes/insumos (carnes, queso, etc.) para
+--  el modulo admin "Inventario". Ver migracion_2026-07-13_insumos.sql.
+-- =====================================================================
+
+CREATE TABLE insumos (
+    id              bigserial PRIMARY KEY,
+    nombre          varchar(120)  NOT NULL,
+    unidad_medida   varchar(20)   NOT NULL,
+    cantidad_actual numeric(10,2) NOT NULL DEFAULT 0,
+    stock_minimo    numeric(10,2),
+    created_at      timestamp,
+    updated_at      timestamp,
+    deleted_at      timestamp
+);
+
+CREATE TABLE insumo_movimientos (
+    id                bigserial PRIMARY KEY,
+    insumo_id         bigint        NOT NULL,
+    user_id           bigint,
+    tipo              varchar(20)   NOT NULL DEFAULT 'toma_fisica',
+    cantidad_anterior numeric(10,2) NOT NULL,
+    cantidad_nueva    numeric(10,2) NOT NULL,
+    diferencia        numeric(10,2) NOT NULL,
+    nota              varchar(255),
+    created_at        timestamp
+);
+
+CREATE INDEX idx_insumo_movimientos_insumo_id ON insumo_movimientos(insumo_id);
+
+
+-- =====================================================================
+--  LLAVES FORANEAS  -  30 relaciones 1-M (28 + 2 de Inventario)
 --  (Las acciones ON DELETE son convencion Laravel; verificar.)
 -- =====================================================================
 
@@ -368,6 +402,11 @@ ALTER TABLE puntos_movimientos
     ADD CONSTRAINT fk_pm_user   FOREIGN KEY (user_id)   REFERENCES users(id),
     ADD CONSTRAINT fk_pm_pedido FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE SET NULL;
 
+ALTER TABLE insumo_movimientos
+    ADD CONSTRAINT fk_im_insumo FOREIGN KEY (insumo_id) REFERENCES insumos(id),
+    ADD CONSTRAINT fk_im_user   FOREIGN KEY (user_id)   REFERENCES users(id) ON DELETE SET NULL;
+
 -- =====================================================================
---  FIN DEL SCRIPT  -  21 tablas, 28 llaves foraneas.
+--  FIN DEL SCRIPT  -  23 tablas, 29 llaves foraneas (27 originales + 2 Inventario;
+--  ver nota Sanctum arriba sobre personal_access_tokens sin FK).
 -- =====================================================================

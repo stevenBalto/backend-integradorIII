@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\CuponController;
+use App\Http\Controllers\InsumoController;
 use App\Http\Controllers\OfertaController;
 use App\Http\Controllers\ProductoController;
 use Illuminate\Support\Facades\Route;
@@ -48,4 +49,13 @@ Route::middleware(['auth:sanctum', 'role:super_admin,admin_sede'])
         Route::post('/cupones', [CuponController::class, 'store']);
         Route::match(['put', 'patch'], '/cupones/{id}', [CuponController::class, 'update']);
         Route::delete('/cupones/{id}', [CuponController::class, 'destroy']);
+
+        // Inventario (insumos / materia prima) — 100% admin, sin endpoints publicos
+        Route::get('/insumos', [InsumoController::class, 'index']);
+        Route::get('/insumos/{id}', [InsumoController::class, 'show']);
+        Route::post('/insumos', [InsumoController::class, 'store']);
+        Route::match(['put', 'patch'], '/insumos/{id}', [InsumoController::class, 'update']);
+        Route::delete('/insumos/{id}', [InsumoController::class, 'destroy']);
+        Route::post('/insumos/{id}/toma-fisica', [InsumoController::class, 'tomaFisica']);
+        Route::get('/insumos/{id}/movimientos', [InsumoController::class, 'movimientos']);
     });
