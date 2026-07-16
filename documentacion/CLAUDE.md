@@ -47,9 +47,12 @@ intención es simple aunque toque un dominio pesado, bajá de tier automáticame
 | Pregunta general, arquitectura, planificación | Respuesta directa (sin agente) | liviano | bajo | no |
 
 ## Reglas del esquema
-- 23 tablas, 29 relaciones, todas 1-M (21/28 originales del ERD + `insumos`/
-  `insumo_movimientos` del módulo Inventario, aprobado 2026-07-13). Ningún
-  agente agrega tablas nuevas sin aprobación explícita del usuario.
+- 29 tablas (21/28 originales del ERD + `insumos`/`insumo_movimientos` del
+  módulo Inventario 2026-07-13 + 6 tablas del multi-tenant/superadmin del
+  compañero 2026-07-12/13 [`instancias`, `superadministradores`, `modulos`,
+  `usuario_modulo`, `password_reset_tokens`, más columnas `instancia_id` en
+  tablas raíz] + `producto_tamanos` del módulo Pedidos 2026-07-16, aprobado).
+  Ningún agente agrega tablas nuevas sin aprobación explícita del usuario.
 - No existe tabla `direcciones` (no hay delivery en esta versión).
 - Horarios viven en `configuraciones` (clave-valor), no en tabla separada.
 - Nullability, DEFAULT y ON DELETE deben verificarse contra las migraciones

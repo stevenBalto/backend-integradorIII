@@ -41,6 +41,15 @@ Sucursales: **una sola** en esta versión, pero el diseño debe ser **escalable 
 - Sucursales (una hoy; arquitectura escalable a varias: horarios, datos y disponibilidad por local)
 - Configuración general
 
+## Superadministración y multi-tenant (agregado por el compañero, 2026-07-12/13)
+El sistema es multi-tenant: cada negocio independiente es una **instancia**
+(`instancias`), con su propio panel Superadmin (`/superadmin/*`, login/guard
+propios, aislado del panel admin normal) para crear instancias, gestionar
+superadministradores y ver catálogos globales. Cada instancia tiene sus
+propias sucursales, usuarios, productos, pedidos, etc. (aislados por
+`instancia_id` vía el trait `PerteneceAInstancia`). Detalle de diseño:
+`back-document/ARQUITECTURA-SUPERADMIN-MULTITENANT.md`.
+
 ## Roles
 - super_admin: acceso total, configuración global, todas las sucursales.
 - admin_sede: solo su sucursal.
@@ -52,11 +61,12 @@ Sucursales: **una sola** en esta versión, pero el diseño debe ser **escalable 
 - Comunicación: solo por **API REST**. Los repos (`backend-integradorIII`, `frotend-integradorIII`) son independientes; no comparten código.
 
 ## Base de datos
-- PostgreSQL, 23 tablas, 29 FK (todas 1-M): 21/28 originales del ERD + `insumos`/`insumo_movimientos` (módulo Inventario, 2026-07-13). Convención: tablas plural snake_case, FK `tabla_id`.
+- PostgreSQL, 29 tablas: 21/28 originales del ERD + `insumos`/`insumo_movimientos` (Inventario, 2026-07-13) + 6 tablas de superadmin/multi-tenant (`instancias`, `superadministradores`, `modulos`, `usuario_modulo`, `password_reset_tokens`, más `instancia_id` en tablas raíz, 2026-07-12/13) + `producto_tamanos` (Pedidos, 2026-07-16). Convención: tablas plural snake_case, FK `tabla_id`.
 - Reglas: sin tabla `direcciones`; horarios en `configuraciones` (clave-valor); precios congelados en el detalle de pedido al momento de la compra.
-- Estados de pedido: `pendiente`, `en_proceso`, `listo`, `entregado`, `cancelado`. Modalidad: comer aquí / para llevar.
+- Estados de pedido: `pendiente`, `en_proceso`, `listo`, `entregado`, `cancelado` (máquina de estados en `PedidoService`, no se puede saltar pasos). Modalidad: `comer_aqui` / `para_llevar`. Código de seguimiento único por pedido (`pedidos.codigo`), pago en caja registrado en `pedidos.pagado`/`pagado_en` (las tablas `metodos_pago`/`pagos` del ERD original siguen sin usarse, ver nota de alcance más arriba).
 - `insumos`/`insumo_movimientos`: inventario de ingredientes/materia prima (NO stock de productos del menú). `insumos.deleted_at` (soft delete, conserva historial en `insumo_movimientos`). Cada "toma física" crea una fila en `insumo_movimientos` y actualiza `insumos.cantidad_actual`.
-- Esquema y versiones: `back-document/bd-doc/` (incluye `rooster_pizza_bd.sql` y `migracion_2026-07-13_insumos.sql`).
+- `producto_tamanos`: tamaños opcionales por producto (ej. pizzas: Personal/Mediana/Grande), cada uno con su propio precio. `extras` (ya existía, ligada a `categoria_id`) se usa como "acompañamientos" opcionales por categoría — sin tabla nueva para esto.
+- Esquema y versiones: `back-document/bd-doc/` (`rooster_pizza_bd.sql` es el dump maestro regenerado por `pg_dump`; migraciones incrementales por fecha en la misma carpeta).
 
 ## Identidad visual (resumen)
 - App cliente: NUNCA fondo negro (negro solo para texto/iconos). Paleta cálida de marca: rojo Pantone 185C (~#E8112D), naranja, dorado, tan. Fondos crema/blanco cálido.
@@ -67,11 +77,12 @@ Sucursales: **una sola** en esta versión, pero el diseño debe ser **escalable 
 ## Estado de módulos
 - **Módulo 1 — Autenticación (registro + login): FUNCIONAL.** Backend (Laravel + Sanctum) y frontend (Ionic) conectados y probados end-to-end. Cómo levantarlo y probarlo: `COMO-CORRER.md`.
 - **Módulo 2 — Catálogo de productos (Menú admin + Home cliente): FUNCIONAL.** CRUD completo (Controller-Service-Repository + DTOs + Resources) protegido por rol (`super_admin`/`admin_sede`), con subida de fotos a Cloudinary (cuenta dedicada al proyecto, subida vía backend). Admin: listar/filtrar/crear/editar/eliminar (soft delete) + modal de detalle. Home: consume el mismo catálogo (`GET /productos`, solo `disponible=true`) con modal de detalle y botón "Añadir al carrito" (placeholder, sin lógica todavía). Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
-- **App cliente (resto): base visual lista.** Pedir, Ofertas, Mi cuenta — maquetado fiel al prototipo, hardcodeado (sin conectar a API todavía). Home ya migrado (ver Módulo 2).
-- **Panel admin (resto): base visual lista.** Shell con sidebar + 10 módulos en `frotend-integradorIII/src/app/admin/`. Menú, Ofertas y cupones e Inventario ya conectados a la API real (ver Módulo 2/3/4); Dashboard, Pedidos, Usuarios y roles, Analíticas, Notificaciones, Reseñas, Configuración siguen maquetado estático. El atajo temporal `admin`/`123` en el login YA NO EXISTE — el acceso a `/admin` ahora depende del rol real devuelto por el backend (aunque la ruta en sí sigue sin guard de Angular).
+- **App cliente (resto): FUNCIONAL en su mayoría.** Home y Carrito (antes "Pedir") conectados a la API real con carrito/checkout/pedidos (ver Módulo 5). Ofertas sigue con datos hardcodeados. Mi cuenta: "Mis pedidos" y "Buscar mi pedido" ya conectados; el resto de filas siguen sin lógica.
+- **Panel admin (resto): base visual lista.** Shell con sidebar + módulos en `frotend-integradorIII/src/app/admin/` (incluye `superadmin/` aparte, panel independiente). Menú, Ofertas y cupones, Inventario y Pedidos ya conectados a la API real (ver Módulo 2/3/4/5); Dashboard, Usuarios y roles, Analíticas, Notificaciones, Reseñas, Configuración siguen maquetado estático. El atajo temporal `admin`/`123` en el login YA NO EXISTE — el acceso ahora depende del rol real devuelto por el backend (login unificado, redirige a `/admin`, `/superadmin/panel` o `/tabs/home` según `tipo`/`rol`).
 - **Módulo 4 — Inventario de insumos: FUNCIONAL.** CRUD de insumos (materia prima: carnes, queso, harina...) + toma física auditada (`insumo_movimientos`), protegido por rol, 100% admin (sin endpoints públicos). Refinado 2026-07-13: unidades de medida personalizadas persistentes (se derivan de datos reales), historial de tomas físicas por insumo (botón condicional si tiene movimientos), buscador funcional, KPIs clicables como filtros, estados con wording claro, validación `stock_minimo ≤ cantidad_actual` en frontend y backend. Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
+- **Módulo 5 — Pedidos (carrito, checkout, seguimiento, admin): FUNCIONAL.** Cliente: elige sucursal + modalidad, arma carrito (productos con tamaños/acompañamientos opcionales), paga en caja y recibe un código de seguimiento; puede consultar el estado por código sin necesidad de entrar a "Mis pedidos". Admin: gestiona el ciclo de vida completo del pedido (máquina de estados, historial, registro de pago tras la entrega), KPIs clicables como filtros, actualización cada 15s. El wording de los estados es una única fuente compartida (`shared/constants/pedido-estado.ts` en el frontend) para que cliente y admin siempre digan lo mismo. Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
 - **Cloudinary**: cuenta gratuita dedicada al proyecto (no mezclada con cuentas personales de ningún dev), subida de imágenes firmada desde el backend (`CloudinaryService`), credenciales solo en `.env` local de cada dev (pedirlas al equipo, no están versionadas).
-- Próximos: conectar Carrito/Pedir real (el botón "Añadir al carrito" del Home ya está maquetado pero sin lógica), guard de rol real en Angular para `/admin`, resto de módulos del admin (pedidos, ofertas, usuarios, etc.) vía `api-integration-helper`, "Continuar con Google" (fast-follow), "Olvidé mi contraseña". Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
+- Próximos: integración de cupones en el checkout, descuento automático de insumos al confirmar un pedido, CRUD completo de Sucursales (hoy solo hay listado + 1 fila sembrada a mano), guard de rol real en Angular para `/admin`, resto de módulos del admin (usuarios, analíticas, etc.) vía `api-integration-helper`, "Continuar con Google" (fast-follow). Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
 
 ## Propósito de esta documentación
 Tener referencia documentada (paleta, logos, reglas, base de datos, decisiones) para que los subagentes respondan sin escanear todo el código, ahorrando tokens y trabajando optimizado. Mantener al día vía `doc-updater`.
@@ -85,4 +96,4 @@ Tener referencia documentada (paleta, logos, reglas, base de datos, decisiones) 
 - `back-document/` — ARQUITECTURA, AntierroresBack, HiloActualBack, `bd-doc/`.
 - `front-document/` — ARQUITECTURA, ReglasUX, guiaMDFrontend, AntierroresFront, HiloActualFront.
 
-*Última actualización: 2026-07-13.*
+*Última actualización: 2026-07-16.*
