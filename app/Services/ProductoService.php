@@ -10,6 +10,7 @@ use App\Models\Producto;
 use App\Repositories\CategoriaRepository;
 use App\Repositories\ProductoRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -53,10 +54,20 @@ final class ProductoService
     {
         $this->validarCategoria($dto->categoriaId);
 
-        $datos = $dto->toArray();
-        $datos['imagen_url'] = $imagenUrl;
+        return DB::transaction(function () use ($dto, $imagenUrl): Producto {
+            $datos = $dto->toArray();
+            $datos['imagen_url'] = $imagenUrl;
 
-        return $this->productos->crear($datos);
+            $producto = $this->productos->crear($datos);
+
+            // Sincronizar tamanos si se enviaron
+            if (! empty($dto->tamanos)) {
+                $this->productos->sincronizarTamanos($producto, $dto->tamanos);
+                $producto->load('tamanos');
+            }
+
+            return $producto;
+        });
     }
 
     /** $imagenUrl: si es null, se conserva la imagen actual del producto (no se pisa). */
@@ -66,12 +77,20 @@ final class ProductoService
 
         $producto = $this->buscarPorId($id);
 
-        $datos = $dto->toArray();
-        if ($imagenUrl !== null) {
-            $datos['imagen_url'] = $imagenUrl;
-        }
+        return DB::transaction(function () use ($producto, $dto, $imagenUrl): Producto {
+            $datos = $dto->toArray();
+            if ($imagenUrl !== null) {
+                $datos['imagen_url'] = $imagenUrl;
+            }
 
-        return $this->productos->actualizar($producto, $datos);
+            $producto = $this->productos->actualizar($producto, $datos);
+
+            // Sincronizar tamanos (se envian siempre, aunque sea array vacio)
+            $this->productos->sincronizarTamanos($producto, $dto->tamanos);
+            $producto->load('todosLosTamanos');
+
+            return $producto;
+        });
     }
 
     public function eliminar(int $id): void

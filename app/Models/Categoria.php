@@ -39,4 +39,16 @@ class Categoria extends Model
     {
         return $this->hasMany(Producto::class);
     }
+
+    /** @return HasMany<Extra> */
+    public function extras(): HasMany
+    {
+        return $this->hasMany(Extra::class);
+    }
+
+    /** Extras disponibles de esta categoria. */
+    public function extrasDisponibles(): HasMany
+    {
+        return $this->hasMany(Extra::class)->where('disponible', true);
+    }
 }

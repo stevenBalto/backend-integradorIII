@@ -6,9 +6,10 @@ namespace App\Models;
 
 use App\Models\Concerns\PerteneceAInstancia;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Producto del catalogo (pizza, grill, pasta, bebida). Mapea `productos`.
@@ -44,5 +45,27 @@ class Producto extends Model
     public function categoria(): BelongsTo
     {
         return $this->belongsTo(Categoria::class);
+    }
+
+    /**
+     * Tamanos (variantes de precio) del producto, ordenados y solo activos no eliminados.
+     *
+     * @return HasMany<ProductoTamano>
+     */
+    public function tamanos(): HasMany
+    {
+        return $this->hasMany(ProductoTamano::class)
+            ->where('activo', true)
+            ->orderBy('orden');
+    }
+
+    /**
+     * Todos los tamanos del producto (incluyendo inactivos), para administracion.
+     *
+     * @return HasMany<ProductoTamano>
+     */
+    public function todosLosTamanos(): HasMany
+    {
+        return $this->hasMany(ProductoTamano::class)->orderBy('orden');
     }
 }

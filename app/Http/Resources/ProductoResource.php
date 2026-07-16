@@ -22,6 +22,8 @@ final class ProductoResource extends JsonResource
             'imagen_url' => $this->imagen_url,
             'destacado' => (bool) $this->destacado,
             'disponible' => (bool) $this->disponible,
+            'tamanos' => ProductoTamanoResource::collection($this->whenLoaded('tamanos')),
+            'extras' => ExtraResource::collection($this->whenLoaded('extrasCategoria', fn () => $this->extrasCategoria)),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

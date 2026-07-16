@@ -16,7 +16,10 @@ class StoreProductoRequest extends FormRequest
         return true;
     }
 
-    /** Normaliza booleanos (llegan como string "1"/"0" en multipart/form-data). */
+    /**
+     * Normaliza booleanos (llegan como string "1"/"0" en multipart/form-data)
+     * y decodifica tamanos que viene como JSON string en multipart.
+     */
     protected function prepareForValidation(): void
     {
         if ($this->has('destacado')) {
@@ -24,6 +27,11 @@ class StoreProductoRequest extends FormRequest
         }
         if ($this->has('disponible')) {
             $this->merge(['disponible' => filter_var($this->input('disponible'), FILTER_VALIDATE_BOOLEAN)]);
+        }
+        // Tamanos viene como JSON string en multipart/form-data
+        if ($this->has('tamanos') && is_string($this->input('tamanos'))) {
+            $decoded = json_decode($this->input('tamanos'), true);
+            $this->merge(['tamanos' => is_array($decoded) ? $decoded : []]);
         }
     }
 
@@ -40,6 +48,9 @@ class StoreProductoRequest extends FormRequest
             'destacado' => ['nullable', 'boolean'],
             'disponible' => ['nullable', 'boolean'],
             'imagen' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'tamanos' => ['nullable', 'array'],
+            'tamanos.*.nombre' => ['required_with:tamanos', 'string', 'max:40'],
+            'tamanos.*.precio' => ['required_with:tamanos', 'numeric', 'min:0'],
         ];
     }
 
@@ -55,6 +66,11 @@ class StoreProductoRequest extends FormRequest
             'precio_base.required' => 'El precio es obligatorio.',
             'precio_base.numeric' => 'El precio debe ser un número.',
             'precio_base.min' => 'El precio no puede ser negativo.',
+            'tamanos.*.nombre.required_with' => 'El nombre del tamaño es obligatorio.',
+            'tamanos.*.nombre.max' => 'El nombre del tamaño no puede superar los 40 caracteres.',
+            'tamanos.*.precio.required_with' => 'El precio del tamaño es obligatorio.',
+            'tamanos.*.precio.numeric' => 'El precio del tamaño debe ser un número.',
+            'tamanos.*.precio.min' => 'El precio del tamaño no puede ser negativo.',
         ];
     }
 }

@@ -6,6 +6,9 @@ namespace App\DTOs\Producto;
 
 final class CrearProductoDTO
 {
+    /**
+     * @param array<int, array{nombre: string, precio: float}> $tamanos
+     */
     public function __construct(
         public readonly int $categoriaId,
         public readonly string $nombre,
@@ -13,11 +16,20 @@ final class CrearProductoDTO
         public readonly float $precioBase,
         public readonly bool $destacado,
         public readonly bool $disponible,
+        public readonly array $tamanos = [],
     ) {
     }
 
     public static function fromArray(array $data): self
     {
+        $tamanos = [];
+        foreach ($data['tamanos'] ?? [] as $tamano) {
+            $tamanos[] = [
+                'nombre' => (string) $tamano['nombre'],
+                'precio' => (float) $tamano['precio'],
+            ];
+        }
+
         return new self(
             categoriaId: (int) $data['categoria_id'],
             nombre: (string) $data['nombre'],
@@ -25,6 +37,7 @@ final class CrearProductoDTO
             precioBase: (float) $data['precio_base'],
             destacado: (bool) ($data['destacado'] ?? false),
             disponible: (bool) ($data['disponible'] ?? true),
+            tamanos: $tamanos,
         );
     }
 

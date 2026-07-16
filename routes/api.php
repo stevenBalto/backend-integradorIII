@@ -2,16 +2,20 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Admin\PedidoAdminController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\SuperAdmin\InstanciaController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ExtraController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\CuentaController;
 use App\Http\Controllers\CuponController;
 use App\Http\Controllers\InsumoController;
 use App\Http\Controllers\OfertaController;
+use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\SucursalController;
 use App\Http\Controllers\SuperAdminAuthController;
 use App\Http\Controllers\SuperAdminController;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +34,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Cambio de contraseña propio (NO lleva password.valida: el usuario temporal
     // debe poder entrar aquí justamente para cambiarla).
     Route::post('/cuenta/cambiar-password', [CuentaController::class, 'cambiarPassword']);
+
+    // Sucursales (cualquier usuario autenticado puede ver las sucursales activas).
+    Route::get('/sucursales', [SucursalController::class, 'index']);
+
+    // Pedidos (cliente autenticado).
+    Route::post('/pedidos', [PedidoController::class, 'store']);
+    Route::get('/pedidos/mios', [PedidoController::class, 'misPedidos']);
+    Route::get('/pedidos/mios/{id}', [PedidoController::class, 'misPedidosShow']);
 });
 
 // ── Catalogo (publico, solo disponibles) ────────────────────────────────────
@@ -37,6 +49,9 @@ Route::get('/productos', [ProductoController::class, 'index']);
 Route::get('/categorias', [CategoriaController::class, 'index']);
 Route::get('/ofertas', [OfertaController::class, 'indexPublic']);
 Route::get('/cupones', [CuponController::class, 'indexPublic']);
+
+// ── Busqueda publica de pedido por codigo ────────────────────────────────────
+Route::get('/pedidos/buscar', [PedidoController::class, 'buscarPublico'])->middleware('throttle:10,1');
 
 // ── Catalogo (administracion) ───────────────────────────────────────────────
 Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_sede'])
@@ -81,6 +96,21 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::post('/usuarios', [UsuarioController::class, 'store']);
         Route::match(['put', 'patch'], '/usuarios/{id}', [UsuarioController::class, 'update']);
         Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy']);
+
+        // Extras / acompañamientos (CRUD completo).
+        Route::get('/extras', [ExtraController::class, 'index']);
+        Route::post('/extras', [ExtraController::class, 'store']);
+        Route::match(['put', 'patch'], '/extras/{id}', [ExtraController::class, 'update']);
+        Route::delete('/extras/{id}', [ExtraController::class, 'destroy']);
+
+        // Pedidos (administracion).
+        Route::get('/pedidos', [PedidoAdminController::class, 'index']);
+        Route::get('/pedidos/{id}', [PedidoAdminController::class, 'show']);
+        Route::post('/pedidos/{id}/estado', [PedidoAdminController::class, 'cambiarEstado']);
+        Route::post('/pedidos/{id}/pagar', [PedidoAdminController::class, 'pagar']);
+
+        // Sucursales (listado admin igual que cliente, misma ruta compartida).
+        Route::get('/sucursales', [SucursalController::class, 'index']);
     });
 
 // ── Superadministracion (panel AISLADO: login/guard/middleware propios) ──────
