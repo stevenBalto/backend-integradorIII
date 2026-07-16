@@ -13,15 +13,22 @@ use Illuminate\Database\Eloquent\Collection;
  */
 final class UserRepository
 {
+    /**
+     * Instancia a la que se asigna un cliente que se registra por el formulario
+     * publico (no elige tenant). Hoy el negocio real es una sola instancia.
+     */
+    private const INSTANCIA_DEFAULT = 1;
+
     public function crearCliente(RegistrarUsuarioDTO $dto, int $rolClienteId): User
     {
         // El cast 'hashed' del modelo se encarga de hashear el password.
         return User::create([
-            'role_id'  => $rolClienteId,
-            'nombre'   => $dto->nombre,
-            'email'    => $dto->email,
-            'password' => $dto->password,
-            'telefono' => $dto->telefono,
+            'role_id'      => $rolClienteId,
+            'instancia_id' => self::INSTANCIA_DEFAULT,
+            'nombre'       => $dto->nombre,
+            'email'        => $dto->email,
+            'password'     => $dto->password,
+            'telefono'     => $dto->telefono,
         ]);
     }
 
