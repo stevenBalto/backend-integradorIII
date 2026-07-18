@@ -21,6 +21,8 @@ final class ProductoResource extends JsonResource
             'precio_base' => (float) $this->precio_base,
             'imagen_url' => $this->imagen_url,
             'destacado' => (bool) $this->destacado,
+            'popular' => (bool) $this->popular,
+            'nuevo' => (bool) $this->nuevo,
             'disponible' => (bool) $this->disponible,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

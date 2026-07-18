@@ -102,3 +102,23 @@ Formato sugerido:
 - Pendiente:
   - Correr la prueba equivalente por curl para el path UPDATE (`PUT /admin/insumos/{id}` con `stock_minimo` > `cantidad_actual` real del insumo) — la regla ya esta implementada, falta el curl explicito de confirmacion.
 - NO TOCAR / nota: igual que la sesion anterior — `cantidad_actual` sigue sin ser editable por PUT; la nueva validacion de `stock_minimo` es adicional, no cambia esa garantia.
+
+## Sesion 2026-07-17 (cont.) — Home rediseñado (vitrina) + modulo admin "Inicio"
+- Hecho:
+  - **Nuevo endpoint `home-config`** (curacion del Home, no contenido duplicado): `Configuracion` (modelo nuevo sobre la tabla ya existente `configuraciones`, clave-valor, `PerteneceAInstancia`), `ConfiguracionRepository` (`obtenerPorClave`/`guardar` via `updateOrCreate`), `ConfiguracionService` (`obtenerHomeConfig`/`actualizarHomeConfig`, clave fija `home_oferta_hero_id`), `ConfiguracionController` (`show` publico, `update` admin), `UpdateHomeConfigRequest` (`oferta_hero_id` nullable, `exists:ofertas,id`).
+  - Rutas: `GET /api/home-config` (publico) y `PUT /api/admin/home-config` (`auth:sanctum` + `role:super_admin,admin_sede`), agregadas junto al resto del catalogo en `routes/api.php`.
+  - **Decision de diseño**: el Home NO tiene tabla de contenido propia. Destacados = `productos.destacado` (campo que ya existia); Ofertas/Cupones del Home = los mismos endpoints publicos `GET /ofertas` y `GET /cupones` (ya filtran vigencia por fecha en el repository, sin curacion manual). Lo unico que persiste es cual oferta se muestra primero cuando hay varias vigentes ("hero"), via `home-config`.
+  - Verificado end-to-end por curl (login admin): crear oferta demo vigente → marcarla como `oferta_hero_id` → `GET /home-config` y `GET /ofertas` la reflejan → 422 en espanol si el id no existe (`exists:ofertas,id`) → limpiado el dato de prueba al terminar (oferta demo eliminada, `oferta_hero_id` vuelto a null).
+- Pendiente:
+  - Nada pendiente conocido de este endpoint. Si a futuro se necesita destacar tambien un cupon "hero", replicar el mismo patron (nueva clave `home_cupon_hero_id`) en vez de nueva tabla.
+- NO TOCAR / nota: `configuraciones.clave` tiene un UNIQUE constraint a nivel de columna (no compuesto con `instancia_id`) — funciona para el uso actual (una instancia activa en dev) pero si el proyecto pasa a multi-instancia real en produccion, revisar si hace falta un unique compuesto `(clave, instancia_id)` antes de que dos instancias choquen por la misma clave.
+
+## Sesion 2026-07-17 (cont. 2) — Secciones multiples del Home: Populares y Lo nuevo
+- Hecho:
+  - **2 columnas nuevas en `productos`**: `popular boolean not null default false`, `nuevo boolean not null default false` (mismo patron que `destacado`, que ya existia). Aplicadas a mano via `php artisan tinker` con `DB::statement('ALTER TABLE ...')` (NO `php artisan migrate`, sigue la regla del proyecto). SQL de referencia guardado en `bd-doc/migracion_2026-07-18_home_secciones.sql`.
+  - Actualizado en cadena, mismo patron que `destacado` en cada capa: `Producto` (fillable + casts), `StoreProductoRequest`/`UpdateProductoRequest` (normalizacion boolean + reglas), `CrearProductoDTO`/`ActualizarProductoDTO` (props + fromArray + toArray), `ProductoResource` (expone `popular`/`nuevo`). `ProductoService`/`ProductoRepository` sin cambios (pasan el array completo, ya cubierto por `$fillable`).
+  - Motivacion: el cliente pidio que el Home tenga varias secciones tipo apps grandes (McDonald's/KFC/BK) — "Destacados", "Populares", "Lo nuevo" — no solo un flag. Se decidio agregar boolean flags independientes (un producto puede estar en varias secciones a la vez) en vez de un enum de una sola seccion, para no forzar mutua exclusion que no pidieron.
+  - Verificado por curl: `GET /productos` expone `popular`/`nuevo` en cada item; `POST /admin/productos/{id}` (con `_method=PUT`) acepta y persiste `popular=1`/`nuevo=1`; revertido a `false` al terminar la prueba para no dejar datos de prueba activos en el producto real "Lomo".
+- Pendiente:
+  - Nada pendiente conocido. Si se pide otra seccion mas (ej. "Oferta del dia" para productos, no solo ofertas), replicar el mismo patron: nueva columna boolean + los mismos 4 archivos tocados aca.
+- NO TOCAR / nota: `destacado` es el campo mas viejo del trio y sigue siendo el unico visible tambien en el checkbox de Menu (`admin/menu/menu.page.ts`) — `popular`/`nuevo` solo se manejan desde el modulo admin "Inicio" (`admin/inicio/inicio.page.ts`, funcion `toggleSeccion`), no se agrego UI para ellos en Menu a proposito (evitar duplicar controles).

@@ -12,6 +12,8 @@ final class CrearProductoDTO
         public readonly ?string $descripcion,
         public readonly float $precioBase,
         public readonly bool $destacado,
+        public readonly bool $popular,
+        public readonly bool $nuevo,
         public readonly bool $disponible,
     ) {
     }
@@ -24,6 +26,8 @@ final class CrearProductoDTO
             descripcion: isset($data['descripcion']) ? (string) $data['descripcion'] : null,
             precioBase: (float) $data['precio_base'],
             destacado: (bool) ($data['destacado'] ?? false),
+            popular: (bool) ($data['popular'] ?? false),
+            nuevo: (bool) ($data['nuevo'] ?? false),
             disponible: (bool) ($data['disponible'] ?? true),
         );
     }
@@ -36,6 +40,8 @@ final class CrearProductoDTO
             'descripcion' => $this->descripcion,
             'precio_base' => $this->precioBase,
             'destacado' => $this->destacado,
+            'popular' => $this->popular,
+            'nuevo' => $this->nuevo,
             'disponible' => $this->disponible,
         ];
     }

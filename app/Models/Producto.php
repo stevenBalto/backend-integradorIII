@@ -29,6 +29,8 @@ class Producto extends Model
         'imagen_url',
         'disponible',
         'destacado',
+        'popular',
+        'nuevo',
     ];
 
     protected function casts(): array
@@ -37,6 +39,8 @@ class Producto extends Model
             'precio_base' => 'decimal:2',
             'disponible' => 'boolean',
             'destacado' => 'boolean',
+            'popular' => 'boolean',
+            'nuevo' => 'boolean',
         ];
     }
 

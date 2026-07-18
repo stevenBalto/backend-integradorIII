@@ -168,3 +168,29 @@ Formato sugerido:
   - Verificar en navegador (no solo curl) el flujo completo de validación de stock_minimo y el botón de historial condicional.
   - Probar el path de UPDATE (`PUT /admin/insumos/{id}`) con curl del mismo modo que CREATE (la regla ya está implementada en `UpdateInsumoRequest`, pendiente de correr la prueba explícita).
 - NO TOCAR / nota: `status-badge`, `admin-search-input` y `admin-kpi-card` son compartidos por otros módulos (Menú/Ofertas/Dashboard) — los cambios son aditivos (nuevos inputs/outputs opcionales con default inerte), no rompen esos usos existentes.
+
+## Sesión 2026-07-17 (cont.) — Home rediseñado como vitrina + tab "Carrito" con el menú real + módulo admin "Inicio"
+- Hecho:
+  - **Home** (`src/app/home/`) dejó de ser el menú completo y pasó a ser vitrina: sección **Ofertas** vigentes, **Cupones para ti** vigentes (`OfertaService.listarPublicas()`/`CuponService.listarPublicos()`, ya filtrados por vigencia en el backend) y **Destacados** (`productos.destacado=true`, filtrado client-side sobre `listarDisponibles()`). Estilos nuevos `.promo-card`/`.promo-scroll` en `home.page.scss`. El botón "Añadir al carrito" del modal de detalle sigue igual (toast placeholder) — **no se tocó lógica de carrito**, queda para otro dev.
+  - **Tab "Carrito"** (`src/app/pedir/`, antes vacío/placeholder con datos hardcodeados en dólares) ahora tiene el menú completo real: categorías (`CategoriaService.listarActivas()`), productos (`ProductoService.listarDisponibles()`), buscador funcional (`busqueda` + filtro client-side por nombre), filtro por categoría, modal de detalle (mismo patrón `dish-modal` que Home, duplicado en `pedir.page.scss` porque cada página es dueña de su CSS en este proyecto). Agregado `CrcCurrencyPipe` al `pedir.module.ts` (antes mostraba precios hardcodeados en `$`).
+  - **Nuevo módulo admin "Inicio"** (`src/app/admin/inicio/`), sidebar entre Dashboard e Inventario (`admin-shell.page.ts`/`admin-shell-routing.module.ts`, ruta `inicio`). Decisión de diseño: **no duplica datos** — es una pantalla de curación sobre lo que ya existe:
+    - Tabla de productos disponibles con toggle `ion-toggle` de "destacado" (mismo campo que el checkbox de Menú, otra puerta de entrada — llama `ProductoService.actualizar()` reconstruyendo el payload completo con `destacado` invertido).
+    - Selector de "oferta destacada (hero)" entre las ofertas vigentes — persiste vía `HomeConfigService` (`GET/PUT /home-config`, nuevo servicio + modelo `core/models/home-config.model.ts`).
+    - Preview de solo lectura de cupones vigentes (sin curación manual, se muestran automáticamente).
+  - **Home** ahora también consume `HomeConfigService.obtener()`: si hay `oferta_hero_id`, esa oferta se ordena primero en la lista y se le agrega badge "★" + halo dorado (`.promo-card--hero`).
+  - Verificado: `ng serve` compiló sin errores en cada paso (Home, Carrito, módulo Inicio). Backend probado end-to-end por curl (ver `HiloActualBack.md`).
+- Pendiente:
+  - Verificación visual manual en navegador del flujo completo (Home → toggle destacado en admin → se refleja en Home; elegir oferta hero → aparece primera con ★).
+  - Carrito real (agregar/quitar/cantidad, modalidad Comer aquí/Para llevar) — explícitamente fuera de esta sesión, queda para otro dev.
+  - Si se agrega curación de "cupón hero" a futuro, replicar el mismo patrón de `home-config` (ver nota en `HiloActualBack.md`).
+- NO TOCAR / nota: `pedir.page.ts`/`.html` ya no son placeholder — cualquiera que trabaje el carrito real debe construir sobre esta base (ya tiene productos reales, buscador, filtro, modal), no reemplazarla desde cero. El botón "Añadir al carrito" en Home y en Carrito siguen siendo el mismo toast placeholder a propósito, para que el dev de carrito los conecte a la vez.
+
+## Sesión 2026-07-17 (cont. 2) — Home con múltiples secciones: Populares y Lo nuevo
+- Hecho:
+  - `Producto`/`ProductoPayload` (`core/models/producto.model.ts`) ganaron `popular`/`nuevo` (boolean), igual que `destacado`. `ProductoService.aFormData()` los agrega al `FormData` (`core/services/producto.service.ts`).
+  - **Home** (`home.page.ts`/`.html`): ahora carga 3 listas independientes (`destacados`, `populares`, `nuevos`) filtrando client-side sobre `listarDisponibles()`. Cada sección solo se muestra si tiene al menos un producto (`*ngIf="lista.length > 0"`). El grid de tarjetas se factorizó en un `<ng-template #dishGrid let-lista="lista">` reutilizado con `*ngTemplateOutlet` para las 3 secciones (evita triplicar el HTML).
+  - **Admin "Inicio"** (`admin/inicio/inicio.page.ts`/`.html`): la tabla de "Destacados del Home" pasó a "Secciones del Home" con 3 columnas de `ion-toggle` independientes (Destacado/Popular/Nuevo) por producto. Método `toggleSeccion(producto, campo)` reemplaza al viejo `toggleDestacado()` — reconstruye el payload completo (necesario porque `ProductoService.actualizar()` no soporta PATCH parcial) e invierte solo el campo tocado.
+  - KPIs del admin "Inicio" ahora muestran los 3 contadores (Destacados/Populares/Lo nuevo) + Ofertas vigentes.
+- Pendiente:
+  - Nada pendiente conocido. Si se agrega una 4ta sección a futuro, replicar: nueva columna boolean (ver `HiloActualBack.md`), nuevo `getter` + `*ngFor` toggle en Inicio, nueva sección `*ngTemplateOutlet` en Home.
+- NO TOCAR / nota: `destacado` se sigue pudiendo togglear también desde `admin/menu/menu.page.ts` (checkbox ya existente) — `popular`/`nuevo` NO tienen control en Menú a propósito, solo viven en el módulo "Inicio" para no duplicar UI de curación en dos lugares.
