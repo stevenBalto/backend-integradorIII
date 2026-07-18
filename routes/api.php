@@ -15,6 +15,7 @@ use App\Http\Controllers\OfertaController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\SuperAdminAuthController;
 use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\ClienteController;
 use Illuminate\Support\Facades\Route;
 
 // ── Autenticacion ─────────────────────────────────────────────────────────────
@@ -86,6 +87,10 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::post('/usuarios', [UsuarioController::class, 'store']);
         Route::match(['put', 'patch'], '/usuarios/{id}', [UsuarioController::class, 'update']);
         Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy']);
+
+        // Clientes (analitica de compra, solo lectura)
+        Route::get('/clientes', [ClienteController::class, 'index']);
+        Route::get('/clientes/{id}/pedidos', [ClienteController::class, 'pedidos']);
     });
 
 // ── Superadministracion (panel AISLADO: login/guard/middleware propios) ──────
