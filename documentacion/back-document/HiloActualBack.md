@@ -122,3 +122,18 @@ Formato sugerido:
 - Pendiente:
   - Nada pendiente conocido. Si se pide otra seccion mas (ej. "Oferta del dia" para productos, no solo ofertas), replicar el mismo patron: nueva columna boolean + los mismos 4 archivos tocados aca.
 - NO TOCAR / nota: `destacado` es el campo mas viejo del trio y sigue siendo el unico visible tambien en el checkbox de Menu (`admin/menu/menu.page.ts`) — `popular`/`nuevo` solo se manejan desde el modulo admin "Inicio" (`admin/inicio/inicio.page.ts`, funcion `toggleSeccion`), no se agrego UI para ellos en Menu a proposito (evitar duplicar controles).
+
+## Sesion 2026-07-18 — Modulo admin: Clientes (analitica de compra, solo lectura)
+- Hecho:
+  - **Nuevo modelo `Pedido`** (`app/Models/Pedido.php`) — **NO existia antes** (el modulo Pedidos del admin seguia sin API real). Mapea `pedidos`, usa trait `PerteneceAInstancia`, `protected $fillable = []` **a proposito** (solo lectura para este modulo). Relaciones: `cliente()` → `belongsTo(User::class, 'cliente_id')`, `sucursal()` → `belongsTo(Sucursal::class)`, `cupon()` → `belongsTo(Cupon::class)`.
+  - **Nuevo modulo API-only de Clientes** (100% solo lectura, sin creacion/edicion): `ClienteRepository` (`listarConEstadisticas`, `listarPedidos`), `ClienteService` (mismos metodos, sin DTOs), `ClienteController` (`index`, `pedidos`), `ClienteResumenResource`/`PedidoResumenResource`.
+  - **Endpoints**:
+    - `GET /api/admin/clientes` — lista de clientes (rol `cliente`) con `total_gastado`, `cantidad_pedidos`, `ticket_promedio`, `ultimo_pedido_en`, `puntos_balance`, `activo`. Excluye pedidos `cancelado` de los calculos. Agregacion hecha en SQL (subquery + leftJoinSub con `withSelect`/`whereNotNull`, filtro `estado != 'cancelado'`), sin N+1.
+    - `GET /api/admin/clientes/{id}/pedidos` — historial de pedidos de un cliente puntual. Validacion de instancia ANTES de devolver datos: `$cliente->instancia_id !== Auth::user()->instancia_id → 404` (evita IDOR cross-tenant).
+  - Ambas rutas bajo `auth:sanctum` + `role:super_admin,admin_sede` en el grupo admin ya existente de `routes/api.php`.
+  - Patron: Controller-Service-Repository (mismo que Ofertas/Insumos). Sin DTOs porque no hay creacion/edicion.
+  - **Seeder de prueba** `ClientesDemoSeeder` (NO registrado en `DatabaseSeeder.php` — opt-in, se corre manual con `php artisan db:seed --class=ClientesDemoSeeder`): crea sucursal "La Fortuna (Centro)" (antes no existia ninguna en BD local, y `pedidos.sucursal_id` es NOT NULL), 15 clientes demo (`cliente-demo-1@rooster-test.com`...), ~100 pedidos en los ultimos 6 meses con estados/montos realistas. Ya ejecutado contra BD local, datos reales verificados.
+  - Verificado: `ClienteService::listarConEstadisticas()` devuelve el ranking correcto, `listarPedidos()` respeta la validacion de instancia (404 para clientes de otra instancia).
+- Pendiente:
+  - Nada pendiente conocido del backend. El frontend del modulo Clientes ya esta conectado y funcional (ver `HiloActualFront.md`).
+- NO TOCAR / nota: `Pedido::$fillable = []` es intencional — cualquier codigo futuro que necesite crear/editar pedidos va a necesitar `forceFill()` o agregar fillable en ese momento, no asumir que `Pedido::create()` funciona. Ver `AntierroresBack.md` EB-03 gotchas de Eloquent del seeder.

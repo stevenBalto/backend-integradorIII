@@ -45,3 +45,13 @@ Formato sugerido por entrada:
 - Causa: el watcher incremental de `@ngtools/webpack` no vuelve a escanear el `include` de `tsconfig.json` cuando aparecen muchos archivos nuevos de golpe mientras el dev server ya está arriba (limitación conocida de compilación incremental, no un error en el código).
 - Regla: si una tarea (propia o de un subagente) crea módulos/archivos NUEVOS con `ionic serve`/`ng serve` ya corriendo, matar el proceso (`taskkill` sobre el árbol, o Ctrl+C) y levantarlo de nuevo en frío. No esperar a que el rebuild incremental lo resuelva solo. Verificar el output del server tras el reinicio (`Compiled successfully`) antes de dar el cambio por bueno.
 - Fecha: 2026-07-03
+
+### EF-04 — Chart.js dentro de páginas Ionic muestra animaciones bugeadas/trabadas
+- Qué pasó: al integrar Chart.js en el módulo admin "Clientes" (`clientes-top-chart.component.ts`) dentro de `ion-content`, la animación de las barras se veía trabada/reiniciada múltiples veces, como si el gráfico se redibujara en loop durante la transición de entrada de la página.
+- Causa: el `ResizeObserver` interno de Chart.js reacciona a los cambios de tamaño transitorios del contenedor durante la transición de página de Ionic (que usa `transform` para la animación de ruta), interpretando esos cambios como un resize real del canvas y reiniciando la animación del gráfico en cada frame de la transición.
+- Regla:
+  - Al usar Chart.js dentro de páginas Ionic (cualquier contenido con transiciones de ruta o `ion-content`), setear `options.animation = false` para deshabilitar la animación del gráfico (el chart aparece completo de golpe, sin transición incremental).
+  - Setear `options.resizeDelay = 200` (o 100–300ms) para que el ResizeObserver espere a que el resize se "estabilice" antes de redibujar (útil si se necesita mantener animación en otros contextos).
+  - La combinación de ambos (`animation: false` + `resizeDelay`) es el fix completo para páginas Ionic con transiciones.
+  - Nota de contexto: Ionic no trae ninguna librería de gráficos — todo lo existente en el proyecto antes de Chart.js (`bar-chart`, `donut-chart`, `progress-bar`, `mini-bar`, `area-chart`) es CSS/SVG hecho a mano, cero dependencias. `chart.js` es la primera dependencia de charting real del proyecto, agregada como excepción puntual (usuario pidió explícitamente Chart.js para el componente de Top 5 clientes).
+- Fecha: 2026-07-18

@@ -28,12 +28,12 @@ Sucursales: **una sola** en esta versión, pero el diseño debe ser **escalable 
 - **Mi cuenta**: acumulación de puntos, Mi Perfil, Inicio de sesión y seguridad, Mis cupones, Mis pedidos, Métodos de pago, Configuración, Rooster (sección del local — "Rooster" es el nombre del restaurante, no un usuario ni mascota), Ayuda (preguntas frecuentes), Contacto (consultas directas al número oficial), Sobre la App, Notificaciones, Mi restaurante.
 
 ## Módulos — Administrador
-- Dashboard / Inicio
+- Dashboard / Inicio (curación del Home: destacados, oferta hero, preview de cupones)
 - Gestión de pedidos en tiempo real
 - Gestión de menú / catálogo
 - Inventario (insumos / materia prima)
 - Ofertas y cupones
-- Clientes
+- Clientes (analítica de compra: gasto total, pedidos, ticket promedio, ranking top 5)
 - Usuarios y roles
 - Reportes y analíticas
 - Notificaciones / marketing
@@ -56,7 +56,8 @@ Sucursales: **una sola** en esta versión, pero el diseño debe ser **escalable 
 - Reglas: sin tabla `direcciones`; horarios en `configuraciones` (clave-valor); precios congelados en el detalle de pedido al momento de la compra.
 - Estados de pedido: `pendiente`, `en_proceso`, `listo`, `entregado`, `cancelado`. Modalidad: comer aquí / para llevar.
 - `insumos`/`insumo_movimientos`: inventario de ingredientes/materia prima (NO stock de productos del menú). `insumos.deleted_at` (soft delete, conserva historial en `insumo_movimientos`). Cada "toma física" crea una fila en `insumo_movimientos` y actualiza `insumos.cantidad_actual`.
-- Esquema y versiones: `back-document/bd-doc/` (incluye `rooster_pizza_bd.sql` y `migracion_2026-07-13_insumos.sql`).
+- `productos.popular`/`productos.nuevo` (2026-07-18): flags boolean independientes para secciones del Home, igual que `productos.destacado` (un producto puede estar en varias secciones a la vez).
+- Esquema y versiones: `back-document/bd-doc/` (incluye `rooster_pizza_bd.sql`, `migracion_2026-07-13_insumos.sql`, `migracion_2026-07-18_home_secciones.sql`).
 
 ## Identidad visual (resumen)
 - App cliente: NUNCA fondo negro (negro solo para texto/iconos). Paleta cálida de marca: rojo Pantone 185C (~#E8112D), naranja, dorado, tan. Fondos crema/blanco cálido.
@@ -67,11 +68,13 @@ Sucursales: **una sola** en esta versión, pero el diseño debe ser **escalable 
 ## Estado de módulos
 - **Módulo 1 — Autenticación (registro + login): FUNCIONAL.** Backend (Laravel + Sanctum) y frontend (Ionic) conectados y probados end-to-end. Cómo levantarlo y probarlo: `COMO-CORRER.md`.
 - **Módulo 2 — Catálogo de productos (Menú admin + Home cliente): FUNCIONAL.** CRUD completo (Controller-Service-Repository + DTOs + Resources) protegido por rol (`super_admin`/`admin_sede`), con subida de fotos a Cloudinary (cuenta dedicada al proyecto, subida vía backend). Admin: listar/filtrar/crear/editar/eliminar (soft delete) + modal de detalle. Home: consume el mismo catálogo (`GET /productos`, solo `disponible=true`) con modal de detalle y botón "Añadir al carrito" (placeholder, sin lógica todavía). Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
-- **App cliente: Home rediseñado como vitrina (2026-07-17).** Home muestra Destacados (`productos.destacado`), Ofertas y Cupones vigentes — ya no es el menú completo. El menú completo (categorías, buscador, filtro) ahora vive en la tab **Carrito** (antes placeholder hardcodeado). Ofertas (tab), Mi cuenta — siguen maquetado fiel al prototipo, hardcodeado. Carrito real (agregar/editar/ver) todavía NO existe — el botón "Añadir al carrito" es placeholder a propósito, queda para otro dev.
-- **Panel admin (resto): base visual lista.** Shell con sidebar + 11 módulos en `frotend-integradorIII/src/app/admin/`. Menú, Ofertas y cupones, Inventario e **Inicio** (nuevo, 2026-07-17: curación del Home — destacados, oferta "hero", preview de cupones) ya conectados a la API real; Dashboard, Pedidos, Usuarios y roles, Analíticas, Notificaciones, Reseñas, Configuración siguen maquetado estático. El atajo temporal `admin`/`123` en el login YA NO EXISTE — el acceso a `/admin` ahora depende del rol real devuelto por el backend (aunque la ruta en sí sigue sin guard de Angular).
+- **App cliente: Home rediseñado como vitrina (2026-07-17, ampliado 2026-07-18).** Home muestra Destacados (`productos.destacado`), Populares (`productos.popular`), Lo nuevo (`productos.nuevo`), Ofertas y Cupones vigentes — ya no es el menú completo. El menú completo (categorías, buscador, filtro) ahora vive en la tab **Carrito** (antes placeholder hardcodeado). Ofertas (tab), Mi cuenta — siguen maquetado fiel al prototipo, hardcodeado. Carrito real (agregar/editar/ver) todavía NO existe — el botón "Añadir al carrito" es placeholder a propósito, queda para otro dev.
+- **Panel admin (funcionales hoy):** Shell con sidebar + 12 módulos en `frotend-integradorIII/src/app/admin/`. Menú, Ofertas y cupones (con KPIs clicables + buscador funcional, 2026-07-18), Inventario, **Inicio** (curación del Home: destacados/popular/nuevo, oferta "hero", preview de cupones) y **Clientes** (nuevo, 2026-07-18: analítica de compra solo lectura, gasto total/ticket promedio/cantidad pedidos/último pedido, historial de pedidos por cliente, Top 5 por gasto con Chart.js) ya conectados a la API real. Dashboard, Pedidos, Usuarios y roles, Analíticas, Notificaciones, Reseñas, Configuración siguen maquetado estático. El atajo temporal `admin`/`123` en el login YA NO EXISTE — el acceso a `/admin` ahora depende del rol real devuelto por el backend (aunque la ruta en sí sigue sin guard de Angular).
 - **Módulo 4 — Inventario de insumos: FUNCIONAL.** CRUD de insumos (materia prima: carnes, queso, harina...) + toma física auditada (`insumo_movimientos`), protegido por rol, 100% admin (sin endpoints públicos). Refinado 2026-07-13: unidades de medida personalizadas persistentes (se derivan de datos reales), historial de tomas físicas por insumo (botón condicional si tiene movimientos), buscador funcional, KPIs clicables como filtros, estados con wording claro, validación `stock_minimo ≤ cantidad_actual` en frontend y backend. Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
+- **Módulo Clientes (admin, nuevo 2026-07-18): FUNCIONAL.** Analítica de compra 100% solo lectura. Backend: `Pedido` (modelo nuevo — antes no existía ningún modelo de pedidos), `ClienteRepository`/`ClienteService`/`ClienteController`, `ClienteResumenResource`/`PedidoResumenResource`, endpoints `GET /admin/clientes` (con agregación SQL sin N+1) y `GET /admin/clientes/{id}/pedidos` (valida instancia antes de devolver, evita IDOR cross-tenant). Frontend: `ClienteService`, 4 KPIs clicables (incluye filtro especial "Top comprador" que muestra únicamente ese cliente), tabla con búsqueda, modal de historial de pedidos, Top 5 por gasto con Chart.js (barra horizontal, solo el pico coloreado con rojo de marca). Seeder `ClientesDemoSeeder` (opt-in) con sucursal + 15 clientes + ~100 pedidos de prueba, ya ejecutado contra BD local.
 - **Cloudinary**: cuenta gratuita dedicada al proyecto (no mezclada con cuentas personales de ningún dev), subida de imágenes firmada desde el backend (`CloudinaryService`), credenciales solo en `.env` local de cada dev (pedirlas al equipo, no están versionadas).
-- Próximos: conectar Carrito/Pedir real (el botón "Añadir al carrito" del Home ya está maquetado pero sin lógica), guard de rol real en Angular para `/admin`, resto de módulos del admin (pedidos, ofertas, usuarios, etc.) vía `api-integration-helper`, "Continuar con Google" (fast-follow), "Olvidé mi contraseña". Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
+- **Chart.js**: dependencia nueva agregada 2026-07-18 (primera librería de charting real del proyecto — todo lo anterior es CSS/SVG hecho a mano). Usada solo en `clientes-top-chart.component.ts`. Requiere `animation: false` + `resizeDelay: 200` para evitar animaciones bugeadas por las transiciones de página de Ionic (ver `AntierroresFront.md` EF-04).
+- Próximos: conectar Carrito/Pedir real (el botón "Añadir al carrito" del Home ya está maquetado pero sin lógica), guard de rol real en Angular para `/admin`, resto de módulos del admin (pedidos/usuarios/analíticas/etc.), "Continuar con Google" (fast-follow), "Olvidé mi contraseña". Detalle en `back-document/HiloActualBack.md` y `front-document/HiloActualFront.md`.
 
 ## Propósito de esta documentación
 Tener referencia documentada (paleta, logos, reglas, base de datos, decisiones) para que los subagentes respondan sin escanear todo el código, ahorrando tokens y trabajando optimizado. Mantener al día vía `doc-updater`.
@@ -85,4 +88,4 @@ Tener referencia documentada (paleta, logos, reglas, base de datos, decisiones) 
 - `back-document/` — ARQUITECTURA, AntierroresBack, HiloActualBack, `bd-doc/`.
 - `front-document/` — ARQUITECTURA, ReglasUX, guiaMDFrontend, AntierroresFront, HiloActualFront.
 
-*Última actualización: 2026-07-13.*
+*Última actualización: 2026-07-18.*
