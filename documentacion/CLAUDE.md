@@ -47,12 +47,15 @@ intención es simple aunque toque un dominio pesado, bajá de tier automáticame
 | Pregunta general, arquitectura, planificación | Respuesta directa (sin agente) | liviano | bajo | no |
 
 ## Reglas del esquema
-- 29 tablas (21/28 originales del ERD + `insumos`/`insumo_movimientos` del
+- 30 tablas (21/28 originales del ERD + `insumos`/`insumo_movimientos` del
   módulo Inventario 2026-07-13 + 6 tablas del multi-tenant/superadmin del
   compañero 2026-07-12/13 [`instancias`, `superadministradores`, `modulos`,
   `usuario_modulo`, `password_reset_tokens`, más columnas `instancia_id` en
-  tablas raíz] + `producto_tamanos` del módulo Pedidos 2026-07-16, aprobado).
-  Ningún agente agrega tablas nuevas sin aprobación explícita del usuario.
+  tablas raíz] + `producto_tamanos` del módulo Pedidos 2026-07-16 +
+  `producto_extras` de Extras 2026-07-17, aprobado). `extras.categoria_id`
+  ahora es nullable (extra "general" = `es_general=true`+`categoria_id NULL`,
+  CHECK garantiza que no coexistan). Ningún agente agrega tablas nuevas sin
+  aprobación explícita del usuario.
 - No existe tabla `direcciones` (no hay delivery en esta versión).
 - Horarios viven en `configuraciones` (clave-valor), no en tabla separada.
 - Nullability, DEFAULT y ON DELETE deben verificarse contra las migraciones
