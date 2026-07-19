@@ -7,20 +7,26 @@ namespace App\DTOs\Extra;
 final class ActualizarExtraDTO
 {
     public function __construct(
-        public readonly int $categoriaId,
+        public readonly ?int $categoriaId,
         public readonly string $nombre,
         public readonly float $precio,
         public readonly bool $disponible,
+        public readonly bool $esGeneral,
     ) {
     }
 
     public static function fromArray(array $data): self
     {
+        $esGeneral = (bool) ($data['es_general'] ?? false);
+
         return new self(
-            categoriaId: (int) $data['categoria_id'],
+            categoriaId: $esGeneral
+                ? null
+                : (isset($data['categoria_id']) ? (int) $data['categoria_id'] : null),
             nombre: (string) $data['nombre'],
             precio: (float) $data['precio'],
             disponible: (bool) ($data['disponible'] ?? true),
+            esGeneral: $esGeneral,
         );
     }
 
@@ -31,6 +37,7 @@ final class ActualizarExtraDTO
             'nombre' => $this->nombre,
             'precio' => $this->precio,
             'disponible' => $this->disponible,
+            'es_general' => $this->esGeneral,
         ];
     }
 }

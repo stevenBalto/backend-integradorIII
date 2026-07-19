@@ -97,11 +97,14 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::match(['put', 'patch'], '/usuarios/{id}', [UsuarioController::class, 'update']);
         Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy']);
 
-        // Extras / acompañamientos (CRUD completo).
+        // Extras / acompañamientos (CRUD completo + asignacion puntual a productos).
         Route::get('/extras', [ExtraController::class, 'index']);
+        Route::get('/extras/{id}', [ExtraController::class, 'show']);
         Route::post('/extras', [ExtraController::class, 'store']);
         Route::match(['put', 'patch'], '/extras/{id}', [ExtraController::class, 'update']);
         Route::delete('/extras/{id}', [ExtraController::class, 'destroy']);
+        Route::post('/extras/{id}/productos', [ExtraController::class, 'asignarProducto']);
+        Route::delete('/extras/{id}/productos/{productoId}', [ExtraController::class, 'desasignarProducto']);
 
         // Pedidos (administracion).
         Route::get('/pedidos', [PedidoAdminController::class, 'index']);
@@ -109,8 +112,10 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::post('/pedidos/{id}/estado', [PedidoAdminController::class, 'cambiarEstado']);
         Route::post('/pedidos/{id}/pagar', [PedidoAdminController::class, 'pagar']);
 
-        // Sucursales (listado admin igual que cliente, misma ruta compartida).
-        Route::get('/sucursales', [SucursalController::class, 'index']);
+        // Sucursales (listado admin incluye inactivas + alta/edicion).
+        Route::get('/sucursales', [SucursalController::class, 'indexAdmin']);
+        Route::post('/sucursales', [SucursalController::class, 'store']);
+        Route::match(['put', 'patch'], '/sucursales/{id}', [SucursalController::class, 'update']);
     });
 
 // ── Superadministracion (panel AISLADO: login/guard/middleware propios) ──────

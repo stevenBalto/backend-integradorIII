@@ -7,6 +7,7 @@ namespace App\Services;
 use App\DTOs\Extra\ActualizarExtraDTO;
 use App\DTOs\Extra\CrearExtraDTO;
 use App\Models\Extra;
+use App\Models\Producto;
 use App\Repositories\CategoriaRepository;
 use App\Repositories\ExtraRepository;
 use Illuminate\Database\Eloquent\Collection;
@@ -48,20 +49,65 @@ final class ExtraService
         return $extra;
     }
 
+    /** Como buscarPorId pero con los productos asignados puntualmente cargados. */
+    public function buscarConAsignados(int $id): Extra
+    {
+        $extra = $this->extras->buscarConAsignados($id);
+
+        if ($extra === null) {
+            throw ValidationException::withMessages([
+                'id' => ['El extra no existe.'],
+            ]);
+        }
+
+        return $extra;
+    }
+
     public function crear(CrearExtraDTO $dto): Extra
     {
-        $this->validarCategoria($dto->categoriaId);
+        if (! $dto->esGeneral) {
+            $this->validarCategoria($dto->categoriaId);
+        }
 
         return $this->extras->crear($dto->toArray());
     }
 
     public function actualizar(int $id, ActualizarExtraDTO $dto): Extra
     {
-        $this->validarCategoria($dto->categoriaId);
+        if (! $dto->esGeneral) {
+            $this->validarCategoria($dto->categoriaId);
+        }
 
         $extra = $this->buscarPorId($id);
 
         return $this->extras->actualizar($extra, $dto->toArray());
+    }
+
+    /**
+     * Asigna puntualmente una extra (de categoria) a un producto especifico.
+     * Una extra general ya aplica a todo, no admite asignacion puntual.
+     */
+    public function asignarAProducto(int $extraId, int $productoId): void
+    {
+        $extra = $this->buscarPorId($extraId);
+
+        // findOrFail aplica el global scope de instancia: no se puede asignar a un
+        // producto de otro tenant (aunque el exists del request lo dejara pasar).
+        Producto::query()->findOrFail($productoId);
+
+        if ($extra->es_general) {
+            throw ValidationException::withMessages([
+                'extra_id' => ['Esta extra ya es general, aplica a todos los productos automáticamente.'],
+            ]);
+        }
+
+        $this->extras->asignarAProducto($extraId, $productoId);
+    }
+
+    /** Quita la asignacion puntual. Borrar una fila inexistente es un no-op inofensivo. */
+    public function desasignarDeProducto(int $extraId, int $productoId): void
+    {
+        $this->extras->desasignarDeProducto($extraId, $productoId);
     }
 
     public function eliminar(int $id): void
@@ -77,8 +123,14 @@ final class ExtraService
         $this->extras->eliminar($extra);
     }
 
-    private function validarCategoria(int $categoriaId): void
+    private function validarCategoria(?int $categoriaId): void
     {
+        if ($categoriaId === null) {
+            throw ValidationException::withMessages([
+                'categoria_id' => ['La categoría es obligatoria si la extra no es general.'],
+            ]);
+        }
+
         if (! $this->categorias->existe($categoriaId)) {
             throw ValidationException::withMessages([
                 'categoria_id' => ['La categoría seleccionada no existe.'],

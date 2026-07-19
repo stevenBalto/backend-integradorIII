@@ -18,6 +18,13 @@ final class ExtraResource extends JsonResource
             'nombre' => $this->nombre,
             'precio' => (float) $this->precio,
             'disponible' => (bool) $this->disponible,
+            'es_general' => (bool) $this->es_general,
+            'productos_asignados' => $this->whenLoaded(
+                'productosAsignados',
+                fn () => $this->productosAsignados
+                    ->map(fn ($p) => ['id' => $p->id, 'nombre' => $p->nombre])
+                    ->all()
+            ),
         ];
     }
 }

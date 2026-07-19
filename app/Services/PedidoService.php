@@ -8,6 +8,7 @@ use App\DTOs\Pedido\CrearPedidoDTO;
 use App\Models\Extra;
 use App\Models\Pedido;
 use App\Models\Producto;
+use App\Models\ProductoExtra;
 use App\Models\ProductoTamano;
 use App\Models\User;
 use App\Repositories\PedidoHistorialRepository;
@@ -186,9 +187,17 @@ final class PedidoService
         $totalExtras = 0.0;
 
         foreach ($item['extra_ids'] ?? [] as $extraId) {
+            // Una extra es valida para este producto si es general, si es de su
+            // categoria, o si fue asignada puntualmente via producto_extras.
             $extra = Extra::query()
-                ->where('categoria_id', $producto->categoria_id)
                 ->where('disponible', true)
+                ->where(function ($query) use ($producto): void {
+                    $query->where('es_general', true)
+                        ->orWhere('categoria_id', $producto->categoria_id)
+                        ->orWhereIn('id', ProductoExtra::query()
+                            ->where('producto_id', $producto->id)
+                            ->select('extra_id'));
+                })
                 ->find($extraId);
 
             if ($extra === null) {

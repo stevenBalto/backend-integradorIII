@@ -41,4 +41,16 @@ final class SucursalRepository
             ->where('activa', true)
             ->exists();
     }
+
+    public function crear(array $datos): Sucursal
+    {
+        return Sucursal::create($datos);
+    }
+
+    public function actualizar(Sucursal $sucursal, array $datos): Sucursal
+    {
+        $sucursal->update($datos);
+
+        return $sucursal;
+    }
 }

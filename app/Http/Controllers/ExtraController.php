@@ -11,6 +11,7 @@ use App\Http\Requests\Extra\UpdateExtraRequest;
 use App\Http\Resources\ExtraResource;
 use App\Services\ExtraService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * Endpoints de extras / acompañamientos (100% administracion, sin acceso publico).
@@ -27,6 +28,12 @@ final class ExtraController extends Controller
     {
         return ExtraResource::collection($this->extras->listarTodos())
             ->response();
+    }
+
+    /** GET /api/admin/extras/{id} */
+    public function show(int $id): ExtraResource
+    {
+        return new ExtraResource($this->extras->buscarConAsignados($id));
     }
 
     /** POST /api/admin/extras */
@@ -51,5 +58,25 @@ final class ExtraController extends Controller
         $this->extras->eliminar($id);
 
         return response()->json(['message' => 'Extra eliminado correctamente.']);
+    }
+
+    /** POST /api/admin/extras/{id}/productos — asigna la extra a un producto puntual. */
+    public function asignarProducto(Request $request, int $id): ExtraResource
+    {
+        $datos = $request->validate([
+            'producto_id' => ['required', 'integer', 'exists:productos,id'],
+        ]);
+
+        $this->extras->asignarAProducto($id, (int) $datos['producto_id']);
+
+        return new ExtraResource($this->extras->buscarConAsignados($id));
+    }
+
+    /** DELETE /api/admin/extras/{id}/productos/{productoId} — quita la asignacion puntual. */
+    public function desasignarProducto(int $id, int $productoId): ExtraResource
+    {
+        $this->extras->desasignarDeProducto($id, $productoId);
+
+        return new ExtraResource($this->extras->buscarConAsignados($id));
     }
 }

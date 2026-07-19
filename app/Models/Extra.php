@@ -8,10 +8,13 @@ use App\Models\Concerns\PerteneceAInstancia;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
- * Extra / acompanamiento de una categoria. Mapea `extras`.
- * Ejemplo: para categoria "Pizzas" -> Extra queso, Jamon extra, Pepperoni extra.
+ * Extra / acompanamiento. Mapea `extras`.
+ * Una extra puede ser: de una categoria (categoria_id, es_general=false, aplica a
+ * todos los productos de esa categoria), general (es_general=true, categoria_id=null,
+ * aplica a TODOS los productos) o asignada puntualmente a productos via producto_extras.
  * Aislado por instancia (multi-tenant) via PerteneceAInstancia.
  */
 class Extra extends Model
@@ -26,6 +29,7 @@ class Extra extends Model
         'nombre',
         'precio',
         'disponible',
+        'es_general',
     ];
 
     protected function casts(): array
@@ -33,6 +37,7 @@ class Extra extends Model
         return [
             'precio' => 'decimal:2',
             'disponible' => 'boolean',
+            'es_general' => 'boolean',
         ];
     }
 
@@ -40,5 +45,16 @@ class Extra extends Model
     public function categoria(): BelongsTo
     {
         return $this->belongsTo(Categoria::class);
+    }
+
+    /**
+     * Productos a los que esta extra fue asignada puntualmente (pivote producto_extras).
+     *
+     * @return BelongsToMany<Producto>
+     */
+    public function productosAsignados(): BelongsToMany
+    {
+        return $this->belongsToMany(Producto::class, 'producto_extras', 'extra_id', 'producto_id')
+            ->withTimestamps();
     }
 }

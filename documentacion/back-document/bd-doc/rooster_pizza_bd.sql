@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict az2UqGgUsscabRLguiK9jl09BA9SCwLHriybme1UeIgVaygQZdMlTXvQRxi1WfZ
+\restrict cTCeJRHFYLQ3xsEJkiuCyrMSx5vfnxYpiISKruca3f9rfdor52N9xgngUmo5qqc
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -237,13 +237,15 @@ ALTER SEQUENCE public.detalle_pedido_id_seq OWNED BY public.detalle_pedido.id;
 
 CREATE TABLE public.extras (
     id bigint NOT NULL,
-    categoria_id bigint NOT NULL,
+    categoria_id bigint,
     nombre character varying(80) NOT NULL,
     precio numeric(10,2) NOT NULL,
     disponible boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone,
     updated_at timestamp without time zone,
-    instancia_id bigint NOT NULL
+    instancia_id bigint NOT NULL,
+    es_general boolean DEFAULT false NOT NULL,
+    CONSTRAINT chk_extras_general_xor_categoria CHECK ((((es_general = true) AND (categoria_id IS NULL)) OR ((es_general = false) AND (categoria_id IS NOT NULL))))
 );
 
 
@@ -729,6 +731,38 @@ ALTER SEQUENCE public.personal_access_tokens_id_seq OWNED BY public.personal_acc
 
 
 --
+-- Name: producto_extras; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.producto_extras (
+    id bigint NOT NULL,
+    producto_id bigint NOT NULL,
+    extra_id bigint NOT NULL,
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone
+);
+
+
+--
+-- Name: producto_extras_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.producto_extras_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: producto_extras_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.producto_extras_id_seq OWNED BY public.producto_extras.id;
+
+
+--
 -- Name: producto_tamanos; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1200,6 +1234,13 @@ ALTER TABLE ONLY public.personal_access_tokens ALTER COLUMN id SET DEFAULT nextv
 
 
 --
+-- Name: producto_extras id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.producto_extras ALTER COLUMN id SET DEFAULT nextval('public.producto_extras_id_seq'::regclass);
+
+
+--
 -- Name: producto_tamanos id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1455,6 +1496,14 @@ ALTER TABLE ONLY public.personal_access_tokens
 
 
 --
+-- Name: producto_extras producto_extras_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.producto_extras
+    ADD CONSTRAINT producto_extras_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: producto_tamanos producto_tamanos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1540,6 +1589,14 @@ ALTER TABLE ONLY public.superadministradores
 
 ALTER TABLE ONLY public.pedidos
     ADD CONSTRAINT uq_pedidos_codigo UNIQUE (codigo);
+
+
+--
+-- Name: producto_extras uq_producto_extras; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.producto_extras
+    ADD CONSTRAINT uq_producto_extras UNIQUE (producto_id, extra_id);
 
 
 --
@@ -1650,6 +1707,20 @@ CREATE INDEX idx_ofertas_instancia ON public.ofertas USING btree (instancia_id);
 --
 
 CREATE INDEX idx_pedidos_instancia ON public.pedidos USING btree (instancia_id);
+
+
+--
+-- Name: idx_producto_extras_extra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_producto_extras_extra ON public.producto_extras USING btree (extra_id);
+
+
+--
+-- Name: idx_producto_extras_producto; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_producto_extras_producto ON public.producto_extras USING btree (producto_id);
 
 
 --
@@ -1916,6 +1987,22 @@ ALTER TABLE ONLY public.pagos
 
 
 --
+-- Name: producto_extras fk_pe_extra; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.producto_extras
+    ADD CONSTRAINT fk_pe_extra FOREIGN KEY (extra_id) REFERENCES public.extras(id) ON DELETE CASCADE;
+
+
+--
+-- Name: producto_extras fk_pe_producto; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.producto_extras
+    ADD CONSTRAINT fk_pe_producto FOREIGN KEY (producto_id) REFERENCES public.productos(id) ON DELETE CASCADE;
+
+
+--
 -- Name: pedidos fk_pedidos_cliente; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2103,5 +2190,5 @@ ALTER TABLE ONLY public.usuario_modulo
 -- PostgreSQL database dump complete
 --
 
-\unrestrict az2UqGgUsscabRLguiK9jl09BA9SCwLHriybme1UeIgVaygQZdMlTXvQRxi1WfZ
+\unrestrict cTCeJRHFYLQ3xsEJkiuCyrMSx5vfnxYpiISKruca3f9rfdor52N9xgngUmo5qqc
 

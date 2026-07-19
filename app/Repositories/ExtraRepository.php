@@ -6,6 +6,7 @@ namespace App\Repositories;
 
 use App\Models\DetallePedidoExtra;
 use App\Models\Extra;
+use App\Models\ProductoExtra;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -35,6 +36,30 @@ final class ExtraRepository
     public function buscarPorId(int $id): ?Extra
     {
         return Extra::query()->with('categoria')->find($id);
+    }
+
+    /** Igual que buscarPorId pero carga los productos asignados puntualmente (para el show). */
+    public function buscarConAsignados(int $id): ?Extra
+    {
+        return Extra::query()->with(['categoria', 'productosAsignados'])->find($id);
+    }
+
+    /** Asigna puntualmente una extra a un producto. Idempotente. */
+    public function asignarAProducto(int $extraId, int $productoId): void
+    {
+        ProductoExtra::firstOrCreate([
+            'extra_id' => $extraId,
+            'producto_id' => $productoId,
+        ]);
+    }
+
+    /** Quita la asignacion puntual. Borrar una fila inexistente es un no-op. */
+    public function desasignarDeProducto(int $extraId, int $productoId): void
+    {
+        ProductoExtra::query()
+            ->where('extra_id', $extraId)
+            ->where('producto_id', $productoId)
+            ->delete();
     }
 
     public function crear(array $datos): Extra

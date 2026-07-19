@@ -8,6 +8,7 @@ use App\Models\Concerns\PerteneceAInstancia;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -67,5 +68,16 @@ class Producto extends Model
     public function todosLosTamanos(): HasMany
     {
         return $this->hasMany(ProductoTamano::class)->orderBy('orden');
+    }
+
+    /**
+     * Extras asignadas puntualmente a este producto (pivote producto_extras).
+     *
+     * @return BelongsToMany<Extra>
+     */
+    public function extrasAsignados(): BelongsToMany
+    {
+        return $this->belongsToMany(Extra::class, 'producto_extras', 'producto_id', 'extra_id')
+            ->withTimestamps();
     }
 }
