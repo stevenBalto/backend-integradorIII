@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ExtraController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\ConfiguracionController;
 use App\Http\Controllers\CuentaController;
 use App\Http\Controllers\CuponController;
 use App\Http\Controllers\InsumoController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\SucursalController;
 use App\Http\Controllers\SuperAdminAuthController;
 use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\ClienteController;
 use Illuminate\Support\Facades\Route;
 
 // ── Autenticacion ─────────────────────────────────────────────────────────────
@@ -49,6 +51,7 @@ Route::get('/productos', [ProductoController::class, 'index']);
 Route::get('/categorias', [CategoriaController::class, 'index']);
 Route::get('/ofertas', [OfertaController::class, 'indexPublic']);
 Route::get('/cupones', [CuponController::class, 'indexPublic']);
+Route::get('/home-config', [ConfiguracionController::class, 'show']);
 
 // ── Busqueda publica de pedido por codigo ────────────────────────────────────
 Route::get('/pedidos/buscar', [PedidoController::class, 'buscarPublico'])->middleware('throttle:10,1');
@@ -77,6 +80,9 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::post('/cupones', [CuponController::class, 'store']);
         Route::match(['put', 'patch'], '/cupones/{id}', [CuponController::class, 'update']);
         Route::delete('/cupones/{id}', [CuponController::class, 'destroy']);
+
+        // Configuracion del Home (curacion: oferta destacada)
+        Route::put('/home-config', [ConfiguracionController::class, 'update']);
 
         // Inventario (insumos / materia prima) — 100% admin, sin endpoints publicos
         Route::get('/insumos', [InsumoController::class, 'index']);
@@ -116,6 +122,10 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::get('/sucursales', [SucursalController::class, 'indexAdmin']);
         Route::post('/sucursales', [SucursalController::class, 'store']);
         Route::match(['put', 'patch'], '/sucursales/{id}', [SucursalController::class, 'update']);
+
+        // Clientes (analitica de compra, solo lectura)
+        Route::get('/clientes', [ClienteController::class, 'index']);
+        Route::get('/clientes/{id}/pedidos', [ClienteController::class, 'pedidos']);
     });
 
 // ── Superadministracion (panel AISLADO: login/guard/middleware propios) ──────

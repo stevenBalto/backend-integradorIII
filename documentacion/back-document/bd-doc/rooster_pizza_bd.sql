@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict cTCeJRHFYLQ3xsEJkiuCyrMSx5vfnxYpiISKruca3f9rfdor52N9xgngUmo5qqc
+\restrict 1470AGsgpHDdsHiIMiGlQ8tza13VWmAUNPVIkaJoHmOOrMowJaDEFmuiqNgvd0w
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -814,7 +814,9 @@ CREATE TABLE public.productos (
     created_at timestamp without time zone,
     updated_at timestamp without time zone,
     deleted_at timestamp without time zone,
-    instancia_id bigint NOT NULL
+    instancia_id bigint NOT NULL,
+    popular boolean DEFAULT false NOT NULL,
+    nuevo boolean DEFAULT false NOT NULL
 );
 
 
@@ -2190,5 +2192,5 @@ ALTER TABLE ONLY public.usuario_modulo
 -- PostgreSQL database dump complete
 --
 
-\unrestrict cTCeJRHFYLQ3xsEJkiuCyrMSx5vfnxYpiISKruca3f9rfdor52N9xgngUmo5qqc
+\unrestrict 1470AGsgpHDdsHiIMiGlQ8tza13VWmAUNPVIkaJoHmOOrMowJaDEFmuiqNgvd0w
 

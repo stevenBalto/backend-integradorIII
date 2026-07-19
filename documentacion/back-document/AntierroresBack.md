@@ -48,3 +48,13 @@ Formato sugerido por entrada:
 - Causa: decisión de arquitectura del multi-tenant del compañero — el catálogo público nunca se diseñó pensando en múltiples instancias con catálogos propios navegables sin login.
 - Por qué no se arregla aquí: hoy es inofensivo (solo la instancia 1 tiene productos reales), y arreglarlo implica decidir un modelo de acceso público multi-tenant (¿subdominio por negocio? ¿selector de negocio en el home?) que le corresponde a quien diseñó el multi-tenant, no a esta tarea de Pedidos.
 - Fecha: 2026-07-16
+
+### EB-06 — Gotchas de Eloquent en seeders (fillable, trait, autoasignacion de instancia_id)
+- Qué pasó: al crear `ClientesDemoSeeder` (para poblar BD con datos de prueba del modulo Clientes), aparecieron 3 bloqueantes inesperados que NO se habian encontrado en seeders previos (`RolesSeeder`, `AdminTestUserSeeder`): (1) `Pedido::create()` tiraba error de mass-assignment porque `$fillable = []` (en la rama donde se escribió este seeder, `Pedido` era de solo lectura para el módulo Clientes — al mergear con el módulo Pedidos, `Pedido::$fillable` ya tiene las columnas reales, ver `HiloActualBack.md`), (2) `User::create()` no persistia `puntos_balance` aunque el campo existe en BD, (3) `Sucursal::create()` tiraba error de constraint NOT NULL en `instancia_id` porque, EN ESE MOMENTO, `Sucursal` no usaba el trait `PerteneceAInstancia` (eso se agregó en paralelo en la sesión de Pedidos del 2026-07-16 — tras el merge, `Sucursal` YA autoasigna `instancia_id`, este workaround puntual puede no ser necesario si se vuelve a correr el seeder desde cero).
+- Causa:
+  - `User::$fillable` NO incluye `puntos_balance` — hay que asignarlo por propiedad + `save()` despues del `create()`.
+  - El trait `PerteneceAInstancia` (que usan `User`/`Pedido`/`Producto`/`Insumo`/`Oferta`/`Sucursal`/`Extra`) autoasigna `instancia_id` leyendo `Auth::user()` en el hook `creating()` — en un seeder/comando de consola no hay usuario autenticado, asi que esto NO se autoasigna solo. Cualquier seeder que cree filas de estos modelos tiene que setear `instancia_id` manualmente.
+- Regla:
+  - Antes de escribir un seeder/comando que cree filas de un modelo, verificar: (1) si `$fillable` esta vacio o falta el campo que necesitas → usar `forceFill()` o asignacion por propiedad + `save()`; (2) si el modelo usa `PerteneceAInstancia` → setear `instancia_id` manualmente porque `Auth::user()` devuelve `null` fuera de requests web.
+  - NO asumir que `Model::create($data)` funciona para todos los modelos — algunos tienen `$fillable` restringido a proposito.
+- Fecha: 2026-07-18

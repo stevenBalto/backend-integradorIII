@@ -25,6 +25,12 @@ class UpdateProductoRequest extends FormRequest
         if ($this->has('destacado')) {
             $this->merge(['destacado' => filter_var($this->input('destacado'), FILTER_VALIDATE_BOOLEAN)]);
         }
+        if ($this->has('popular')) {
+            $this->merge(['popular' => filter_var($this->input('popular'), FILTER_VALIDATE_BOOLEAN)]);
+        }
+        if ($this->has('nuevo')) {
+            $this->merge(['nuevo' => filter_var($this->input('nuevo'), FILTER_VALIDATE_BOOLEAN)]);
+        }
         if ($this->has('disponible')) {
             $this->merge(['disponible' => filter_var($this->input('disponible'), FILTER_VALIDATE_BOOLEAN)]);
         }
@@ -46,6 +52,8 @@ class UpdateProductoRequest extends FormRequest
             'descripcion' => ['nullable', 'string', 'max:1000'],
             'precio_base' => ['required', 'numeric', 'min:0'],
             'destacado' => ['nullable', 'boolean'],
+            'popular' => ['nullable', 'boolean'],
+            'nuevo' => ['nullable', 'boolean'],
             'disponible' => ['nullable', 'boolean'],
             'imagen' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'tamanos' => ['nullable', 'array'],

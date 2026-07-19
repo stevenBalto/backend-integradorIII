@@ -13,6 +13,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * Pedido del cliente. Mapea `pedidos`.
  * Aislado por instancia (multi-tenant) via PerteneceAInstancia.
+ *
+ * Estados validos: pendiente, en_proceso, listo, entregado, cancelado.
+ * Modalidades: para_llevar, comer_aqui.
  */
 class Pedido extends Model
 {
@@ -59,6 +62,12 @@ class Pedido extends Model
     public function sucursal(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class);
+    }
+
+    /** @return BelongsTo<Cupon, Pedido> */
+    public function cupon(): BelongsTo
+    {
+        return $this->belongsTo(Cupon::class);
     }
 
     /** @return HasMany<DetallePedido> */

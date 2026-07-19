@@ -21,6 +21,8 @@ final class ProductoResource extends JsonResource
             'precio_base' => (float) $this->precio_base,
             'imagen_url' => $this->imagen_url,
             'destacado' => (bool) $this->destacado,
+            'popular' => (bool) $this->popular,
+            'nuevo' => (bool) $this->nuevo,
             'disponible' => (bool) $this->disponible,
             'tamanos' => ProductoTamanoResource::collection($this->whenLoaded('tamanos')),
             'extras' => ExtraResource::collection($this->whenLoaded('extrasCategoria', fn () => $this->extrasCategoria)),
