@@ -46,6 +46,7 @@ class StoreExtraRequest extends FormRequest
             'precio' => ['required', 'numeric', 'min:0'],
             'disponible' => ['nullable', 'boolean'],
             'es_general' => ['nullable', 'boolean'],
+            'imagen' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }
 

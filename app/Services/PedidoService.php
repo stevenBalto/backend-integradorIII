@@ -15,7 +15,6 @@ use App\Repositories\PedidoHistorialRepository;
 use App\Repositories\PedidoRepository;
 use App\Repositories\PuntosMovimientoRepository;
 use App\Repositories\SucursalRepository;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -81,6 +80,7 @@ final class PedidoService
                 'sucursal_id' => $dto->sucursalId,
                 'cupon_id' => null, // No hay integracion de cupones en este pass
                 'modalidad' => $dto->modalidad,
+                'nombre_cliente' => $dto->nombreCliente,
                 'estado' => 'pendiente',
                 'subtotal' => $subtotalPedido,
                 'descuento' => 0,
@@ -299,6 +299,66 @@ final class PedidoService
     }
 
     /**
+     * Revierte manualmente un pedido a un estado por el que YA paso (accion administrativa
+     * de "deshacer", distinta de cambiarEstado y su maquina de transiciones normal).
+     * No borra ni edita el historial: agrega una entrada nueva y auditable al final.
+     */
+    public function revertirEstado(int $pedidoId, string $estadoObjetivo, int $adminId): Pedido
+    {
+        return DB::transaction(function () use ($pedidoId, $estadoObjetivo, $adminId): Pedido {
+            $pedido = $this->pedidos->buscarPorId($pedidoId);
+
+            if ($pedido === null) {
+                throw ValidationException::withMessages([
+                    'id' => ['El pedido no existe.'],
+                ]);
+            }
+
+            $estadoActual = $pedido->estado;
+
+            if ($estadoObjetivo === $estadoActual) {
+                throw ValidationException::withMessages([
+                    'estado' => ['El pedido ya está en ese estado.'],
+                ]);
+            }
+
+            // El estado objetivo debe existir en el historial: no se puede "revertir" a
+            // un estado por el que el pedido nunca pasó.
+            $estuvoEnEseEstado = $pedido->historial
+                ->contains(fn ($fila) => $fila->estado === $estadoObjetivo);
+
+            if (! $estuvoEnEseEstado) {
+                throw ValidationException::withMessages([
+                    'estado' => ['Este pedido nunca estuvo en ese estado.'],
+                ]);
+            }
+
+            // Deshacer una entrega ya pagada implica que el pago registrado post-entrega
+            // deja de aplicar.
+            if ($estadoActual === 'entregado' && $pedido->pagado) {
+                $this->pedidos->revertirPago($pedido);
+            }
+
+            $this->pedidos->actualizarEstado($pedido, $estadoObjetivo);
+
+            $this->historial->crear([
+                'pedido_id' => $pedido->id,
+                'estado' => $estadoObjetivo,
+                'comentario' => 'Revertido manualmente por el admin',
+                'cambiado_por' => $adminId,
+            ]);
+
+            return $pedido->fresh([
+                'cliente',
+                'sucursal',
+                'detalles.producto',
+                'detalles.extras.extra',
+                'historial.cambiadoPor',
+            ]);
+        });
+    }
+
+    /**
      * Registra el pago de un pedido (solo si esta entregado).
      */
     public function registrarPago(int $pedidoId): Pedido
@@ -332,31 +392,6 @@ final class PedidoService
         ]);
     }
 
-    /**
-     * Estima la hora en que el pedido estara listo.
-     *
-     * Base: 15 min para llevar, 20 min para comer aqui.
-     * +2 min por cada item mas alla de los primeros 3.
-     * Maximo adicional: 45 minutos.
-     */
-    public function estimarHoraLista(Pedido $pedido): Carbon
-    {
-        $minutosBase = $pedido->modalidad === 'para_llevar' ? 15 : 20;
-
-        // Cargar detalles si no estan cargados
-        if (! $pedido->relationLoaded('detalles')) {
-            $pedido->load('detalles');
-        }
-
-        $cantidadItems = $pedido->detalles->count();
-        $minutosAdicionales = max(0, $cantidadItems - 3) * 2;
-        $minutosAdicionales = min($minutosAdicionales, 45);
-
-        $totalMinutos = $minutosBase + $minutosAdicionales;
-
-        return $pedido->created_at->copy()->addMinutes($totalMinutos);
-    }
-
     /** @return Collection<int, Pedido> */
     public function listarDeCliente(int $userId): Collection
     {
@@ -370,6 +405,20 @@ final class PedidoService
         if ($pedido === null) {
             throw ValidationException::withMessages([
                 'id' => ['El pedido no existe.'],
+            ]);
+        }
+
+        return $pedido;
+    }
+
+    /** El cliente busca uno de SUS pedidos por codigo (detalle completo). */
+    public function buscarDeClientePorCodigo(int $userId, string $codigo): Pedido
+    {
+        $pedido = $this->pedidos->buscarDeClientePorCodigo($userId, $codigo);
+
+        if ($pedido === null) {
+            throw ValidationException::withMessages([
+                'codigo' => ['No encontramos un pedido con ese código a tu nombre.'],
             ]);
         }
 

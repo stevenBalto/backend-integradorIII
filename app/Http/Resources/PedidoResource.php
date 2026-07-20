@@ -14,16 +14,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 final class PedidoResource extends JsonResource
 {
-    /** Hora estimada de entrega, calculada en el controller/service. */
-    private ?\Carbon\Carbon $horaEstimada = null;
-
-    public function setHoraEstimada(\Carbon\Carbon $hora): self
-    {
-        $this->horaEstimada = $hora;
-
-        return $this;
-    }
-
     public function toArray(Request $request): array
     {
         return [
@@ -36,9 +26,7 @@ final class PedidoResource extends JsonResource
             'total' => (float) $this->total,
             'puntos_ganados' => (int) $this->puntos_ganados,
             'notas' => $this->notas,
-            'hora_estimada' => $this->horaEstimada?->toIso8601String()
-                ?? $this->additional['hora_estimada']
-                ?? null,
+            'nombre_cliente' => $this->nombre_cliente,
             'sucursal' => $this->whenLoaded('sucursal', fn () => [
                 'id' => $this->sucursal->id,
                 'nombre' => $this->sucursal->nombre,

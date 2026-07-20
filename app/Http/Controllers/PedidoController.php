@@ -30,10 +30,7 @@ final class PedidoController extends Controller
             CrearPedidoDTO::fromArray($request->validated())
         );
 
-        $horaEstimada = $this->pedidos->estimarHoraLista($pedido);
-
         return (new PedidoResource($pedido))
-            ->additional(['hora_estimada' => $horaEstimada->toIso8601String()])
             ->response()
             ->setStatusCode(201);
     }
@@ -43,15 +40,23 @@ final class PedidoController extends Controller
     {
         $pedidos = $this->pedidos->listarDeCliente($request->user()->id);
 
-        // Agregar hora estimada a cada pedido
-        $pedidosConHora = $pedidos->map(function ($pedido) {
-            $horaEstimada = $this->pedidos->estimarHoraLista($pedido);
+        return PedidoResource::collection($pedidos)->response();
+    }
 
-            return (new PedidoResource($pedido))
-                ->additional(['hora_estimada' => $horaEstimada->toIso8601String()]);
-        });
+    /** GET /api/pedidos/mios/buscar?codigo=XXXX-XXXX — el cliente busca SU propio pedido por codigo. */
+    public function misPedidosBuscar(Request $request): JsonResponse
+    {
+        $codigo = $request->query('codigo');
 
-        return response()->json(['data' => $pedidosConHora]);
+        if (empty($codigo)) {
+            return response()->json([
+                'message' => 'El código del pedido es obligatorio.',
+            ], 422);
+        }
+
+        $pedido = $this->pedidos->buscarDeClientePorCodigo($request->user()->id, $codigo);
+
+        return (new PedidoResource($pedido))->response();
     }
 
     /** GET /api/pedidos/mios/{id} — ver un pedido propio. */
@@ -59,11 +64,7 @@ final class PedidoController extends Controller
     {
         $pedido = $this->pedidos->buscarDeCliente($request->user()->id, $id);
 
-        $horaEstimada = $this->pedidos->estimarHoraLista($pedido);
-
-        return (new PedidoResource($pedido))
-            ->additional(['hora_estimada' => $horaEstimada->toIso8601String()])
-            ->response();
+        return (new PedidoResource($pedido))->response();
     }
 
     /** GET /api/pedidos/buscar?codigo=XXXX-XXXX — busqueda publica por codigo. */
@@ -85,10 +86,6 @@ final class PedidoController extends Controller
             ], 404);
         }
 
-        $horaEstimada = $this->pedidos->estimarHoraLista($pedido);
-
-        return (new PedidoPublicoResource($pedido))
-            ->additional(['hora_estimada' => $horaEstimada->toIso8601String()])
-            ->response();
+        return (new PedidoPublicoResource($pedido))->response();
     }
 }

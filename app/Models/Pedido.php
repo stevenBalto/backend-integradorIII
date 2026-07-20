@@ -35,6 +35,7 @@ class Pedido extends Model
         'total',
         'puntos_ganados',
         'notas',
+        'nombre_cliente',
         'codigo',
         'pagado',
         'pagado_en',

@@ -79,7 +79,7 @@ final class ProductoRepository
      * Estrategia: soft-delete todos los existentes y crear los nuevos.
      * Es seguro porque producto_tamano_id en detalle_pedido es ON DELETE SET NULL.
      *
-     * @param array<int, array{nombre: string, precio: float}> $tamanos
+     * @param array<int, array{nombre: string, precio: float, descripcion?: ?string}> $tamanos
      */
     public function sincronizarTamanos(Producto $producto, array $tamanos): void
     {
@@ -92,6 +92,7 @@ final class ProductoRepository
                 'producto_id' => $producto->id,
                 'nombre' => $tamano['nombre'],
                 'precio' => $tamano['precio'],
+                'descripcion' => $tamano['descripcion'] ?? null,
                 'orden' => $orden,
                 'activo' => true,
             ]);

@@ -9,6 +9,7 @@ use App\DTOs\Extra\CrearExtraDTO;
 use App\Http\Requests\Extra\StoreExtraRequest;
 use App\Http\Requests\Extra\UpdateExtraRequest;
 use App\Http\Resources\ExtraResource;
+use App\Services\CloudinaryService;
 use App\Services\ExtraService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ final class ExtraController extends Controller
 {
     public function __construct(
         private readonly ExtraService $extras,
+        private readonly CloudinaryService $cloudinary,
     ) {
     }
 
@@ -39,7 +41,11 @@ final class ExtraController extends Controller
     /** POST /api/admin/extras */
     public function store(StoreExtraRequest $request): JsonResponse
     {
-        $extra = $this->extras->crear(CrearExtraDTO::fromArray($request->validated()));
+        $imagenUrl = $request->hasFile('imagen')
+            ? $this->cloudinary->subirImagenExtra($request->file('imagen'))
+            : null;
+
+        $extra = $this->extras->crear(CrearExtraDTO::fromArray($request->validated()), $imagenUrl);
 
         return (new ExtraResource($extra))->response()->setStatusCode(201);
     }
@@ -47,7 +53,11 @@ final class ExtraController extends Controller
     /** PUT/PATCH /api/admin/extras/{id} */
     public function update(UpdateExtraRequest $request, int $id): ExtraResource
     {
-        $extra = $this->extras->actualizar($id, ActualizarExtraDTO::fromArray($request->validated()));
+        $imagenUrl = $request->hasFile('imagen')
+            ? $this->cloudinary->subirImagenExtra($request->file('imagen'))
+            : null;
+
+        $extra = $this->extras->actualizar($id, ActualizarExtraDTO::fromArray($request->validated()), $imagenUrl);
 
         return new ExtraResource($extra);
     }

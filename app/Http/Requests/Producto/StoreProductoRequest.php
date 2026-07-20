@@ -59,6 +59,7 @@ class StoreProductoRequest extends FormRequest
             'tamanos' => ['nullable', 'array'],
             'tamanos.*.nombre' => ['required_with:tamanos', 'string', 'max:40'],
             'tamanos.*.precio' => ['required_with:tamanos', 'numeric', 'min:0'],
+            'tamanos.*.descripcion' => ['nullable', 'string', 'max:60'],
         ];
     }
 

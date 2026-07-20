@@ -12,6 +12,7 @@ final class CrearPedidoDTO
     public function __construct(
         public readonly int $sucursalId,
         public readonly string $modalidad,
+        public readonly string $nombreCliente,
         public readonly ?string $notas,
         public readonly array $items,
     ) {
@@ -33,6 +34,7 @@ final class CrearPedidoDTO
         return new self(
             sucursalId: (int) $data['sucursal_id'],
             modalidad: (string) $data['modalidad'],
+            nombreCliente: (string) $data['nombre_cliente'],
             notas: isset($data['notas']) ? (string) $data['notas'] : null,
             items: $items,
         );
@@ -43,6 +45,7 @@ final class CrearPedidoDTO
         return [
             'sucursal_id' => $this->sucursalId,
             'modalidad' => $this->modalidad,
+            'nombre_cliente' => $this->nombreCliente,
             'notas' => $this->notas,
             'items' => $this->items,
         ];

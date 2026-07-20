@@ -24,6 +24,7 @@ class StorePedidoRequest extends FormRequest
         return [
             'sucursal_id' => ['required', 'integer', 'exists:sucursales,id'],
             'modalidad' => ['required', 'string', 'in:para_llevar,comer_aqui'],
+            'nombre_cliente' => ['required', 'string', 'max:120'],
             'notas' => ['nullable', 'string', 'max:300'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.producto_id' => ['required', 'integer'],
@@ -45,6 +46,8 @@ class StorePedidoRequest extends FormRequest
             'sucursal_id.exists' => 'La sucursal seleccionada no existe.',
             'modalidad.required' => 'La modalidad es obligatoria.',
             'modalidad.in' => 'La modalidad debe ser "para_llevar" o "comer_aqui".',
+            'nombre_cliente.required' => 'El nombre es obligatorio.',
+            'nombre_cliente.max' => 'El nombre no puede superar los 120 caracteres.',
             'notas.max' => 'Las notas no pueden superar los 300 caracteres.',
             'items.required' => 'El pedido debe tener al menos un producto.',
             'items.min' => 'El pedido debe tener al menos un producto.',

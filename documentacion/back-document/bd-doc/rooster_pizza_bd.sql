@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 1470AGsgpHDdsHiIMiGlQ8tza13VWmAUNPVIkaJoHmOOrMowJaDEFmuiqNgvd0w
+\restrict QiEERqU6nTXd5tOTjSP4aBLYugqINCIUB6r6ucOdt1Gbm4MTCuwHDVrJaST2z1z
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -245,6 +245,7 @@ CREATE TABLE public.extras (
     updated_at timestamp without time zone,
     instancia_id bigint NOT NULL,
     es_general boolean DEFAULT false NOT NULL,
+    imagen_url character varying(255),
     CONSTRAINT chk_extras_general_xor_categoria CHECK ((((es_general = true) AND (categoria_id IS NULL)) OR ((es_general = false) AND (categoria_id IS NOT NULL))))
 );
 
@@ -670,7 +671,8 @@ CREATE TABLE public.pedidos (
     instancia_id bigint NOT NULL,
     codigo character varying(12) NOT NULL,
     pagado boolean DEFAULT false NOT NULL,
-    pagado_en timestamp without time zone
+    pagado_en timestamp without time zone,
+    nombre_cliente character varying(120)
 );
 
 
@@ -775,7 +777,8 @@ CREATE TABLE public.producto_tamanos (
     activo boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone,
     updated_at timestamp without time zone,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    descripcion character varying(60)
 );
 
 
@@ -2192,5 +2195,5 @@ ALTER TABLE ONLY public.usuario_modulo
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 1470AGsgpHDdsHiIMiGlQ8tza13VWmAUNPVIkaJoHmOOrMowJaDEFmuiqNgvd0w
+\unrestrict QiEERqU6nTXd5tOTjSP4aBLYugqINCIUB6r6ucOdt1Gbm4MTCuwHDVrJaST2z1z
 

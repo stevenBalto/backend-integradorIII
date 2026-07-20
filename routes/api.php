@@ -43,6 +43,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Pedidos (cliente autenticado).
     Route::post('/pedidos', [PedidoController::class, 'store']);
     Route::get('/pedidos/mios', [PedidoController::class, 'misPedidos']);
+    // 'mios/buscar' debe registrarse ANTES que 'mios/{id}', si no Laravel toma "buscar" como {id}.
+    Route::get('/pedidos/mios/buscar', [PedidoController::class, 'misPedidosBuscar']);
     Route::get('/pedidos/mios/{id}', [PedidoController::class, 'misPedidosShow']);
 });
 
@@ -116,6 +118,7 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::get('/pedidos', [PedidoAdminController::class, 'index']);
         Route::get('/pedidos/{id}', [PedidoAdminController::class, 'show']);
         Route::post('/pedidos/{id}/estado', [PedidoAdminController::class, 'cambiarEstado']);
+        Route::post('/pedidos/{id}/revertir', [PedidoAdminController::class, 'revertir']);
         Route::post('/pedidos/{id}/pagar', [PedidoAdminController::class, 'pagar']);
 
         // Sucursales (listado admin incluye inactivas + alta/edicion).

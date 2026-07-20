@@ -7,7 +7,7 @@ namespace App\DTOs\Producto;
 final class ActualizarProductoDTO
 {
     /**
-     * @param array<int, array{nombre: string, precio: float}> $tamanos
+     * @param array<int, array{nombre: string, precio: float, descripcion: ?string}> $tamanos
      */
     public function __construct(
         public readonly int $categoriaId,
@@ -29,6 +29,7 @@ final class ActualizarProductoDTO
             $tamanos[] = [
                 'nombre' => (string) $tamano['nombre'],
                 'precio' => (float) $tamano['precio'],
+                'descripcion' => isset($tamano['descripcion']) ? (string) $tamano['descripcion'] : null,
             ];
         }
 

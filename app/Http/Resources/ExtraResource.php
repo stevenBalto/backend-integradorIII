@@ -19,6 +19,7 @@ final class ExtraResource extends JsonResource
             'precio' => (float) $this->precio,
             'disponible' => (bool) $this->disponible,
             'es_general' => (bool) $this->es_general,
+            'imagen_url' => $this->imagen_url,
             'productos_asignados' => $this->whenLoaded(
                 'productosAsignados',
                 fn () => $this->productosAsignados

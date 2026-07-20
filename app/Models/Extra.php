@@ -30,6 +30,7 @@ class Extra extends Model
         'precio',
         'disponible',
         'es_general',
+        'imagen_url',
     ];
 
     protected function casts(): array

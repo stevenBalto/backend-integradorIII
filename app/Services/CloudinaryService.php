@@ -42,4 +42,14 @@ final class CloudinaryService
 
         return (string) $resultado['secure_url'];
     }
+
+    /** Sube la imagen de una extra y devuelve su secure_url. */
+    public function subirImagenExtra(UploadedFile $archivo): string
+    {
+        $resultado = $this->cliente()->uploadApi()->upload($archivo->getRealPath(), [
+            'folder' => 'rooster-pizza/extras',
+        ]);
+
+        return (string) $resultado['secure_url'];
+    }
 }

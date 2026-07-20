@@ -24,6 +24,7 @@ class ProductoTamano extends Model
         'producto_id',
         'nombre',
         'precio',
+        'descripcion',
         'orden',
         'activo',
     ];

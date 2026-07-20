@@ -63,16 +63,21 @@ final class ExtraService
         return $extra;
     }
 
-    public function crear(CrearExtraDTO $dto): Extra
+    /** $imagenUrl: si se subio una imagen nueva a Cloudinary, su secure_url. */
+    public function crear(CrearExtraDTO $dto, ?string $imagenUrl = null): Extra
     {
         if (! $dto->esGeneral) {
             $this->validarCategoria($dto->categoriaId);
         }
 
-        return $this->extras->crear($dto->toArray());
+        $datos = $dto->toArray();
+        $datos['imagen_url'] = $imagenUrl;
+
+        return $this->extras->crear($datos);
     }
 
-    public function actualizar(int $id, ActualizarExtraDTO $dto): Extra
+    /** $imagenUrl: si es null, se conserva la imagen actual de la extra (no se pisa). */
+    public function actualizar(int $id, ActualizarExtraDTO $dto, ?string $imagenUrl = null): Extra
     {
         if (! $dto->esGeneral) {
             $this->validarCategoria($dto->categoriaId);
@@ -80,7 +85,12 @@ final class ExtraService
 
         $extra = $this->buscarPorId($id);
 
-        return $this->extras->actualizar($extra, $dto->toArray());
+        $datos = $dto->toArray();
+        if ($imagenUrl !== null) {
+            $datos['imagen_url'] = $imagenUrl;
+        }
+
+        return $this->extras->actualizar($extra, $datos);
     }
 
     /**

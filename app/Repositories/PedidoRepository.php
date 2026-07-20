@@ -75,6 +75,16 @@ final class PedidoRepository
             ->first();
     }
 
+    /** Busca un pedido de un cliente especifico por codigo (detalle completo). */
+    public function buscarDeClientePorCodigo(int $userId, string $codigo): ?Pedido
+    {
+        return Pedido::query()
+            ->where('cliente_id', $userId)
+            ->where('codigo', $codigo)
+            ->with(['sucursal', 'detalles.producto', 'detalles.extras.extra'])
+            ->first();
+    }
+
     /**
      * Lista pedidos para administracion con filtros.
      *
@@ -84,7 +94,7 @@ final class PedidoRepository
     public function listarAdmin(array $filtros): Collection
     {
         $query = Pedido::query()
-            ->with(['cliente', 'sucursal']);
+            ->with(['cliente', 'sucursal', 'detalles.producto', 'detalles.extras.extra']);
 
         if (! empty($filtros['estado'])) {
             $query->where('estado', $filtros['estado']);
@@ -155,6 +165,17 @@ final class PedidoRepository
         $pedido->update([
             'pagado' => true,
             'pagado_en' => now(),
+        ]);
+
+        return $pedido;
+    }
+
+    /** Revierte el pago del pedido (operacion inversa de registrarPago). */
+    public function revertirPago(Pedido $pedido): Pedido
+    {
+        $pedido->update([
+            'pagado' => false,
+            'pagado_en' => null,
         ]);
 
         return $pedido;

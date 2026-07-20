@@ -16,6 +16,7 @@ final class ProductoTamanoResource extends JsonResource
             'id' => $this->id,
             'nombre' => $this->nombre,
             'precio' => (float) $this->precio,
+            'descripcion' => $this->descripcion,
             'orden' => (int) $this->orden,
         ];
     }
