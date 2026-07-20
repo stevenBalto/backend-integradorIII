@@ -52,7 +52,9 @@ intención es simple aunque toque un dominio pesado, bajá de tier automáticame
   compañero 2026-07-12/13 [`instancias`, `superadministradores`, `modulos`,
   `usuario_modulo`, `password_reset_tokens`, más columnas `instancia_id` en
   tablas raíz] + `producto_tamanos` del módulo Pedidos 2026-07-16 +
-  `producto_extras` de Extras 2026-07-17, aprobado). `extras.categoria_id`
+  `producto_extras` de Extras 2026-07-17, aprobado). `extras.imagen_url` y
+  `producto_tamanos.descripcion` agregadas 2026-07-19 (aprobado, sin tabla
+  nueva). `extras.categoria_id`
   ahora es nullable (extra "general" = `es_general=true`+`categoria_id NULL`,
   CHECK garantiza que no coexistan). Ningún agente agrega tablas nuevas sin
   aprobación explícita del usuario.
