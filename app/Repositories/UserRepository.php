@@ -46,6 +46,8 @@ final class UserRepository
 
     /**
      * Usuarios de una instancia (aislamiento: SIEMPRE filtra por instancia_id).
+     * Excluye el rol 'cliente': ese modulo es exclusivo del panel de Clientes
+     * (ver ClienteRepository), no del panel de Usuarios/staff.
      *
      * @return Collection<int, User>
      */
@@ -54,17 +56,22 @@ final class UserRepository
         return User::query()
             ->with(['role', 'modulos'])
             ->where('instancia_id', $instanciaId)
+            ->whereHas('role', fn ($q) => $q->where('nombre', '!=', 'cliente'))
             ->orderByDesc('created_at')
             ->get();
     }
 
-    /** Busca un usuario dentro de una instancia (nunca de otra). */
+    /**
+     * Busca un usuario (no cliente) dentro de una instancia (nunca de otra).
+     * Excluye 'cliente' por el mismo motivo que listarDeInstancia().
+     */
     public function buscarEnInstancia(int $id, int $instanciaId): ?User
     {
         return User::query()
             ->with(['role', 'modulos'])
             ->where('id', $id)
             ->where('instancia_id', $instanciaId)
+            ->whereHas('role', fn ($q) => $q->where('nombre', '!=', 'cliente'))
             ->first();
     }
 

@@ -13,6 +13,12 @@ Formato sugerido por entrada:
 - Fecha: YYYY-MM-DD
 ```
 
+### EF-11 — Sesión compartida entre pestañas por usar `@ionic/storage-angular` (IndexedDB) para el token
+- Qué pasó: con el panel admin abierto en una pestaña, al registrar un cliente nuevo en OTRA pestaña del mismo navegador y luego recargar (F5) la pestaña del admin, esta se rompía con `403 Forbidden` ("No tenés permiso para realizar esta acción.") en vez de mostrar el panel.
+- Causa: `TokenStorageService` (y, con el mismo patrón, `SuperAdminAuthService`) guardaban el token/usuario con `@ionic/storage-angular`, cuyo driver por defecto es IndexedDB — un almacén a nivel de ORIGEN, compartido por todas las pestañas/ventanas abiertas del mismo `localhost:puerto`, no aislado por pestaña. `AuthService.init()` (llamado por `APP_INITIALIZER` en cada carga/recarga de página) relee el token desde ese store compartido. Como registrar/loguear en cualquier pestaña sobreescribe las mismas claves (`auth_token`/`auth_user`), la ÚLTIMA sesión iniciada en CUALQUIER pestaña ganaba para TODAS las pestañas la próxima vez que alguna de ellas recargara.
+- Regla: para que cada pestaña de una SPA (Angular/Ionic) mantenga una sesión de usuario independiente (necesario en este proyecto porque un mismo navegador puede tener abiertos a la vez, por ejemplo, el panel admin y el modo kiosko/cliente), la persistencia del token de sesión debe usar un storage AISLADO por pestaña — `sessionStorage` nativo del navegador (se pierde al cerrar la pestaña, pero sobrevive a un F5 de esa misma pestaña), NO un store compartido como IndexedDB/localStorage. Esto es específico de SESIONES DE USUARIO — datos que sí deben compartirse entre pestañas (ej. el carrito de compras en `carrito-storage.service.ts`) pueden seguir usando `@ionic/storage-angular` sin problema, esa es una decisión de producto distinta.
+- Fecha: 2026-07-23
+
 ### EF-01 — Card de auth omitida y sin centrar/responsive en PC
 - Qué pasó: las pantallas login/register quedaron sin la tarjeta blanca redondeada del mockup. Al agregarla, en PC no se centraba (quedaba pegada arriba con espacio muerto) y el contenido excedía la altura de pantalla (scroll, botón inferior cortado). Tomó varios turnos resolverlo.
 - Causa:

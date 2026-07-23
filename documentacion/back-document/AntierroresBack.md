@@ -59,6 +59,12 @@ Formato sugerido por entrada:
   - NO asumir que `Model::create($data)` funciona para todos los modelos — algunos tienen `$fillable` restringido a proposito.
 - Fecha: 2026-07-18
 
+### EB-08 — listarDeInstancia()/buscarEnInstancia() del panel Usuarios no excluían el rol `cliente`
+- Qué pasó: cualquier cliente que se registraba desde el login público aparecía mezclado en el panel admin "Usuarios y roles" junto al staff (`admin_sede`/`super_admin`).
+- Causa: `UserRepository::listarDeInstancia()`/`buscarEnInstancia()` solo filtraban por `instancia_id`. Como `crearCliente()` siempre asigna `instancia_id = 1` (mismo tenant que el staff, ver EB-03), todo cliente nuevo cumplía ese filtro. El módulo "Clientes" (`ClienteRepository`) sí filtraba por rol desde el inicio — el hueco era exclusivo del módulo Usuarios.
+- Regla: cuando dos módulos admin distintos leen de la misma tabla `users` pero representan conceptos de negocio distintos (staff vs. clientes), el filtro por rol tiene que estar en CADA query que alimenta cada panel, no asumir que "filtrar por instancia" ya es suficiente aislamiento — instancia y rol son dos dimensiones independientes. Cualquier método nuevo que liste/busque usuarios para el panel admin debe excluir explícitamente `cliente` (`whereHas('role', fn ($q) => $q->where('nombre', '!=', 'cliente'))`).
+- Fecha: 2026-07-23
+
 ### EB-07 — listarAdmin() de Pedidos nunca cargaba `detalles` (tabla admin casi vacía)
 - Qué pasó: al probar el panel de Pedidos, la tabla se veía casi vacía (modalidad, estado y pago en blanco) y los KPIs mostraban 0 pese a haber filas visibles. `GET /admin/pedidos` respondía sin la key `items` en absoluto.
 - Causa: `PedidoRepository::listarAdmin()` solo hacía `->with(['cliente', 'sucursal'])`, nunca `detalles.producto`/`detalles.extras.extra`. `PedidoAdminResource` usa `PedidoDetalleResource::collection($this->whenLoaded('detalles'))` — patrón correcto de Laravel que omite la key completa cuando la relación no está cargada (no un error, comportamiento esperado de `whenLoaded()`). El frontend hace `{{ p.items.length }}` sin guardas, asumiendo que `items` siempre existe — con la key ausente, ese binding rompía el render de toda la fila. Este bug ya existía antes de esta sesión (nadie lo había notado porque nadie probó la tabla completa con datos reales en el navegador).

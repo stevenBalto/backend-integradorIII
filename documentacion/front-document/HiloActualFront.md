@@ -12,6 +12,15 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-07-23 — Fix: sesión compartida entre pestañas (admin perdía su sesión al registrar un cliente en otra)
+- Contexto: el usuario reportó que los clientes registrados por el login caían en el panel admin "Usuarios y roles" (fix real en el backend, ver `HiloActualBack.md`). Al verificar el fix, apareció un SEGUNDO bug real: si se registraba un cliente nuevo en una pestaña del navegador mientras el panel admin ya estaba abierto en otra pestaña, al recargar esta última se rompía con `403 Forbidden` en `admin/usuarios/opciones` ("No tenés permiso para realizar esta acción.").
+- **Diagnóstico** (confirmado con el backend probado end-to-end por curl, sin errores — el bug era 100% frontend): `TokenStorageService` usaba `@ionic/storage-angular` (IndexedDB), un almacén **compartido por todas las pestañas del mismo origen**, no aislado por pestaña. `AuthService.persistir()` escribe ahí en cada login/registro. Al recargar (F5) la pestaña del admin, `AuthService.init()` (`APP_INITIALIZER`) vuelve a leer el token desde ese store compartido — y como la otra pestaña acababa de registrar un cliente y sobreescribió las mismas claves (`auth_token`/`auth_user`), la pestaña del admin terminaba levantando el token del CLIENTE en vez del suyo propio.
+- **Fix**: `token-storage.service.ts` reescrito para usar `sessionStorage` (nativo del navegador, aislado por pestaña/ventana) en vez de `@ionic/storage-angular`. Mismo cambio aplicado a `superadmin-auth.service.ts` (mismo patrón compartido, mismas claves `sa_token`/`sa_user`) a pedido explícito del usuario, aunque no era parte del bug reportado — evita que el panel superadmin sufra la misma contaminación si se abre en varias pestañas.
+- `carrito-storage.service.ts` NO se tocó — sigue usando `@ionic/storage-angular` a propósito (el carrito de compras sí tiene sentido que sea compartido/persistente, no es una sesión de usuario). `IonicStorageModule.forRoot()` se mantiene en `app.module.ts` porque `carrito-storage.service.ts` todavía lo necesita.
+- Verificado: `npx tsc --noEmit` limpio tras ambos cambios. Repro manual pendiente de confirmar por el usuario (recargar ambas pestañas para tomar el código nuevo, registrar cliente en una, confirmar que la otra sigue mostrando solo al staff sin 403).
+- Pendiente: nada pendiente conocido de este fix. Si en el futuro se quiere "recordar sesión" entre reinicios completos del navegador (no solo reload de la misma pestaña), `sessionStorage` NO alcanza — habría que evaluar un storage persistente pero con clave namespaced por pestaña (ej. un id de pestaña generado en runtime), no volver a un store compartido plano.
+- NO TOCAR / nota: el bug reportado tenía dos mitades — la del backend (clientes visibles en Usuarios, ver `HiloActualBack.md`) y esta del frontend (sesión pisada entre pestañas). Ambas están resueltas, pero son fixes independientes en archivos distintos.
+
 ## Sesión 2026-06-28 — Módulo 1: Auth (frontend)
 - Hecho:
   - `npm install` del scaffold Ionic+Angular. Logo en `src/assets/logo/rooster-logo.png`.
