@@ -61,6 +61,7 @@ class DemoRoosterSeeder extends Seeder
             $this->sembrarCupones();
             $this->sembrarAdminSede($sucursal);
             $this->sembrarClientes();
+            $this->sembrarUsuarioInvitado();
             // Los pedidos NO se siembran: el usuario los crea a mano desde la app.
             // limpiar() deja la tabla de pedidos de la instancia vacia en cada corrida.
         });
@@ -150,17 +151,18 @@ class DemoRoosterSeeder extends Seeder
         $laFortuna = Sucursal::withoutGlobalScopes()
             ->where('instancia_id', self::INSTANCIA_ID)
             ->where('nombre', 'like', '%La Fortuna%')
-            ->first();
+            ->first() ?? new Sucursal();
 
-        if (! $laFortuna) {
-            $laFortuna = new Sucursal();
-            $laFortuna->nombre = 'Rooster Pizza & Grill - La Fortuna';
-            $laFortuna->direccion = 'Diagonal a la Iglesia Católica, La Fortuna de San Carlos, Alajuela';
-            $laFortuna->telefono = '2479-1122';
-            $laFortuna->activa = true;
-            $laFortuna->instancia_id = self::INSTANCIA_ID;
-            $laFortuna->save();
-        }
+        // Contacto/ubicacion siempre actualizados (los consume la pantalla "Restaurantes"
+        // de Mi cuenta: direccion, telefono y link a Google Maps con lat/long).
+        $laFortuna->nombre = 'Rooster Pizza & Grill - La Fortuna';
+        $laFortuna->direccion = 'Diagonal a la Iglesia Católica, La Fortuna de San Carlos, Alajuela';
+        $laFortuna->telefono = '2479-1122';
+        $laFortuna->latitud = 10.4712;
+        $laFortuna->longitud = -84.6455;
+        $laFortuna->activa = true;
+        $laFortuna->instancia_id = self::INSTANCIA_ID;
+        $laFortuna->save();
 
         // El negocio opera UNA sola sucursal (La Fortuna, que da nombre a la instancia).
         // Se elimina cualquier sucursal Liberia sembrada en sesiones anteriores: los pedidos
@@ -612,6 +614,31 @@ class DemoRoosterSeeder extends Seeder
             ->get();
 
         return collect([$dedicado])->merge($resto)->values();
+    }
+
+    /**
+     * Usuario centinela "Invitado" (uno por instancia). Los pedidos de visitantes sin
+     * sesion se guardan a su nombre (cliente_id) con el nombre real en nombre_cliente.
+     * Queda inactivo (activo=false) y con password aleatoria: nunca debe poder loguear.
+     */
+    private function sembrarUsuarioInvitado(): void
+    {
+        $rolCliente = Role::where('nombre', 'cliente')->firstOrFail();
+
+        User::withoutGlobalScope('instancia')->updateOrCreate(
+            ['email' => User::EMAIL_INVITADO],
+            [
+                'role_id' => $rolCliente->id,
+                'instancia_id' => self::INSTANCIA_ID,
+                'nombre' => 'Invitado',
+                'usuario' => 'invitado',
+                'password' => 'no-login-' . bin2hex(random_bytes(12)),
+                'telefono' => null,
+                'activo' => false,
+                'password_temporal' => false,
+                'cambio_password_obligatorio' => false,
+            ],
+        );
     }
 
     // ── Pedidos (via flujo real de PedidoService) ──────────────────────────

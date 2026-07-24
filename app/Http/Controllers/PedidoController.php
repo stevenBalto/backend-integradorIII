@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\DTOs\Pedido\CrearPedidoDTO;
+use App\Http\Requests\Pedido\StorePedidoInvitadoRequest;
 use App\Http\Requests\Pedido\StorePedidoRequest;
 use App\Http\Resources\PedidoPublicoResource;
 use App\Http\Resources\PedidoResource;
+use App\Models\User;
 use App\Services\PedidoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Endpoints de pedidos para clientes.
@@ -28,6 +31,42 @@ final class PedidoController extends Controller
         $pedido = $this->pedidos->crear(
             $request->user()->id,
             CrearPedidoDTO::fromArray($request->validated())
+        );
+
+        return (new PedidoResource($pedido))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    /**
+     * POST /api/pedidos/invitado — crear pedido SIN sesion (visitante).
+     *
+     * El pedido se guarda a nombre del usuario centinela "Invitado" (para no volver
+     * cliente_id nullable) con el nombre real en nombre_cliente. Se autentica el
+     * centinela solo durante la peticion para que el trait multi-tenant asigne la
+     * instancia; NO acumula ni canjea Roosters.
+     */
+    public function storeInvitado(StorePedidoInvitadoRequest $request): JsonResponse
+    {
+        $centinela = User::withoutGlobalScope('instancia')
+            ->where('email', User::EMAIL_INVITADO)
+            ->first();
+
+        if ($centinela === null) {
+            return response()->json([
+                'message' => 'Los pedidos como invitado no están disponibles por el momento.',
+            ], 503);
+        }
+
+        // Fijar al centinela como usuario actual solo para esta peticion (sin sesion):
+        // el trait PerteneceAInstancia lee Auth::user()->instancia_id para asignar la
+        // instancia al pedido y sus detalles.
+        Auth::setUser($centinela);
+
+        $pedido = $this->pedidos->crear(
+            $centinela->id,
+            CrearPedidoDTO::fromArray($request->validated()),
+            acumulaPuntos: false,
         );
 
         return (new PedidoResource($pedido))

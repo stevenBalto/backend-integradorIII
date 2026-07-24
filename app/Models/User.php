@@ -21,6 +21,19 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     /**
+     * Correo del usuario centinela "Invitado" (uno por instancia). Los pedidos de
+     * un visitante sin sesion se guardan a su nombre para no volver cliente_id
+     * nullable; el nombre real del cliente vive en pedidos.nombre_cliente.
+     */
+    public const EMAIL_INVITADO = 'invitado@rooster.local';
+
+    /** True si este usuario es el centinela de pedidos de invitado. */
+    public function esInvitado(): bool
+    {
+        return $this->email === self::EMAIL_INVITADO;
+    }
+
+    /**
      * Columnas asignables en masa (segun el esquema real, en espanol).
      *
      * @var list<string>

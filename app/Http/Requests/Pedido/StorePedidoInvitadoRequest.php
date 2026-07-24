@@ -7,9 +7,12 @@ namespace App\Http\Requests\Pedido;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validacion de creacion de pedido por el cliente.
+ * Validacion de creacion de pedido por un visitante SIN sesion (invitado).
+ * Igual que StorePedidoRequest pero sin canje de Roosters (el invitado no acumula
+ * ni canjea puntos); el nombre es obligatorio porque es el unico identificador
+ * humano del pedido junto con el codigo.
  */
-class StorePedidoRequest extends FormRequest
+class StorePedidoInvitadoRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -26,7 +29,6 @@ class StorePedidoRequest extends FormRequest
             'modalidad' => ['required', 'string', 'in:para_llevar,comer_aqui'],
             'nombre_cliente' => ['required', 'string', 'max:120'],
             'notas' => ['nullable', 'string', 'max:300'],
-            'roosters_a_usar' => ['nullable', 'integer', 'min:0'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.producto_id' => ['required', 'integer'],
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
@@ -47,7 +49,7 @@ class StorePedidoRequest extends FormRequest
             'sucursal_id.exists' => 'La sucursal seleccionada no existe.',
             'modalidad.required' => 'La modalidad es obligatoria.',
             'modalidad.in' => 'La modalidad debe ser "para_llevar" o "comer_aqui".',
-            'nombre_cliente.required' => 'El nombre es obligatorio.',
+            'nombre_cliente.required' => 'El nombre es obligatorio para identificar tu pedido.',
             'nombre_cliente.max' => 'El nombre no puede superar los 120 caracteres.',
             'notas.max' => 'Las notas no pueden superar los 300 caracteres.',
             'items.required' => 'El pedido debe tener al menos un producto.',
@@ -55,7 +57,6 @@ class StorePedidoRequest extends FormRequest
             'items.*.producto_id.required' => 'Cada producto debe tener un ID.',
             'items.*.cantidad.required' => 'La cantidad es obligatoria.',
             'items.*.cantidad.min' => 'La cantidad mínima es 1.',
-            'items.*.notas.max' => 'Las notas del producto no pueden superar los 200 caracteres.',
         ];
     }
 }

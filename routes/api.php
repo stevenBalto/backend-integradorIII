@@ -16,6 +16,7 @@ use App\Http\Controllers\InsumoController;
 use App\Http\Controllers\OfertaController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\PuntosController;
 use App\Http\Controllers\SucursalController;
 use App\Http\Controllers\SuperAdminAuthController;
 use App\Http\Controllers\SuperAdminController;
@@ -37,8 +38,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // debe poder entrar aquí justamente para cambiarla).
     Route::post('/cuenta/cambiar-password', [CuentaController::class, 'cambiarPassword']);
 
-    // Sucursales (cualquier usuario autenticado puede ver las sucursales activas).
-    Route::get('/sucursales', [SucursalController::class, 'index']);
+    // Roosters (puntos de fidelidad) del cliente.
+    Route::get('/puntos/mios', [PuntosController::class, 'mios']);
 
     // Pedidos (cliente autenticado).
     Route::post('/pedidos', [PedidoController::class, 'store']);
@@ -51,12 +52,18 @@ Route::middleware('auth:sanctum')->group(function () {
 // ── Catalogo (publico, solo disponibles) ────────────────────────────────────
 Route::get('/productos', [ProductoController::class, 'index']);
 Route::get('/categorias', [CategoriaController::class, 'index']);
+// Sucursales: publico para que un invitado pueda elegir sucursal al pedir. Es info
+// de negocio (nombre/direccion/telefono) ya publicada en la web del cliente.
+Route::get('/sucursales', [SucursalController::class, 'index']);
 Route::get('/ofertas', [OfertaController::class, 'indexPublic']);
 Route::get('/cupones', [CuponController::class, 'indexPublic']);
 Route::get('/home-config', [ConfiguracionController::class, 'show']);
 
 // ── Busqueda publica de pedido por codigo ────────────────────────────────────
 Route::get('/pedidos/buscar', [PedidoController::class, 'buscarPublico'])->middleware('throttle:10,1');
+
+// ── Pedido de invitado (visitante sin sesion; identificado por codigo + nombre) ─
+Route::post('/pedidos/invitado', [PedidoController::class, 'storeInvitado'])->middleware('throttle:10,1');
 
 // ── Catalogo (administracion) ───────────────────────────────────────────────
 Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_sede'])

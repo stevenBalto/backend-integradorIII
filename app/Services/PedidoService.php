@@ -48,9 +48,9 @@ final class PedidoService
     /**
      * Crea un nuevo pedido con todos sus detalles.
      */
-    public function crear(int $userId, CrearPedidoDTO $dto): Pedido
+    public function crear(int $userId, CrearPedidoDTO $dto, bool $acumulaPuntos = true): Pedido
     {
-        return DB::transaction(function () use ($userId, $dto): Pedido {
+        return DB::transaction(function () use ($userId, $dto, $acumulaPuntos): Pedido {
             // 1. Validar sucursal
             if (! $this->sucursales->existeYActiva($dto->sucursalId)) {
                 throw ValidationException::withMessages([
@@ -71,10 +71,21 @@ final class PedidoService
             // 3. Generar codigo unico
             $codigo = $this->generarCodigoUnico();
 
-            // 4. Calcular puntos ganados (1 punto por cada 1000 colones)
-            $puntosGanados = intdiv((int) $subtotalPedido, 1000);
+            // 4. Canje de Roosters (1 Rooster = ₡1). Solo usuarios logueados; se capa al
+            //    saldo real y al subtotal para no dejar el total en negativo.
+            $descuento = 0;
+            if ($acumulaPuntos && $dto->roostersAUsar > 0) {
+                $saldo = (int) User::where('id', $userId)->lockForUpdate()->value('puntos_balance');
+                $descuento = max(0, min($dto->roostersAUsar, $saldo, (int) $subtotalPedido));
+            }
 
-            // 5. Crear el pedido
+            $total = $subtotalPedido - $descuento;
+
+            // 5. Roosters ganados = 5% del total pagado (estilo Taco Bell). El invitado
+            //    (no logueado) no acumula.
+            $puntosGanados = $acumulaPuntos ? (int) floor($total * 0.05) : 0;
+
+            // 6. Crear el pedido
             $datosPedido = [
                 'cliente_id' => $userId,
                 'sucursal_id' => $dto->sucursalId,
@@ -83,8 +94,8 @@ final class PedidoService
                 'nombre_cliente' => $dto->nombreCliente,
                 'estado' => 'pendiente',
                 'subtotal' => $subtotalPedido,
-                'descuento' => 0,
-                'total' => $subtotalPedido,
+                'descuento' => $descuento,
+                'total' => $total,
                 'puntos_ganados' => $puntosGanados,
                 'notas' => $dto->notas,
                 'codigo' => $codigo,
@@ -108,7 +119,7 @@ final class PedidoService
 
             $pedido = $this->pedidos->crear($datosPedido, $itemsParaRepo);
 
-            // 6. Crear primer registro de historial
+            // 7. Crear primer registro de historial
             $this->historial->crear([
                 'pedido_id' => $pedido->id,
                 'estado' => 'pendiente',
@@ -116,7 +127,19 @@ final class PedidoService
                 'cambiado_por' => null, // Creado por el cliente mismo
             ]);
 
-            // 7. Registrar puntos ganados si aplica
+            // 8. Movimientos de Roosters: primero el canje (resta), luego la ganancia.
+            if ($descuento > 0) {
+                $this->puntos->crear([
+                    'user_id' => $userId,
+                    'pedido_id' => $pedido->id,
+                    'tipo' => 'canjeado',
+                    'puntos' => -$descuento,
+                    'descripcion' => "Canje en pedido {$codigo}",
+                ]);
+
+                User::where('id', $userId)->decrement('puntos_balance', $descuento);
+            }
+
             if ($puntosGanados > 0) {
                 $this->puntos->crear([
                     'user_id' => $userId,

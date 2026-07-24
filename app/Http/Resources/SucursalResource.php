@@ -17,6 +17,8 @@ final class SucursalResource extends JsonResource
             'nombre' => $this->nombre,
             'direccion' => $this->direccion,
             'telefono' => $this->telefono,
+            'latitud' => $this->latitud !== null ? (float) $this->latitud : null,
+            'longitud' => $this->longitud !== null ? (float) $this->longitud : null,
             'activa' => (bool) $this->activa,
         ];
     }

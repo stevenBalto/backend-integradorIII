@@ -25,6 +25,7 @@ final class PedidoResource extends JsonResource
             'descuento' => (float) $this->descuento,
             'total' => (float) $this->total,
             'puntos_ganados' => (int) $this->puntos_ganados,
+            'pagado' => (bool) $this->pagado,
             'notas' => $this->notas,
             'nombre_cliente' => $this->nombre_cliente,
             'sucursal' => $this->whenLoaded('sucursal', fn () => [

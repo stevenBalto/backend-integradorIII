@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -27,6 +28,8 @@ final class PedidoAdminResource extends JsonResource
             'puntos_ganados' => (int) $this->puntos_ganados,
             'notas' => $this->notas,
             'nombre_cliente' => $this->nombre_cliente,
+            // Pedido hecho por un visitante sin sesion (cliente = centinela invitado).
+            'es_invitado' => $this->relationLoaded('cliente') && $this->cliente?->email === User::EMAIL_INVITADO,
             'pagado' => (bool) $this->pagado,
             'pagado_en' => $this->pagado_en?->toIso8601String(),
             'cliente' => $this->whenLoaded('cliente', fn () => [

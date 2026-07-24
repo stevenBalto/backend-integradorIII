@@ -15,6 +15,8 @@ final class CrearPedidoDTO
         public readonly string $nombreCliente,
         public readonly ?string $notas,
         public readonly array $items,
+        /** Roosters (colones) que el cliente quiere canjear en este pedido. */
+        public readonly int $roostersAUsar = 0,
     ) {
     }
 
@@ -37,6 +39,7 @@ final class CrearPedidoDTO
             nombreCliente: (string) $data['nombre_cliente'],
             notas: isset($data['notas']) ? (string) $data['notas'] : null,
             items: $items,
+            roostersAUsar: max(0, (int) ($data['roosters_a_usar'] ?? 0)),
         );
     }
 
@@ -48,6 +51,7 @@ final class CrearPedidoDTO
             'nombre_cliente' => $this->nombreCliente,
             'notas' => $this->notas,
             'items' => $this->items,
+            'roosters_a_usar' => $this->roostersAUsar,
         ];
     }
 }
