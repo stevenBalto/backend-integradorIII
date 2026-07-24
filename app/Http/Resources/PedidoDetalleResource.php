@@ -13,7 +13,7 @@ final class PedidoDetalleResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'producto' => $this->whenLoaded('producto', fn () => $this->producto?->nombre),
+            'producto_nombre' => $this->whenLoaded('producto', fn () => $this->producto?->nombre),
             'cantidad' => (int) $this->cantidad,
             'tamano_nombre' => $this->tamano_nombre,
             'precio_unitario' => (float) $this->precio_unitario,
