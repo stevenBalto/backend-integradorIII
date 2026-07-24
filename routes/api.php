@@ -97,6 +97,7 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
 
         // Categorias de la instancia (aisladas: el global scope filtra por instancia).
         Route::get('/categorias', [CategoriaController::class, 'index']);
+        Route::post('/categorias', [CategoriaController::class, 'store']);
 
         // Gestion de usuarios de la instancia (CRUD + permisos por modulo).
         Route::get('/usuarios', [UsuarioController::class, 'index']);
