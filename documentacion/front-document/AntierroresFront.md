@@ -90,3 +90,9 @@ Formato sugerido por entrada:
 - Causa: `.cart-list` tenía `padding: 0 32px` en desktop, lo que empujaba la card del producto 32px hacia adentro por cada lado. `.cart-footer` no tiene ese padding lateral en su propio contenedor (su fondo blanco llega hasta el borde de los 600px), así que las dos "cards" apiladas no coincidían en ancho, generando un escalón visual entre ambas.
 - Regla: cuando dos secciones apiladas dentro del mismo wrapper centrado deben verse como una sola tarjeta continua, medir con el navegador (`getBoundingClientRect()`, no asumir a ojo) que AMBAS tienen el mismo ancho real — un `max-width` igual en las dos NO alcanza si una tiene padding lateral adicional que la otra no tiene.
 - Fecha: 2026-07-19
+
+### EF-11 — Componentes NUEVOS: "is missing from the TypeScript compilation" con `ng serve` corriendo
+- Qué pasó: al agregar 7 componentes nuevos (`mi-cuenta/pages/*.page.ts`) y referenciarlos desde el módulo/routing, el `ng serve` YA en ejecución tiró `Module build failed ... is missing from the TypeScript compilation. Please make sure it is in your tsconfig` para cada archivo nuevo, más una cascada de errores FALSOS en el resto del módulo (`No pipe found with name 'crcCurrency'`, `Object is possibly 'null'`) que no eran errores reales.
+- Causa: el watcher de `ng serve` no siempre incorpora al TS program, en caliente, archivos `.ts` nuevos referenciados por un módulo lazy. Como el módulo no compilaba, el type-checker de plantillas reportaba el pipe y el null como "errores" — puras cascadas.
+- Regla: tras crear archivos de **componente nuevos**, **reiniciar `ng serve`** ANTES de creer que hay errores reales de plantilla. Si tras reiniciar compila limpio, los errores de pipe/null eran cascada de la resolución de módulos. No perder tiempo "arreglando" el pipe/null primero.
+- Fecha: 2026-07-24

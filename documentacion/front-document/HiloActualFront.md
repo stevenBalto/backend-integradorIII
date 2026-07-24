@@ -12,6 +12,19 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-07-24 — Mi cuenta cliente end-to-end (Roosters, invitado, historial, contenido)
+- Hecho:
+  - **Entrada sin login**: la app abre en `/tabs/home` (antes `''` → `/login`). Sin sesión se navega Home/menú/ofertas y se puede **pedir como invitado**; con sesión, todo. `mis-pedidos` protegido con `authGuard`.
+  - **Mi cuenta según sesión** (`mi-cuenta.page`): sin sesión muestra bienvenida + botones Iniciar sesión / Crear cuenta (oculta todo lo demás); con sesión, perfil real + card destacada de Roosters + menú reorganizado (Tus pedidos / Tu cuenta / Rooster) con TODAS las filas cableadas. Tildes corregidas (Quiénes / Términos / Métodos / Cerrar sesión).
+  - **Checkout** (`pedir.page`): invitado → `pedidoService.crearInvitado()` (endpoint público) con nota "cliente no logueado" + código; logueado → `crear()` con toggle "Usar mis Roosters" y descuento estimado en el resumen. Tras pedir logueado, `auth.refrescarPerfil()` refresca el saldo local.
+  - **Mis pedidos**: botón copiar código + filtra a NO pagados (los pagados van a Historial).
+  - **7 pantallas nuevas** bajo `/tabs/mi-cuenta/...` (declaradas en `MiCuentaPageModule`, **template inline**, estilos compartidos en `pages/sub-page.scss`): `roosters` (saldo/acumulado/canjeado/movimientos, `GET /puntos/mios`), `historial` (pedidos pagados), `perfil` (datos de registro, solo lectura + link a cambiar-password), `restaurantes` (sucursales + botón Google Maps), `productos` (vitrina con marquee infinito lento en dos filas, respeta `prefers-reduced-motion`), `faq` (acordeón), `info/:tema` (prosa reutilizable: quienes-somos con link a la web informativa, terminos, privacidad, sobre-app con devs). `roosters`/`perfil`/`historial` con `authGuard`.
+  - **Métodos de pago**: modal informativo (todo se paga en caja).
+  - Constantes centralizadas: `shared/constants/negocio.ts` (contacto/horario/web/devs) + `shared/constants/mi-cuenta-contenido.ts` (FAQ + prosa). Nuevos: `PuntosService`/`puntos.model`, `AuthService.refrescarPerfil()`, `crearInvitado()` en `PedidoService`, `roosters_a_usar`+`pagado` en `pedido.model`, `latitud`/`longitud` en `sucursal.model`.
+  - Verificado: `ng serve` compila limpio + smoke test Puppeteer de 12 pantallas (invitado + logueado) con **0 errores de consola**.
+- Pendiente / usuario: falta la info REAL de desarrolladores para "Sobre la app" (hoy placeholder en `negocio.ts`, constante `DESARROLLADORES`).
+- NO TOCAR / nota: al crear componentes NUEVOS hay que reiniciar `ng serve` (ver `AntierroresFront.md` EF-11). Los `routerLink` a `/tabs/mi-cuenta/...` dependen de las rutas hijas en `mi-cuenta-routing.module.ts`.
+
 ## Sesión 2026-07-23 — Fix: sesión compartida entre pestañas (admin perdía su sesión al registrar un cliente en otra)
 - Contexto: el usuario reportó que los clientes registrados por el login caían en el panel admin "Usuarios y roles" (fix real en el backend, ver `HiloActualBack.md`). Al verificar el fix, apareció un SEGUNDO bug real: si se registraba un cliente nuevo en una pestaña del navegador mientras el panel admin ya estaba abierto en otra pestaña, al recargar esta última se rompía con `403 Forbidden` en `admin/usuarios/opciones` ("No tenés permiso para realizar esta acción.").
 - **Diagnóstico** (confirmado con el backend probado end-to-end por curl, sin errores — el bug era 100% frontend): `TokenStorageService` usaba `@ionic/storage-angular` (IndexedDB), un almacén **compartido por todas las pestañas del mismo origen**, no aislado por pestaña. `AuthService.persistir()` escribe ahí en cada login/registro. Al recargar (F5) la pestaña del admin, `AuthService.init()` (`APP_INITIALIZER`) vuelve a leer el token desde ese store compartido — y como la otra pestaña acababa de registrar un cliente y sobreescribió las mismas claves (`auth_token`/`auth_user`), la pestaña del admin terminaba levantando el token del CLIENTE en vez del suyo propio.
