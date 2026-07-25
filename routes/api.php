@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PedidoAdminController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\SuperAdmin\InstanciaController;
@@ -121,6 +122,9 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::delete('/extras/{id}', [ExtraController::class, 'destroy']);
         Route::post('/extras/{id}/productos', [ExtraController::class, 'asignarProducto']);
         Route::delete('/extras/{id}/productos/{productoId}', [ExtraController::class, 'desasignarProducto']);
+
+        // Dashboard (resumen: KPIs del dia, ventas de la semana, pedidos nuevos/ultimos).
+        Route::get('/dashboard', [DashboardController::class, 'index']);
 
         // Pedidos (administracion).
         Route::get('/pedidos', [PedidoAdminController::class, 'index']);
