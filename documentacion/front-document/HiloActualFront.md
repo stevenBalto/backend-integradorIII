@@ -12,6 +12,19 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-07-25 — Dashboard admin funcional + limpieza Home (oferta destacada, tarjetas ticket) + header dinámico
+- Contexto: sesión de varios pedidos puntuales del usuario sobre cosas ya maquetadas/estáticas: (1) Dashboard admin sin datos reales, (2) sección "Oferta destacada del Home" que no aportaba valor, (3) ofertas/cupones del Home cliente mostrados como texto plano sin estilo, (4) header del shell admin con saludo/fecha/usuario 100% hardcodeados.
+- Hecho:
+  - **Dashboard (`admin/dashboard/`): conectado a `GET /admin/dashboard`** (ver `HiloActualBack.md`). Mismo layout/diseño exacto (pedido explícito del usuario) — solo se reemplazó el binding: `DashboardService`/`DashboardResumen` nuevos (`core/services/dashboard.service.ts`, `core/models/dashboard.model.ts`). KPIs reales, gráfico de "ventas de la semana" ahora con 7 días reales (antes eran 12 puntos con labels de $ que no correspondían a nada), pedidos nuevos con tiempo relativo real (`tiempoRelativo()`), tabla de últimos pedidos con estado/modalidad reales vía `status-badge`/`modality-pill` ya existentes. Se quitó el subtítulo hardcodeado "Sucursal Liberia" del `admin-page-header` (dato falso, este dashboard no filtra por sucursal).
+  - **Oferta destacada del Home: ELIMINADA** (a pedido del usuario, ver captura). Se quitó del admin (`admin/inicio/`) la card completa "Oferta destacada del Home" (selector + botón Guardar) y su lógica (`ofertaHeroId`, `guardarHero()`), y del Home cliente el resaltado ★ correspondiente (`esOfertaHero()`, `promo-card--hero`). Se borraron `core/services/home-config.service.ts` y `core/models/home-config.model.ts` (sin más consumidores). El backend `home-config` NO se tocó (ver nota en `HiloActualBack.md`).
+  - **Home cliente — tarjetas de ofertas/cupones: rediseñadas estilo "ticket".** Antes `promo-card` no tenía NINGÚN CSS (por eso se veía como texto plano). Se reutilizó el lenguaje visual ya existente en la pantalla dedicada `ofertas.page` (círculo de color + ícono según tipo, badge de descuento; para cupones, borde punteado + línea de perforación entre el ícono y el código). Nuevos helpers en `home.page.ts`: `colorFor()`, `iconOferta()`, `iconCupon()` (mismo criterio/paleta que `ofertas.page.ts`).
+  - **Header del admin shell (`admin-shell/`): dinámico.** Saludo según hora real (Buenos días/tardes/noches) + primer nombre del usuario logueado, fecha exacta calculada (`toLocaleDateString('es-CR', ...)`), sucursal real si el usuario tiene `sucursal_id` (vía `SucursalService`, se omite si no aplica — ej. `super_admin` sin sucursal), nombre/rol/avatar reales desde `AuthService.usuarioActual$` (antes "Admin Rooster"/"Administrador"/"A" fijos).
+  - Verificado: `ng serve` compiló limpio en cada cambio (sin errores de tipo en plantillas).
+- Pendiente:
+  - Decidir si se elimina del todo el endpoint backend `home-config` (huérfano) o se reutiliza para otra cosa.
+  - Activar el contador real de la campanita de notificaciones del header admin (sigue con punto rojo fijo, sin datos) — mencionado por el usuario como posible siguiente paso, no confirmado aún.
+- NO TOCAR / nota: `ofertasVigentes` (getter en `admin/inicio/inicio.page.ts`) se mantiene — sigue usándose para el KPI "Ofertas vigentes", no es código muerto pese a que ya no alimenta el selector hero.
+
 ## Sesión 2026-07-24 — Mi cuenta cliente end-to-end (Roosters, invitado, historial, contenido)
 - Hecho:
   - **Entrada sin login**: la app abre en `/tabs/home` (antes `''` → `/login`). Sin sesión se navega Home/menú/ofertas y se puede **pedir como invitado**; con sesión, todo. `mis-pedidos` protegido con `authGuard`.

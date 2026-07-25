@@ -223,3 +223,20 @@ Formato sugerido:
   - Verificado por curl end-to-end: gana 5% → canjea todo (total baja, balance queda solo lo recien ganado) → `/puntos/mios` cuadra (ganado − canjeado = balance) → pedido invitado da codigo, `puntos_ganados=0`, `es_invitado=true` en admin.
 - Pendiente / futuro: no hay endpoint de edicion de perfil (el frontend "Mi cuenta" es solo lectura + cambiar contraseña). La resolucion de instancia del pedido de invitado asume 1 instancia (mismo limite conocido del catalogo publico).
 - NO TOCAR / nota: patron centinela + `Auth::setUser()` documentado en `AntierroresBack.md` EB-08. El `intdiv(subtotal,1000)` viejo de puntos YA NO EXISTE (ahora es 5% del total).
+
+## Sesion 2026-07-25 — Dashboard admin: nuevo endpoint con datos reales
+- Contexto: el modulo Dashboard del panel admin (`frotend-integradorIII/src/app/admin/dashboard/`) seguia 100% maquetado desde el inicio del proyecto (arrays hardcodeados en el componente). El usuario pidio dejarlo funcional manteniendo exactamente el mismo diseño/layout.
+- Hecho:
+  - **Nuevo endpoint `GET /api/admin/dashboard`** (`auth:sanctum` + `role:super_admin,admin_sede`), patron Controller-Service-Repository igual que Clientes (100% solo lectura, sin DTOs, sin tablas nuevas): `DashboardController` -> `DashboardService` -> `DashboardRepository`.
+  - `DashboardService::resumen()` calcula: `pedidos_hoy`/`ventas_hoy` (excluye `cancelado`) + variacion porcentual vs ayer (`null` si ayer fue 0, evita division por cero), `ticket_promedio`, `pedidos_activos` (`pendiente`+`en_proceso`+`listo`), `ventas_semana` (array de los ultimos 7 dias reales, dia+fecha+total, para el grafico de area), `pedidos_nuevos` (ultimos 5 `pendiente`), `ultimos_pedidos` (ultimos 8 de cualquier estado, con `cantidad` = `withSum('detalles as detalles_sum_cantidad', 'cantidad')` para evitar N+1).
+  - Respeta el scope de instancia (multi-tenant) automaticamente via el global scope de `Pedido` (`PerteneceAInstancia`), igual que el resto de endpoints admin — no se agrego logica de tenant manual.
+  - Verificado por curl (login real `admin@rooster.com`): 200 con datos reales de la BD local (ventas de la semana, pedidos nuevos/ultimos coincidiendo con lo esperado).
+- Pendiente: nada pendiente conocido de este endpoint puntual.
+- NO TOCAR / nota: `DashboardRepository::pedidosEntre()` no filtra por estado (lo hace el `DashboardService` con `reject()` en memoria) porque se reutiliza tanto para KPIs del dia como para el conteo total de pedidos_hoy (que SI cuenta cancelados). No mover ese filtro al repository sin revisar ambos usos.
+
+## Sesion 2026-07-25 (cont.) — Oferta destacada del Home: eliminada (a pedido del usuario)
+- Contexto: el usuario penso que la seccion "Oferta destacada del Home" (admin > Inicio, selector para elegir que oferta se muestra primero cuando hay varias vigentes) no aportaba valor y pidio quitarla.
+- Hecho: se elimino el consumo del feature en el **frontend** (seccion admin, resaltado ★ en el Home cliente, servicios/modelos huerfanos `home-config.service.ts`/`.model.ts`) — ver `HiloActualFront.md` sesion 2026-07-25 para el detalle de archivos tocados.
+- **NO se toco el backend**: el endpoint `GET /home-config` (publico) y `PUT /admin/home-config` (`ConfiguracionController`/`ConfiguracionService`/`ConfiguracionRepository`, tabla `configuraciones` clave `home_oferta_hero_id`) siguen existiendo pero YA NO TIENEN CONSUMIDORES desde el frontend. Se dejo asi a proposito (bajo riesgo, reversible) en vez de borrar codigo/rutas — pendiente decidir con el usuario si se elimina del todo o se reutiliza para otra cosa a futuro.
+- Pendiente: decidir el destino final del endpoint `home-config` (eliminarlo o reusarlo).
+- NO TOCAR / nota: si se decide eliminar `home-config` del backend, revisar que no quede la clave `home_oferta_hero_id` huerfana en la tabla `configuraciones` de instancias ya sembradas.
