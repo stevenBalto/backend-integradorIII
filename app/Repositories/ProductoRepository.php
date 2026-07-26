@@ -20,6 +20,8 @@ final class ProductoRepository
     {
         $productos = Producto::query()
             ->with(['categoria', 'todosLosTamanos'])
+            ->withCount('resenasVisibles')
+            ->withAvg('resenasVisibles', 'calificacion')
             ->orderBy('nombre')
             ->get();
 
@@ -31,6 +33,8 @@ final class ProductoRepository
     {
         $productos = Producto::query()
             ->with(['categoria', 'tamanos'])
+            ->withCount('resenasVisibles')
+            ->withAvg('resenasVisibles', 'calificacion')
             ->where('disponible', true)
             ->orderBy('nombre')
             ->get();
@@ -42,6 +46,8 @@ final class ProductoRepository
     {
         $producto = Producto::query()
             ->with(['categoria', 'todosLosTamanos'])
+            ->withCount('resenasVisibles')
+            ->withAvg('resenasVisibles', 'calificacion')
             ->find($id);
 
         if ($producto !== null) {

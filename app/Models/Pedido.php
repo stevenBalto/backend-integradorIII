@@ -39,6 +39,7 @@ class Pedido extends Model
         'codigo',
         'pagado',
         'pagado_en',
+        'resena_descartada',
     ];
 
     protected function casts(): array
@@ -50,6 +51,7 @@ class Pedido extends Model
             'puntos_ganados' => 'integer',
             'pagado' => 'boolean',
             'pagado_en' => 'datetime',
+            'resena_descartada' => 'boolean',
         ];
     }
 
@@ -81,5 +83,11 @@ class Pedido extends Model
     public function historial(): HasMany
     {
         return $this->hasMany(PedidoHistorialEstado::class)->orderBy('creado_en');
+    }
+
+    /** @return HasMany<Resena> */
+    public function resenas(): HasMany
+    {
+        return $this->hasMany(Resena::class);
     }
 }
