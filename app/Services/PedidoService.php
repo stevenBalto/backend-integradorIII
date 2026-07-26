@@ -17,6 +17,7 @@ use App\Repositories\PuntosMovimientoRepository;
 use App\Repositories\SucursalRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
@@ -42,6 +43,7 @@ final class PedidoService
         private readonly PedidoHistorialRepository $historial,
         private readonly PuntosMovimientoRepository $puntos,
         private readonly SucursalRepository $sucursales,
+        private readonly NotificacionService $notificaciones,
     ) {
     }
 
@@ -50,7 +52,7 @@ final class PedidoService
      */
     public function crear(int $userId, CrearPedidoDTO $dto, bool $acumulaPuntos = true): Pedido
     {
-        return DB::transaction(function () use ($userId, $dto, $acumulaPuntos): Pedido {
+        $pedido = DB::transaction(function () use ($userId, $dto, $acumulaPuntos): Pedido {
             // 1. Validar sucursal
             if (! $this->sucursales->existeYActiva($dto->sucursalId)) {
                 throw ValidationException::withMessages([
@@ -158,6 +160,19 @@ final class PedidoService
                 'detalles.extras.extra',
             ]);
         });
+
+        // Notificar a los admins de la instancia (fuera de la transaccion: un
+        // fallo de notificacion NUNCA debe tumbar la confirmacion del pedido).
+        try {
+            $this->notificaciones->notificarPedidoNuevo($pedido);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo crear la notificacion de pedido nuevo', [
+                'pedido_id' => $pedido->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $pedido;
     }
 
     /**

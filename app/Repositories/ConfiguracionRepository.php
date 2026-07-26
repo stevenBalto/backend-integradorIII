@@ -23,4 +23,40 @@ final class ConfiguracionRepository
             ['valor' => $valor, 'descripcion' => $descripcion],
         );
     }
+
+    /**
+     * Mapa clave => valor de TODA la configuracion de la instancia actual.
+     *
+     * @return array<string, string|null>
+     */
+    public function obtenerMapa(): array
+    {
+        return Configuracion::query()->pluck('valor', 'clave')->toArray();
+    }
+
+    /**
+     * Guarda varias claves de una (upsert por clave, aislado por instancia).
+     *
+     * @param array<string, string|null> $pares clave => valor
+     */
+    public function guardarVarias(array $pares): void
+    {
+        foreach ($pares as $clave => $valor) {
+            $this->guardar($clave, $valor);
+        }
+    }
+
+    /**
+     * Lee un valor de una instancia ESPECIFICA, sin depender de la sesion
+     * (el aislamiento normal filtra por el usuario logueado; esto lo usa el
+     * backend en contexto de sistema, ej. al crear una notificacion cuando
+     * quien dispara es el cliente pero el ajuste es del admin de esa instancia).
+     */
+    public function valorDeInstancia(int $instanciaId, string $clave): ?string
+    {
+        return Configuracion::withoutGlobalScope('instancia')
+            ->where('instancia_id', $instanciaId)
+            ->where('clave', $clave)
+            ->value('valor');
+    }
 }

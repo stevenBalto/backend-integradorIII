@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Admin\AnaliticasController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\NotificacionController;
 use App\Http\Controllers\Admin\PedidoAdminController;
+use App\Http\Controllers\Admin\ResenaController as AdminResenaController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\SuperAdmin\InstanciaController;
 use App\Http\Controllers\AuthController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\OfertaController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\PuntosController;
+use App\Http\Controllers\ResenaController;
 use App\Http\Controllers\SucursalController;
 use App\Http\Controllers\SuperAdminAuthController;
 use App\Http\Controllers\SuperAdminController;
@@ -49,6 +52,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // 'mios/buscar' debe registrarse ANTES que 'mios/{id}', si no Laravel toma "buscar" como {id}.
     Route::get('/pedidos/mios/buscar', [PedidoController::class, 'misPedidosBuscar']);
     Route::get('/pedidos/mios/{id}', [PedidoController::class, 'misPedidosShow']);
+
+    // Reseñas del cliente (solo pedidos propios ya entregados).
+    Route::get('/resenas/pendientes', [ResenaController::class, 'pendientes']);
+    Route::post('/resenas/pedidos/{pedidoId}', [ResenaController::class, 'enviar']);
+    Route::post('/resenas/pedidos/{pedidoId}/descartar', [ResenaController::class, 'descartar']);
 });
 
 // ── Catalogo (publico, solo disponibles) ────────────────────────────────────
@@ -60,6 +68,7 @@ Route::get('/sucursales', [SucursalController::class, 'index']);
 Route::get('/ofertas', [OfertaController::class, 'indexPublic']);
 Route::get('/cupones', [CuponController::class, 'indexPublic']);
 Route::get('/home-config', [ConfiguracionController::class, 'show']);
+Route::get('/productos/{id}/resenas', [ResenaController::class, 'producto']);
 
 // ── Busqueda publica de pedido por codigo ────────────────────────────────────
 Route::get('/pedidos/buscar', [PedidoController::class, 'buscarPublico'])->middleware('throttle:10,1');
@@ -94,6 +103,10 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
 
         // Configuracion del Home (curacion: oferta destacada)
         Route::put('/home-config', [ConfiguracionController::class, 'update']);
+
+        // Configuracion general del panel (por instancia).
+        Route::get('/configuracion', [ConfiguracionController::class, 'ajustes']);
+        Route::put('/configuracion', [ConfiguracionController::class, 'guardarAjustes']);
 
         // Inventario (insumos / materia prima) — 100% admin, sin endpoints publicos
         Route::get('/insumos', [InsumoController::class, 'index']);
@@ -145,6 +158,18 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         // Clientes (analitica de compra, solo lectura)
         Route::get('/clientes', [ClienteController::class, 'index']);
         Route::get('/clientes/{id}/pedidos', [ClienteController::class, 'pedidos']);
+
+        // Notificaciones (bandeja de admin; el front hace polling de index).
+        Route::get('/notificaciones', [NotificacionController::class, 'index']);
+        Route::post('/notificaciones/leer-todas', [NotificacionController::class, 'marcarTodasLeidas']);
+        Route::post('/notificaciones/{id}/leer', [NotificacionController::class, 'marcarLeida']);
+
+        // Reseñas (gestión: listar/filtrar, ocultar/mostrar, eliminar, stats).
+        Route::get('/resenas', [AdminResenaController::class, 'index']);
+        Route::get('/resenas/stats', [AdminResenaController::class, 'stats']);
+        Route::post('/resenas/{id}/ocultar', [AdminResenaController::class, 'ocultar']);
+        Route::post('/resenas/{id}/mostrar', [AdminResenaController::class, 'mostrar']);
+        Route::delete('/resenas/{id}', [AdminResenaController::class, 'destroy']);
     });
 
 // ── Superadministracion (panel AISLADO: login/guard/middleware propios) ──────

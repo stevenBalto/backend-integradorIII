@@ -24,6 +24,10 @@ final class ProductoResource extends JsonResource
             'popular' => (bool) $this->popular,
             'nuevo' => (bool) $this->nuevo,
             'disponible' => (bool) $this->disponible,
+            'calificacion_promedio' => $this->resenas_visibles_avg_calificacion !== null
+                ? round((float) $this->resenas_visibles_avg_calificacion, 1)
+                : null,
+            'resenas_count' => (int) ($this->resenas_visibles_count ?? 0),
             'tamanos' => ProductoTamanoResource::collection($this->whenLoaded('tamanos')),
             'extras' => ExtraResource::collection($this->whenLoaded('extrasCategoria', fn () => $this->extrasCategoria)),
             'created_at' => $this->created_at?->toIso8601String(),

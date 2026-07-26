@@ -84,4 +84,17 @@ class Producto extends Model
         return $this->belongsToMany(Extra::class, 'producto_extras', 'producto_id', 'extra_id')
             ->withTimestamps();
     }
+
+    /**
+     * Reseñas VISIBLES de este producto (publicadas, no borradas). Se usa con
+     * withCount/withAvg para exponer promedio y cantidad en el catálogo.
+     *
+     * @return HasMany<Resena>
+     */
+    public function resenasVisibles(): HasMany
+    {
+        return $this->hasMany(Resena::class)
+            ->where('tipo', 'producto')
+            ->where('estado', 'publicada');
+    }
 }
