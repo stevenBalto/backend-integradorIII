@@ -62,8 +62,8 @@ class DemoRoosterSeeder extends Seeder
             $this->sembrarAdminSede($sucursal);
             $this->sembrarClientes();
             $this->sembrarUsuarioInvitado();
-            // Los pedidos NO se siembran: el usuario los crea a mano desde la app.
-            // limpiar() deja la tabla de pedidos de la instancia vacia en cada corrida.
+            // Los pedidos NO se siembran aqui (dependen de tablas extras que pueden
+            // no existir). Usar DetallePedidoDemoSeeder para poblar detalle_pedido.
         });
 
         $this->command?->info('DemoRoosterSeeder completado.');

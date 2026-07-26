@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Admin\AnaliticasController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PedidoAdminController;
 use App\Http\Controllers\Admin\UsuarioController;
@@ -125,6 +126,9 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
 
         // Dashboard (resumen: KPIs del dia, ventas de la semana, pedidos nuevos/ultimos).
         Route::get('/dashboard', [DashboardController::class, 'index']);
+
+        // Analiticas (ventas mensuales, horas pico, top productos, modalidad).
+        Route::get('/analiticas', [AnaliticasController::class, 'index']);
 
         // Pedidos (administracion).
         Route::get('/pedidos', [PedidoAdminController::class, 'index']);

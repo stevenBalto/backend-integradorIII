@@ -314,3 +314,30 @@ Formato sugerido:
   - Nada pendiente conocido del módulo Clientes (funcional end-to-end con datos reales).
   - Guard de rol real para `/admin` (pendiente conocido, arrastrado de sesiones anteriores).
 - NO TOCAR / nota: Chart.js es la primera dependencia de charting real del proyecto (todo lo existente antes — `bar-chart`, `donut-chart`, `progress-bar`, `mini-bar`, `area-chart` — es CSS/SVG hecho a mano). Se agrego como excepcion puntual porque el usuario pidio explicitamente Chart.js para este componente. Ver `AntierroresFront.md` EF-04 gotcha de Chart.js + Ionic.
+
+## Sesión 2026-07-26 — Admin Analíticas migrada de mock a datos reales del backend
+- Contexto: la pantalla `admin/analiticas/` (existente desde sesión 2026-07-03 como maqueta estática con datos hardcodeados del prototipo) se migró completamente a datos reales del backend vía `GET /api/admin/analiticas?mes=YYYY-MM`.
+- Hecho:
+  - **Modelos nuevos** (`core/models/analiticas.model.ts`): interfaz `AnaliticasResponse` + sub-interfaces `VentaDia`, `HoraPico`, `TopProductoApi`, `ModalidadApi`, `ComparacionMesAnterior`, `VentaCategoria`. Modelan la respuesta exacta del endpoint negociado con el backend.
+  - **Servicio nuevo** (`core/services/analiticas.service.ts`): `AnaliticasService.obtenerAnaliticas(mes?)` — mes por defecto = mes actual en formato `YYYY-MM`. Sigue el patrón HTTP ya establecido por `ClienteService` (inyecta `HttpClient`, usa `environment.apiBaseUrl`).
+  - **Componentes Chart.js nuevos** (standalone, reemplazan charts mock previos sin borrarlos):
+    - `admin/shared/sales-bar-chart.component.ts` — barras verticales genéricas (`@Input() data: {label,value}[]`), reemplaza al viejo `bar-chart` en "Ventas por día", "Horas pico" y los nuevos comparativos mensuales.
+    - `admin/shared/modality-donut-chart.component.ts` — gráfico de dona, reemplaza al viejo `donut-chart` en "Modalidad de pedido".
+    - Ambos siguen el patrón ya establecido por `clientes-top-chart.component.ts`: `Chart.register` acotado, rojo `#e13642` SOLO en el dato pico (regla 70-20-10), gris `#6b728033` en el resto, `animation:false` + `resizeDelay:200` (fix bug ResizeObserver de Ionic), `aria-label` accesible.
+  - **`analiticas.page.ts`** (reconstrucción completa): mock reemplazado por llamada real a `AnaliticasService`, con `cargando`/`error` (mismo patrón que `ClientesPage`). Mapea la respuesta a:
+    - 3 KPIs reales: ventas, pedidos, ticket promedio. KPI "Calificación promedio" queda mock a propósito (NO existe tabla de reseñas en el esquema de 21 tablas del backend).
+    - Ranking de top productos (lista ordenada, sin chart).
+    - Datos para charts de barras (ventas por día, horas pico) y dona (modalidad).
+    - Comparación mensual con flecha/color (`formatComparacion()`) — maneja `null` (sin datos previos) mostrando "Sin datos previos" en gris, nunca "0%".
+    - Nueva sección "Ventas por categoría" (lista con `progress-bar`).
+    - Nuevos comparativos: "Comparativo de ventas" / "Comparativo de pedidos" (reutiliza `sales-bar-chart` con 2 barras: mes anterior vs. este mes).
+  - **`analiticas.page.html`**: usa los componentes Chart.js nuevos, agrega estados de loading/error, nuevas secciones de categorías y comparativos. Se quitaron del header los botones "Este mes" y "Exportar" (sin funcionalidad real, decisión del usuario).
+  - **`analiticas.module.ts`**: importa `SalesBarChartComponent` y `ModalityDonutChartComponent` (standalone) en el NgModule clásico de la página.
+  - **`analiticas.page.scss`**: se quitó `.an-range-btn` (sin uso tras borrar botón "Este mes"); se agregaron estilos `.an-categoria*` para la sección nueva de ventas por categoría.
+  - **Contrato de API** (coordinado con el backend en esta misma sesión, ya implementado): `GET /api/admin/analiticas?mes=YYYY-MM` devuelve `{ ventas_mes, pedidos_mes, ticket_promedio, ventas_por_dia: [{fecha,total}], horas_pico: [{hora,cantidad}], top_productos: [{nombre,unidades}], modalidad: [{modalidad,cantidad,pct}], comparacion_mes_anterior: {ventas_pct, pedidos_pct, ventas_mes_anterior, pedidos_mes_anterior}, ventas_por_categoria: [{categoria,total}] }`. Notas: `ventas_pct`/`pedidos_pct` pueden ser `null` si el mes anterior no tuvo datos (el frontend muestra "Sin datos previos" en gris, nunca "0%"); `ventas_mes_anterior`/`pedidos_mes_anterior` SIEMPRE numéricos (vienen en 0 si no hubo datos); `ventas_por_categoria` puede incluir `"categoria": "Sin categoria"` para productos sin categoría asignada (dato real, no se filtra); requiere auth admin (Sanctum), mismo patrón que el resto de `/api/admin/*`; no hay soporte de calificación/reseñas en el esquema (ese KPI seguirá siendo mock hasta que se agregue esa tabla al backend, fuera de alcance de hoy).
+- Verificado: compilación limpia (`ng serve`), sin errores de tipo en plantillas.
+- Pendiente:
+  - Verificación visual manual en navegador del flujo completo con datos reales del backend.
+  - El KPI "Calificación promedio" sigue siendo mock a propósito (valor hardcodeado `4.7`, sin binding real) — quedará así hasta que se agregue tabla de reseñas al backend.
+  - Los charts viejos (`bar-chart`, `donut-chart`) quedaron en el repo sin uso (no se borraron, solo se dejaron de importar en `analiticas.module.ts`) — limpieza cosmética pendiente si se quiere.
+- NO TOCAR / nota: `ventas_pct`/`pedidos_pct` vienen `null` (no `0`) cuando el mes anterior no tuvo datos — NUNCA pintar "0%" en ese caso, usar el texto "Sin datos previos" como lo hace `formatComparacion()`. `ventas_por_categoria` puede incluir `"Sin categoria"` como categoría válida (productos sin categoría asignada) — no filtrarla, es dato real.
