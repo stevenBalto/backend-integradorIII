@@ -46,8 +46,9 @@ final class UserRepository
 
     /**
      * Usuarios de una instancia (aislamiento: SIEMPRE filtra por instancia_id).
-     * Excluye el rol 'cliente': ese modulo es exclusivo del panel de Clientes
-     * (ver ClienteRepository), no del panel de Usuarios/staff.
+     * Solo trae el rol 'admin_sede': excluye 'cliente' (panel de Clientes, ver
+     * ClienteRepository) y 'super_admin' (ese vive en la tabla
+     * `superadministradores`, ver SuperAdminRepository, no en este panel).
      *
      * @return Collection<int, User>
      */
@@ -56,14 +57,14 @@ final class UserRepository
         return User::query()
             ->with(['role', 'modulos'])
             ->where('instancia_id', $instanciaId)
-            ->whereHas('role', fn ($q) => $q->where('nombre', '!=', 'cliente'))
+            ->whereHas('role', fn ($q) => $q->where('nombre', 'admin_sede'))
             ->orderByDesc('created_at')
             ->get();
     }
 
     /**
-     * Busca un usuario (no cliente) dentro de una instancia (nunca de otra).
-     * Excluye 'cliente' por el mismo motivo que listarDeInstancia().
+     * Busca un usuario admin_sede dentro de una instancia (nunca de otra).
+     * Excluye 'cliente' y 'super_admin' por el mismo motivo que listarDeInstancia().
      */
     public function buscarEnInstancia(int $id, int $instanciaId): ?User
     {
@@ -71,7 +72,7 @@ final class UserRepository
             ->with(['role', 'modulos'])
             ->where('id', $id)
             ->where('instancia_id', $instanciaId)
-            ->whereHas('role', fn ($q) => $q->where('nombre', '!=', 'cliente'))
+            ->whereHas('role', fn ($q) => $q->where('nombre', 'admin_sede'))
             ->first();
     }
 
