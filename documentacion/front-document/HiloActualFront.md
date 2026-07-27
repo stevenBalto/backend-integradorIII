@@ -341,3 +341,12 @@ Formato sugerido:
   - El KPI "Calificación promedio" sigue siendo mock a propósito (valor hardcodeado `4.7`, sin binding real) — quedará así hasta que se agregue tabla de reseñas al backend.
   - Los charts viejos (`bar-chart`, `donut-chart`) quedaron en el repo sin uso (no se borraron, solo se dejaron de importar en `analiticas.module.ts`) — limpieza cosmética pendiente si se quiere.
 - NO TOCAR / nota: `ventas_pct`/`pedidos_pct` vienen `null` (no `0`) cuando el mes anterior no tuvo datos — NUNCA pintar "0%" en ese caso, usar el texto "Sin datos previos" como lo hace `formatComparacion()`. `ventas_por_categoria` puede incluir `"Sin categoria"` como categoría válida (productos sin categoría asignada) — no filtrarla, es dato real.
+
+## Sesión 2026-07-27 — Usuarios y roles: filtro sin "Clientes" + aviso de cache en Analíticas
+- Contexto: dos pedidos puntuales del usuario tras revisar el admin.
+- Hecho:
+  - **Usuarios y roles** (`admin/usuarios/usuarios.page.ts`): se quitó la opción "Clientes" del array `filters` (pestañas de búsqueda superiores). Antes: Todos / Administradores / Clientes. Ahora: Todos / Administradores. No se tocó `usuariosFiltrados` ni los KPIs (`totalAdmins`/`totalClientes`) — siguen calculándose igual, solo se sacó la pestaña del filtro visual.
+  - **Analíticas** (`admin/analiticas/analiticas.page.html`/`.scss`): se agregó un aviso debajo del `admin-page-header` con el texto "Los datos se actualizan cada 30 minutos" (píldora gris `.an-cache-notice`, ícono `time-outline`). Motivo: el endpoint `GET /api/admin/analiticas` usa cache de Laravel con TTL de 30 minutos (ver sesión 2026-07-26 de este mismo archivo), y no había ninguna señal en pantalla de que los datos no son en tiempo real.
+- Verificado: cambios triviales de plantilla/array, sin lógica nueva de negocio; no requirió recompilación especial.
+- Pendiente: nada pendiente conocido de estos dos ajustes.
+- NO TOCAR / nota: los datos de clientes siguen accesibles vía backend (KPIs, tabla completa bajo "Todos") — solo se removió la opción de filtro "Clientes" de la UI, no el acceso a esos datos.
