@@ -21,8 +21,10 @@ final class DashboardService
     ) {
     }
 
-    public function resumen(): array
+    /** @param int $dias Ventana del gráfico de ventas (7, 14 o 30). */
+    public function resumen(int $dias = 7): array
     {
+        $dias = in_array($dias, [7, 14, 30], true) ? $dias : 7;
         $hoy = $this->rango(Carbon::today());
         $ayer = $this->rango(Carbon::yesterday());
 
@@ -44,7 +46,7 @@ final class DashboardService
                 ? round($ventasHoy / $pedidosHoyValidos->count(), 2)
                 : 0.0,
             'pedidos_activos' => $this->repositorio->contarActivos(),
-            'ventas_semana' => $this->ventasSemana(),
+            'ventas_semana' => $this->ventasSemana($dias),
             'pedidos_nuevos' => $this->repositorio->ultimosPendientes(5)->map(fn (Pedido $p) => [
                 'id' => $p->id,
                 'codigo' => $p->codigo,
@@ -81,29 +83,34 @@ final class DashboardService
         return round((($actual - $anterior) / $anterior) * 100, 1);
     }
 
-    /** Total vendido (sin cancelados) por cada uno de los ultimos 7 dias, terminando hoy. */
-    private function ventasSemana(): array
+    /**
+     * Total vendido (sin cancelados) por cada uno de los ultimos N dias, terminando hoy.
+     * Para ventanas > 7 dias la etiqueta usa d/m (el nombre del dia se repetiria).
+     */
+    private function ventasSemana(int $dias): array
     {
-        $inicio = Carbon::today()->subDays(6)->startOfDay();
+        $inicio = Carbon::today()->subDays($dias - 1)->startOfDay();
         $fin = Carbon::today()->endOfDay();
 
         $pedidos = $this->repositorio->pedidosEntre($inicio, $fin)
             ->reject(fn (Pedido $p) => $p->estado === 'cancelado');
 
-        $dias = [];
-        for ($i = 0; $i < 7; $i++) {
+        $filas = [];
+        for ($i = 0; $i < $dias; $i++) {
             $fecha = $inicio->copy()->addDays($i);
             $totalDia = $pedidos
                 ->filter(fn (Pedido $p) => $p->created_at->isSameDay($fecha))
                 ->sum('total');
 
-            $dias[] = [
-                'dia' => self::DIAS_SEMANA[(int) $fecha->dayOfWeek],
+            $filas[] = [
+                'dia' => $dias > 7
+                    ? $fecha->format('d/m')
+                    : self::DIAS_SEMANA[(int) $fecha->dayOfWeek],
                 'fecha' => $fecha->toDateString(),
                 'total' => (float) $totalDia,
             ];
         }
 
-        return $dias;
+        return $filas;
     }
 }

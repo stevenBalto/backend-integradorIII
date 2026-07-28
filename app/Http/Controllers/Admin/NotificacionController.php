@@ -49,4 +49,12 @@ final class NotificacionController extends Controller
 
         return response()->json(['cambiadas' => $cambiadas]);
     }
+
+    /** DELETE /api/admin/notificaciones/{id} — elimina una notificación. */
+    public function destroy(int $id): JsonResponse
+    {
+        $this->notificaciones->eliminar($id);
+
+        return response()->json(['eliminada' => true]);
+    }
 }

@@ -43,6 +43,12 @@ final class NotificacionRepository
         return Notificacion::create($datos);
     }
 
+    /** Elimina una notificación de la bandeja. */
+    public function eliminar(Notificacion $notificacion): void
+    {
+        $notificacion->delete();
+    }
+
     public function marcarLeida(Notificacion $notificacion): Notificacion
     {
         if (! $notificacion->leida) {

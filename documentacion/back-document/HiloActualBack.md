@@ -267,3 +267,11 @@ Formato sugerido:
   - **Frontend verificado, sin necesidad de cambios**: `usuario-admin.service.ts` + `usuarios.page.ts` (`frotend-integradorIII/src/app/admin/usuarios/`) solo aplican un filtro local redundante `rol !== 'cliente'` (ya inofensivo, el backend nunca mandaba ni manda `cliente` aca) y una funcion de display `etiquetaRol()` que mapeaba tanto `admin_sede` como `super_admin` a la etiqueta "Administrador" (sigue funcionando, simplemente ese caso ya no ocurre). Las opciones de rol del formulario ya eran dinamicas via `GET /api/admin/usuarios/opciones`, no hardcodeadas.
 - Pendiente: nada pendiente conocido de este cambio puntual. Cambio NO commiteado todavia (queda para que el usuario decida cuando commitear).
 - NO TOCAR / nota: `UsuarioAdminService::assertRolAsignable()` ya impedia asignar `super_admin` desde este panel (anti-escalacion de privilegios) desde antes de este cambio — el ajuste de hoy es solo sobre lectura (listar/buscar), no sobre creacion/edicion, que ya estaba protegida.
+
+## Sesión 2026-07-28 — Dashboard con rango de días + eliminar notificación
+- Hecho:
+  - **Dashboard `GET /admin/dashboard?dias=7|14|30`.** `DashboardController@index(Request)` lee `dias` (default 7, validado `in_array($dias,[7,14,30],true)`) y `DashboardService::resumen(int $dias)` → `ventasSemana(int $dias)` recorre N días (label `d/m` si >7, día de la semana si =7). El frontend usa esto para el select de rango del gráfico (ver `HiloActualFront.md`).
+  - **Eliminar notificación.** `DELETE /api/notificaciones/{id}` → `NotificacionController@destroy(int $id)` → `NotificacionService::eliminar(int)` (busca, 422 si no existe, borra) → `NotificacionRepository::eliminar(Notificacion)`. El front lo usa para "eliminar leídas" + actualizar el contador local.
+  - Verificado con curl: dashboard `dias=7|14|30` devuelve 7/14/30 filas; DELETE de id inexistente → 422; endpoints admin responden 200 con token válido.
+- NO esquema nuevo: sólo controllers/services/repositories/rutas. La BD no se tocó.
+- NO TOCAR / nota: `sanctum.expiration=NULL` (tokens no expiran, sobreviven reinicios). La BD sigue por SQL (no `php artisan migrate`).

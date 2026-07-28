@@ -90,4 +90,18 @@ final class NotificacionService
     {
         return $this->notificaciones->marcarTodasLeidas();
     }
+
+    /** Elimina una notificación de la bandeja del admin. */
+    public function eliminar(int $id): void
+    {
+        $notificacion = $this->notificaciones->buscarPorId($id);
+
+        if ($notificacion === null) {
+            throw ValidationException::withMessages([
+                'id' => ['La notificación no existe.'],
+            ]);
+        }
+
+        $this->notificaciones->eliminar($notificacion);
+    }
 }

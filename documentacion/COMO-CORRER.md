@@ -75,8 +75,24 @@ cd frotend-integradorIII
 npm install
 ionic serve        # o: npx ionic serve
 ```
-Verificar `src/environments/environment.ts` → `apiBaseUrl: 'http://127.0.0.1:8000/api'`.
-Si el backend corre en otro host/puerto, ajustar ahí.
+`src/environments/environment.ts` usa `apiBaseUrl: '/api'` (relativo). El dev-server
+reenvía `/api` → `http://127.0.0.1:8000` vía `proxy.conf.json` (declarado en
+`angular.json` → `serve.options.proxyConfig`). Funciona igual en local. Si el backend
+corre en otro host/puerto, cambiá el `target` de `proxy.conf.json` y reiniciá `ionic serve`.
+
+---
+
+## 3.1 Acceso por túnel público (celular / demo remota)
+Para abrir la app desde un celular u otra red (ej. con **Dev Tunnels de VS Code**):
+1. En VS Code, pestaña **Ports** → reenviar el puerto **8100** → visibilidad **Public**.
+2. Abrir en el celular la URL del túnel (`https://<algo>-8100.<region>.devtunnels.ms`).
+3. Iniciar sesión de nuevo (un token viejo puede apuntar a otra base).
+
+Por qué funciona sin nada más: como `apiBaseUrl` es `/api` (relativo), las llamadas van al
+**mismo origen del túnel (8100)** y el dev-server las reenvía al backend local (8000). **No
+hace falta exponer el 8000 ni tocar CORS.** Requisitos: la PC que corre `ionic serve` +
+`php artisan serve` debe quedar encendida y el túnel del 8100 en **Public**. Tras cambiar el
+proxy hay que reiniciar `ionic serve`.
 
 ---
 
@@ -156,4 +172,4 @@ Endpoints del módulo:
    - **"Continuar con Google"** (fast-follow; mapeo aprobado con columnas `google_id` + `auth_provider`).
    - "Olvidé mi contraseña" y localizar a español los mensajes de complejidad de password.
 
-*Última actualización: 2026-07-10.*
+*Última actualización: 2026-07-28.*
