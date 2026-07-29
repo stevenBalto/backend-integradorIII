@@ -96,3 +96,23 @@ Formato sugerido por entrada:
 - Causa: el watcher de `ng serve` no siempre incorpora al TS program, en caliente, archivos `.ts` nuevos referenciados por un módulo lazy. Como el módulo no compilaba, el type-checker de plantillas reportaba el pipe y el null como "errores" — puras cascadas.
 - Regla: tras crear archivos de **componente nuevos**, **reiniciar `ng serve`** ANTES de creer que hay errores reales de plantilla. Si tras reiniciar compila limpio, los errores de pipe/null eran cascada de la resolución de módulos. No perder tiempo "arreglando" el pipe/null primero.
 - Fecha: 2026-07-24
+
+### EF-12 — Tablas del admin: scroll "diagonal"/inestable en móvil (touch)
+- Qué pasó: en móvil, TODAS las tablas del admin (`.admin-table-wrap`/`.of-table-wrap`) se "movían para todos lados" al arrastrarlas con el dedo — se podían desplazar en diagonal, sin la sensación de scroll estable de una tabla normal.
+- Causa: cada contenedor de tabla era **un solo contenedor 2D** — scrolleaba en los DOS ejes a la vez: `max-height: 60vh` (scroll vertical interno, para el alto fijo) **y** la tabla con `min-width: max-content`/celdas `nowrap` (scroll horizontal interno). Un único elemento que scrollea en X **y** Y, en touch, se arrastra libremente en diagonal. `touch-action` NO puede "bloquear al eje dominante" en un solo contenedor (solo permite `pan-x`, `pan-y` o ambos; no "uno a la vez según el gesto").
+- Solución (CSS puro, sin JS, sin tocar el HTML): **dos contenedores 1D anidados**, cada uno de un solo eje. El navegador enruta nativamente cada gesto al scroller de su eje → nunca diagonal, y se conserva el alto fijo:
+  ```scss
+  @media (max-width: 767px) {
+    .admin-table-wrap {           // externo = SOLO vertical (alto fijo)
+      max-height: 60vh; overflow-y: auto; overflow-x: hidden;
+    }
+    .admin-table {                // tabla como bloque = SOLO horizontal
+      display: block; width: max-content; max-width: 100%; min-width: 0;
+      overflow-x: auto; overflow-y: hidden;
+    }
+  }
+  ```
+  Claves: (1) `min-width: 0` en la tabla es OBLIGATORIO — si queda `min-width: max-content`, el bloque no se topa a `max-width:100%` y no hay overflow horizontal que scrollear. (2) `display:block` en `<table>` mantiene las columnas alineadas (tabla anónima interna; mismo truco que las tablas de GitHub). (3) el encabezado `sticky` puede dejar de pegarse en móvil — es aceptable, comportamiento de tabla normal.
+- Ojo con la especificidad: los estilos de componente Ionic quedan scoped (`[_ngcontent-xxx]`), así que `.of-table*` (definido en `ofertas.page.scss`) NO se puede sobreescribir desde `global.scss` — el fix de esas tablas hay que ponerlo EN `ofertas.page.scss`. Las `.admin-table*` sí viven solo en `global.scss`.
+- Regla: NUNCA dejar un contenedor que scrollee en los dos ejes a la vez en móvil. Alto fijo + scroll horizontal = separar en dos contenedores 1D anidados (vertical afuera, horizontal adentro/tabla-bloque). Verificar en teléfono real.
+- Fecha: 2026-07-29

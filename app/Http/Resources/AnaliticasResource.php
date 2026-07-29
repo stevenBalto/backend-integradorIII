@@ -33,6 +33,10 @@ final class AnaliticasResource extends JsonResource
             'modalidad' => $data['modalidad'],
             'comparacion_mes_anterior' => $data['comparacion_mes_anterior'],
             'ventas_por_categoria' => $data['ventas_por_categoria'],
+            // Metadatos de caché (para el contador de próxima actualización en el front).
+            'generado_en' => $data['generado_en'] ?? null,
+            'expira_en' => $data['expira_en'] ?? null,
+            'ttl_minutos' => $data['ttl_minutos'] ?? 30,
         ];
     }
 }

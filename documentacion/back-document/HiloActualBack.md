@@ -275,3 +275,10 @@ Formato sugerido:
   - Verificado con curl: dashboard `dias=7|14|30` devuelve 7/14/30 filas; DELETE de id inexistente → 422; endpoints admin responden 200 con token válido.
 - NO esquema nuevo: sólo controllers/services/repositories/rutas. La BD no se tocó.
 - NO TOCAR / nota: `sanctum.expiration=NULL` (tokens no expiran, sobreviven reinicios). La BD sigue por SQL (no `php artisan migrate`).
+
+## Sesión 2026-07-29 — Analíticas: metadatos de caché para el contador de próxima actualización
+- Hecho:
+  - `AnaliticasService::resumen()`: dentro del closure cacheado se agregan `generado_en`, `expira_en` (= generado + 30 min = expiración real de la caché) y `ttl_minutos` (30). `AnaliticasResource` los expone (el resource tiene whitelist explícito, había que agregarlos ahí también).
+  - El frontend usa `expira_en` para el contador en vivo del botón/modal de Analíticas (ver `HiloActualFront.md`). Al vencer, el front re-consulta y el backend regenera la caché (nuevo `expira_en`).
+  - Verificado por curl: `expira_en` = `generado_en` + 30 min, `ttl_minutos` = 30. Se corrió `php artisan cache:clear` para regenerar con los campos nuevos.
+- NO esquema nuevo (solo service + resource).

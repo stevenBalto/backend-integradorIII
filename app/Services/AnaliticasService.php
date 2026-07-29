@@ -36,7 +36,13 @@ final class AnaliticasService
         $cacheKey = "analiticas:{$instanciaId}:{$sucursalKey}:{$mesFormato}";
 
         return Cache::remember($cacheKey, now()->addMinutes(self::CACHE_TTL_MINUTES), function () use ($mesFormato, $sucursalId) {
-            return $this->calcularResumen($mesFormato, $sucursalId);
+            $data = $this->calcularResumen($mesFormato, $sucursalId);
+            // Metadatos de caché para que el frontend muestre el contador de próxima actualización.
+            $data['generado_en'] = now()->toIso8601String();
+            $data['expira_en'] = now()->addMinutes(self::CACHE_TTL_MINUTES)->toIso8601String();
+            $data['ttl_minutos'] = self::CACHE_TTL_MINUTES;
+
+            return $data;
         });
     }
 
