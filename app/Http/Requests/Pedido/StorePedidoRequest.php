@@ -27,6 +27,7 @@ class StorePedidoRequest extends FormRequest
             'nombre_cliente' => ['required', 'string', 'max:120'],
             'notas' => ['nullable', 'string', 'max:300'],
             'roosters_a_usar' => ['nullable', 'integer', 'min:0'],
+            'cupon_codigo' => ['nullable', 'string', 'max:20'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.producto_id' => ['required', 'integer'],
             'items.*.cantidad' => ['required', 'integer', 'min:1'],

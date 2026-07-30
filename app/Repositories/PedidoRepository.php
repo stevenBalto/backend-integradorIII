@@ -94,7 +94,7 @@ final class PedidoRepository
     public function listarAdmin(array $filtros): Collection
     {
         $query = Pedido::query()
-            ->with(['cliente', 'sucursal', 'detalles.producto', 'detalles.extras.extra']);
+            ->with(['cliente', 'sucursal', 'cupon', 'detalles.producto', 'detalles.extras.extra']);
 
         if (! empty($filtros['estado'])) {
             $query->where('estado', $filtros['estado']);
@@ -124,6 +124,7 @@ final class PedidoRepository
             ->with([
                 'cliente',
                 'sucursal',
+                'cupon',
                 'detalles.producto',
                 'detalles.extras.extra',
                 'historial.cambiadoPor',

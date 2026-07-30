@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\DTOs\Pedido\CrearPedidoDTO;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Pedido\CambiarEstadoPedidoRequest;
 use App\Http\Requests\Pedido\RevertirEstadoPedidoRequest;
+use App\Http\Requests\Pedido\StorePedidoInvitadoRequest;
 use App\Http\Resources\PedidoAdminResource;
+use App\Models\User;
 use App\Services\PedidoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -79,5 +82,36 @@ final class PedidoAdminController extends Controller
         $pedido = $this->pedidos->registrarPago($id);
 
         return (new PedidoAdminResource($pedido))->response();
+    }
+
+    /**
+     * POST /api/admin/pedidos/mostrador — el staff arma el pedido de un cliente que
+     * pidio en el mostrador (no uso el carrito de la app) y mostro un cupon por QR.
+     * Mismo patron que storeInvitado (usuario centinela "Invitado" como cliente_id,
+     * sin acumular Roosters), pero autenticado como staff: la instancia del pedido
+     * se asigna sola desde el usuario admin logueado (PerteneceAInstancia), no hace
+     * falta suplantar al centinela para eso.
+     */
+    public function storeMostrador(StorePedidoInvitadoRequest $request): JsonResponse
+    {
+        $centinela = User::withoutGlobalScope('instancia')
+            ->where('email', User::EMAIL_INVITADO)
+            ->first();
+
+        if ($centinela === null) {
+            return response()->json([
+                'message' => 'Los pedidos de mostrador no están disponibles por el momento.',
+            ], 503);
+        }
+
+        $pedido = $this->pedidos->crear(
+            $centinela->id,
+            CrearPedidoDTO::fromArray($request->validated()),
+            acumulaPuntos: false,
+        );
+
+        return (new PedidoAdminResource($pedido))
+            ->response()
+            ->setStatusCode(201);
     }
 }

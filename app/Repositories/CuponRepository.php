@@ -53,6 +53,29 @@ final class CuponRepository
         return Cupon::query()->where('codigo', strtoupper($codigo))->first();
     }
 
+    /** Busca un cupon por codigo SOLO si esta activo, vigente y con usos disponibles. */
+    public function buscarActivoPorCodigo(string $codigo): ?Cupon
+    {
+        $hoy = now()->toDateString();
+
+        return Cupon::query()
+            ->where('codigo', strtoupper($codigo))
+            ->where('activo', true)
+            ->where(function ($query) use ($hoy): void {
+                $query->whereNull('fecha_inicio')
+                    ->orWhereDate('fecha_inicio', '<=', $hoy);
+            })
+            ->where(function ($query) use ($hoy): void {
+                $query->whereNull('fecha_fin')
+                    ->orWhereDate('fecha_fin', '>=', $hoy);
+            })
+            ->where(function ($query): void {
+                $query->whereNull('usos_max')
+                    ->orWhereColumn('usos_actuales', '<', 'usos_max');
+            })
+            ->first();
+    }
+
     /**
      * @param array<string, mixed> $datos
      */
@@ -75,5 +98,11 @@ final class CuponRepository
     public function eliminar(Cupon $cupon): void
     {
         $cupon->delete();
+    }
+
+    /** Incrementa el contador de usos (canje via QR/pedido de mostrador). */
+    public function incrementarUso(Cupon $cupon): void
+    {
+        $cupon->increment('usos_actuales');
     }
 }

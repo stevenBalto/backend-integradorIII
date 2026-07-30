@@ -17,6 +17,8 @@ final class CrearPedidoDTO
         public readonly array $items,
         /** Roosters (colones) que el cliente quiere canjear en este pedido. */
         public readonly int $roostersAUsar = 0,
+        /** Codigo de cupon a canjear (QR o checkout), opcional. */
+        public readonly ?string $cuponCodigo = null,
     ) {
     }
 
@@ -40,6 +42,7 @@ final class CrearPedidoDTO
             notas: isset($data['notas']) ? (string) $data['notas'] : null,
             items: $items,
             roostersAUsar: max(0, (int) ($data['roosters_a_usar'] ?? 0)),
+            cuponCodigo: ! empty($data['cupon_codigo']) ? (string) $data['cupon_codigo'] : null,
         );
     }
 
@@ -52,6 +55,7 @@ final class CrearPedidoDTO
             'notas' => $this->notas,
             'items' => $this->items,
             'roosters_a_usar' => $this->roostersAUsar,
+            'cupon_codigo' => $this->cuponCodigo,
         ];
     }
 }

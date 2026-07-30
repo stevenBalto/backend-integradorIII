@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DTOs\Pedido\CrearPedidoDTO;
+use App\Models\Cupon;
 use App\Models\Extra;
 use App\Models\Pedido;
 use App\Models\Producto;
@@ -44,6 +45,7 @@ final class PedidoService
         private readonly PuntosMovimientoRepository $puntos,
         private readonly SucursalRepository $sucursales,
         private readonly NotificacionService $notificaciones,
+        private readonly CuponService $cupones,
     ) {
     }
 
@@ -81,6 +83,25 @@ final class PedidoService
                 $descuento = max(0, min($dto->roostersAUsar, $saldo, (int) $subtotalPedido));
             }
 
+            // 4.1 Canje de cupon (QR o checkout): se suma al descuento de Roosters,
+            //     siempre topado para no dejar el total en negativo. Se valida contra
+            //     el subtotal ANTES de restar Roosters (monto_minimo se mide sobre el
+            //     subtotal real de la compra, no sobre lo que ya se descontó).
+            /** @var Cupon|null $cupon */
+            $cupon = null;
+            if ($dto->cuponCodigo !== null) {
+                $cupon = $this->cupones->buscarActivoPorCodigo($dto->cuponCodigo);
+
+                if ($cupon === null) {
+                    throw ValidationException::withMessages([
+                        'cupon_codigo' => ['Este cupón no existe, está vencido, inactivo o ya agotó sus usos.'],
+                    ]);
+                }
+
+                $descuentoCupon = $this->cupones->calcularDescuento($cupon, $subtotalPedido);
+                $descuento = min($descuento + $descuentoCupon, $subtotalPedido);
+            }
+
             $total = $subtotalPedido - $descuento;
 
             // 5. Roosters ganados = 5% del total pagado (estilo Taco Bell). El invitado
@@ -91,7 +112,7 @@ final class PedidoService
             $datosPedido = [
                 'cliente_id' => $userId,
                 'sucursal_id' => $dto->sucursalId,
-                'cupon_id' => null, // No hay integracion de cupones en este pass
+                'cupon_id' => $cupon?->id,
                 'modalidad' => $dto->modalidad,
                 'nombre_cliente' => $dto->nombreCliente,
                 'estado' => 'pendiente',
@@ -154,8 +175,15 @@ final class PedidoService
                 User::where('id', $userId)->increment('puntos_balance', $puntosGanados);
             }
 
+            // 9. Registrar el uso del cupon (si aplico) — dentro de la transaccion:
+            //    si algo falla arriba, el cupon no se descuenta.
+            if ($cupon !== null) {
+                $this->cupones->registrarUso($cupon);
+            }
+
             return $pedido->load([
                 'sucursal',
+                'cupon',
                 'detalles.producto',
                 'detalles.extras.extra',
             ]);
@@ -329,6 +357,7 @@ final class PedidoService
             return $pedido->fresh([
                 'cliente',
                 'sucursal',
+                'cupon',
                 'detalles.producto',
                 'detalles.extras.extra',
                 'historial.cambiadoPor',
@@ -389,6 +418,7 @@ final class PedidoService
             return $pedido->fresh([
                 'cliente',
                 'sucursal',
+                'cupon',
                 'detalles.producto',
                 'detalles.extras.extra',
                 'historial.cambiadoPor',
@@ -424,6 +454,7 @@ final class PedidoService
         return $this->pedidos->registrarPago($pedido)->fresh([
             'cliente',
             'sucursal',
+            'cupon',
             'detalles.producto',
             'detalles.extras.extra',
             'historial.cambiadoPor',

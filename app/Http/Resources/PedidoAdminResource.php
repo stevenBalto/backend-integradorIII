@@ -40,6 +40,10 @@ final class PedidoAdminResource extends JsonResource
                 'id' => $this->sucursal->id,
                 'nombre' => $this->sucursal->nombre,
             ]),
+            'cupon' => $this->whenLoaded('cupon', fn () => $this->cupon !== null ? [
+                'id' => $this->cupon->id,
+                'codigo' => $this->cupon->codigo,
+            ] : null),
             'items' => PedidoDetalleResource::collection($this->whenLoaded('detalles')),
             'historial' => PedidoHistorialResource::collection($this->whenLoaded('historial')),
             'created_at' => $this->created_at?->toIso8601String(),

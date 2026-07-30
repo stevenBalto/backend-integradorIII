@@ -8,9 +8,11 @@ use App\DTOs\Cupon\ActualizarCuponDTO;
 use App\DTOs\Cupon\CrearCuponDTO;
 use App\Http\Requests\Cupon\StoreCuponRequest;
 use App\Http\Requests\Cupon\UpdateCuponRequest;
+use App\Http\Requests\Cupon\ValidarCuponRequest;
 use App\Http\Resources\CuponResource;
 use App\Services\CuponService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Endpoints de administracion de cupones.
@@ -64,5 +66,29 @@ final class CuponController extends Controller
         $this->cupones->eliminar($id);
 
         return response()->json(['message' => 'Cupon eliminado correctamente.']);
+    }
+
+    /**
+     * POST /api/admin/cupones/validar — usado por el scanner QR del staff antes de
+     * armar el pedido de mostrador: valida vigencia/usos y devuelve el descuento
+     * estimado sobre un subtotal opcional (sin registrar el uso todavia).
+     */
+    public function validar(ValidarCuponRequest $request): JsonResponse
+    {
+        $datos = $request->validated();
+
+        $cupon = $this->cupones->buscarActivoPorCodigo($datos['codigo']);
+
+        if ($cupon === null) {
+            throw ValidationException::withMessages([
+                'codigo' => ['Este cupón no existe, está vencido, inactivo o ya agotó sus usos.'],
+            ]);
+        }
+
+        $subtotal = (float) ($datos['subtotal'] ?? 0);
+
+        return (new CuponResource($cupon))->additional([
+            'descuento_estimado' => $subtotal > 0 ? $this->cupones->calcularDescuento($cupon, $subtotal) : null,
+        ])->response();
     }
 }

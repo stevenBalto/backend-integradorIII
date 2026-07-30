@@ -71,6 +71,40 @@ final class CuponService
         $this->cupones->eliminar($cupon);
     }
 
+    /**
+     * Busca un cupon vigente por codigo (activo, dentro de fechas, con usos disponibles).
+     * Usado por el canje via QR/pedido de mostrador y por el checkout normal.
+     */
+    public function buscarActivoPorCodigo(string $codigo): ?Cupon
+    {
+        return $this->cupones->buscarActivoPorCodigo($codigo);
+    }
+
+    /**
+     * Calcula el descuento de un cupon sobre un subtotal, validando el monto minimo.
+     * Porcentaje o monto fijo, siempre topado al subtotal (nunca deja el total en negativo).
+     */
+    public function calcularDescuento(Cupon $cupon, float $subtotal): float
+    {
+        if ($cupon->monto_minimo !== null && $subtotal < (float) $cupon->monto_minimo) {
+            throw ValidationException::withMessages([
+                'cupon_codigo' => ["Este cupón requiere una compra mínima de ₡{$cupon->monto_minimo}."],
+            ]);
+        }
+
+        $descuento = $cupon->tipo === 'porcentaje'
+            ? $subtotal * ((float) $cupon->valor / 100)
+            : (float) $cupon->valor;
+
+        return min($descuento, $subtotal);
+    }
+
+    /** Marca el cupon como usado (incrementa el contador de canjes). */
+    public function registrarUso(Cupon $cupon): void
+    {
+        $this->cupones->incrementarUso($cupon);
+    }
+
     private function validarFechas(?string $fechaInicio, ?string $fechaFin): void
     {
         if ($fechaInicio !== null && $fechaFin !== null && $fechaFin < $fechaInicio) {

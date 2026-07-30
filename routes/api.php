@@ -100,6 +100,7 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::post('/cupones', [CuponController::class, 'store']);
         Route::match(['put', 'patch'], '/cupones/{id}', [CuponController::class, 'update']);
         Route::delete('/cupones/{id}', [CuponController::class, 'destroy']);
+        Route::post('/cupones/validar', [CuponController::class, 'validar']);
 
         // Configuracion del Home (curacion: oferta destacada)
         Route::put('/home-config', [ConfiguracionController::class, 'update']);
@@ -144,6 +145,7 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::get('/analiticas', [AnaliticasController::class, 'index']);
 
         // Pedidos (administracion).
+        Route::post('/pedidos/mostrador', [PedidoAdminController::class, 'storeMostrador']);
         Route::get('/pedidos', [PedidoAdminController::class, 'index']);
         Route::get('/pedidos/{id}', [PedidoAdminController::class, 'show']);
         Route::post('/pedidos/{id}/estado', [PedidoAdminController::class, 'cambiarEstado']);
