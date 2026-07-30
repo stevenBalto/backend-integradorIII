@@ -34,6 +34,16 @@ final class ConfiguracionController extends Controller
         return response()->json(['data' => $datos]);
     }
 
+    /**
+     * GET /api/restaurantes — publico. Lista los restaurantes (una por instancia
+     * activa) con la "Informacion del negocio" que cada sucursal configuro.
+     * Lo consume la pantalla Restaurantes de la app cliente.
+     */
+    public function restaurantes(): JsonResponse
+    {
+        return response()->json(['data' => $this->configuraciones->listarRestaurantes()]);
+    }
+
     /** GET /api/admin/configuracion — ajustes generales de la instancia. */
     public function ajustes(): JsonResponse
     {

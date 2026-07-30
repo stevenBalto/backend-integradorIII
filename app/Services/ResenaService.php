@@ -27,6 +27,7 @@ final class ResenaService
     public function __construct(
         private readonly ResenaRepository $resenas,
         private readonly NotificacionService $notificaciones,
+        private readonly ConfiguracionService $configuracion,
     ) {
     }
 
@@ -103,6 +104,12 @@ final class ResenaService
 
             $creadas = new Collection();
 
+            // Si el negocio revisa las reseñas antes de publicarlas (Configuración
+            // → Reseñas), nacen 'oculta' y el admin las aprueba desde su panel.
+            $estadoInicial = $this->configuracion->moderacionResenasActiva((int) $pedido->instancia_id)
+                ? 'oculta'
+                : 'publicada';
+
             // Reseña general (1 por pedido).
             if ($general !== null) {
                 if ($this->resenas->existeGeneral($pedido->id)) {
@@ -118,7 +125,7 @@ final class ResenaService
                     'tipo' => 'general',
                     'calificacion' => $general['calificacion'],
                     'comentario' => $general['comentario'] ?? null,
-                    'estado' => 'publicada',
+                    'estado' => $estadoInicial,
                 ]));
             }
 
@@ -151,7 +158,7 @@ final class ResenaService
                         'tipo' => 'producto',
                         'calificacion' => $p['calificacion'],
                         'comentario' => $p['comentario'] ?? null,
-                        'estado' => 'publicada',
+                        'estado' => $estadoInicial,
                     ]));
                 }
             }

@@ -68,6 +68,9 @@ Route::get('/sucursales', [SucursalController::class, 'index']);
 Route::get('/ofertas', [OfertaController::class, 'indexPublic']);
 Route::get('/cupones', [CuponController::class, 'indexPublic']);
 Route::get('/home-config', [ConfiguracionController::class, 'show']);
+// Restaurantes: una tarjeta por instancia activa, con los datos que cada
+// sucursal cargó en Configuración → Información del negocio.
+Route::get('/restaurantes', [ConfiguracionController::class, 'restaurantes']);
 Route::get('/productos/{id}/resenas', [ResenaController::class, 'producto']);
 
 // ── Busqueda publica de pedido por codigo ────────────────────────────────────

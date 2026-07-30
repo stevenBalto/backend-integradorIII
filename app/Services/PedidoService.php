@@ -48,6 +48,7 @@ final class PedidoService
         private readonly NotificacionService $notificaciones,
         private readonly CuponService $cupones,
         private readonly OfertaService $ofertas,
+        private readonly ConfiguracionService $configuracion,
     ) {
     }
 
@@ -58,9 +59,30 @@ final class PedidoService
     {
         $pedido = DB::transaction(function () use ($userId, $dto, $acumulaPuntos): Pedido {
             // 1. Validar sucursal
-            if (! $this->sucursales->existeYActiva($dto->sucursalId)) {
+            $sucursal = $this->sucursales->buscarPorId($dto->sucursalId);
+            if ($sucursal === null || ! $sucursal->activa) {
                 throw ValidationException::withMessages([
                     'sucursal_id' => ['La sucursal seleccionada no está disponible.'],
+                ]);
+            }
+
+            // 1.1 Reglas de operacion del negocio (Configuracion de la instancia):
+            //     recibir pedidos, cierre temporal y HORARIO. Fuera de horario no
+            //     se acepta el pedido.
+            $operacion = $this->configuracion->operacionDeInstancia((int) $sucursal->instancia_id);
+
+            $motivoCierre = $this->configuracion->motivoCierre($operacion);
+            if ($motivoCierre !== null) {
+                throw ValidationException::withMessages(['sucursal_id' => [$motivoCierre]]);
+            }
+
+            // 1.2 Modalidad habilitada por el negocio.
+            $modalidadActiva = $dto->modalidad === 'comer_aqui'
+                ? $operacion['modalidad_comer_aqui']
+                : $operacion['modalidad_para_llevar'];
+            if (! $modalidadActiva) {
+                throw ValidationException::withMessages([
+                    'modalidad' => ['Esta modalidad no está disponible en este momento.'],
                 ]);
             }
 
@@ -74,13 +96,21 @@ final class PedidoService
                 $subtotalPedido += $itemProcesado['subtotal_con_extras'];
             }
 
+            // 2.1 Monto minimo de pedido (Configuracion del negocio).
+            $montoMinimo = $operacion['pedido_monto_minimo'];
+            if ($montoMinimo > 0 && $subtotalPedido < $montoMinimo) {
+                throw ValidationException::withMessages([
+                    'items' => ['El pedido mínimo es de ₡' . number_format($montoMinimo, 0, ',', '.') . '.'],
+                ]);
+            }
+
             // 3. Generar codigo unico
             $codigo = $this->generarCodigoUnico();
 
             // 4. Canje de Roosters (1 Rooster = ₡1). Solo usuarios logueados; se capa al
             //    saldo real y al subtotal para no dejar el total en negativo.
             $descuento = 0;
-            if ($acumulaPuntos && $dto->roostersAUsar > 0) {
+            if ($acumulaPuntos && $operacion['roosters_activo'] && $dto->roostersAUsar > 0) {
                 $saldo = (int) User::where('id', $userId)->lockForUpdate()->value('puntos_balance');
                 $descuento = max(0, min($dto->roostersAUsar, $saldo, (int) $subtotalPedido));
             }
@@ -127,9 +157,12 @@ final class PedidoService
 
             $total = $subtotalPedido - $descuento;
 
-            // 5. Roosters ganados = 5% del total pagado (estilo Taco Bell). El invitado
-            //    (no logueado) no acumula.
-            $puntosGanados = $acumulaPuntos ? (int) floor($total * 0.05) : 0;
+            // 5. Roosters ganados: % del total pagado, configurable por el negocio
+            //    (Configuración → Programa de Roosters). El invitado (no logueado)
+            //    no acumula, y si el programa está apagado tampoco.
+            $puntosGanados = ($acumulaPuntos && $operacion['roosters_activo'])
+                ? (int) floor($total * ($operacion['roosters_porcentaje'] / 100))
+                : 0;
 
             // 6. Crear el pedido
             $datosPedido = [

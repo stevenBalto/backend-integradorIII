@@ -121,6 +121,10 @@ final class NotificacionService
     /** Notifica que se creó un producto nuevo en el menú. */
     public function notificarProductoNuevo(Producto $producto): ?Notificacion
     {
+        if (! $this->configuracion->notificacionActiva((int) $producto->instancia_id, 'notif_producto_nuevo')) {
+            return null;
+        }
+
         return $this->notificaciones->crear([
             'instancia_id' => $producto->instancia_id,
             'tipo' => 'producto_nuevo',
@@ -136,6 +140,9 @@ final class NotificacionService
     public function notificarClienteNuevo(User $cliente): ?Notificacion
     {
         if ($cliente->instancia_id === null) {
+            return null;
+        }
+        if (! $this->configuracion->notificacionActiva((int) $cliente->instancia_id, 'notif_cliente_nuevo')) {
             return null;
         }
 
@@ -154,6 +161,9 @@ final class NotificacionService
     public function notificarUsuarioNuevo(User $usuario): ?Notificacion
     {
         if ($usuario->instancia_id === null) {
+            return null;
+        }
+        if (! $this->configuracion->notificacionActiva((int) $usuario->instancia_id, 'notif_usuario_nuevo')) {
             return null;
         }
 
