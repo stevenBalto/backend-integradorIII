@@ -143,6 +143,8 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
 
         // Analiticas (ventas mensuales, horas pico, top productos, modalidad).
         Route::get('/analiticas', [AnaliticasController::class, 'index']);
+        Route::get('/analiticas/exportar/excel', [AnaliticasController::class, 'exportarExcel']);
+        Route::get('/analiticas/exportar/pdf', [AnaliticasController::class, 'exportarPdf']);
 
         // Pedidos (administracion).
         Route::post('/pedidos/mostrador', [PedidoAdminController::class, 'storeMostrador']);

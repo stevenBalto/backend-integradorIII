@@ -31,7 +31,7 @@ final class AnaliticasResource extends JsonResource
             'horas_pico' => $data['horas_pico'],
             'top_productos' => $data['top_productos'],
             'modalidad' => $data['modalidad'],
-            'comparacion_mes_anterior' => $data['comparacion_mes_anterior'],
+            'comparacion_periodo_anterior' => $data['comparacion_periodo_anterior'],
             'ventas_por_categoria' => $data['ventas_por_categoria'],
             // Metadatos de caché (para el contador de próxima actualización en el front).
             'generado_en' => $data['generado_en'] ?? null,
