@@ -126,3 +126,23 @@ Formato sugerido por entrada:
 - Regla: en páginas Ionic/Angular con `IonicRouteStrategy`, **nunca** asumir que `ngOnInit` corre una sola vez por "primera carga" ni que `ngOnDestroy` se dispara siempre al salir — para timers, listeners o cualquier "efecto que se repite en cada visita", usar los hooks de vista de Ionic (`ionViewWillEnter`/`ionViewWillLeave`/`ionViewDidEnter`/`ionViewDidLeave`), o si el problema vive en un patrón COMPARTIDO por varias páginas (como una directiva), arreglarlo ahí y no parchear cada página por separado.
 - Fecha: 2026-07-29
 - Fecha: 2026-07-29
+
+### EF-14 — `<ion-modal [isOpen]>` (sheet) deja backdrop huérfano al navegar → congela la app
+- Qué pasó: el prompt de reseñas (`resena-prompt.component`, vive en el shell de tabs) usaba `<ion-modal [isOpen]="isOpen" [breakpoints]="[0,1]">`. Tras pasar por varias secciones, la app quedaba **congelada**: no se abría NADA (ni el detalle de un producto, ni otros modales) — un backdrop invisible interceptaba todos los clics "por siempre".
+- Causa: `ion-modal` es un overlay a nivel de `ion-app` (no vive dentro de una tab page, así que no se oculta al cambiar de tab). El binding declarativo `[isOpen]` con sheet + los cambios de ruta dejan el `ion-backdrop` en el DOM aunque el contenido ya no esté visible → captura todos los eventos de puntero. Es un problema conocido de `[isOpen]` + sheet al combinarse con navegación.
+- Solución: reemplazar el `ion-modal` por el **patrón de overlay `*ngIf` propio** que ya usa todo el proyecto (`.xxx-modal` = `position:fixed; inset:0` + `__backdrop` + panel, todo bajo un `*ngIf="isOpen"`). Al poner `isOpen=false` el nodo entero se **desmonta** → es imposible que quede un backdrop pegado. Se mantiene la misma UI (bottom-sheet, tap en el backdrop = cerrar).
+- Regla: en este proyecto, para modales propios preferir el overlay `*ngIf` (se desmonta al cerrar) en vez de `<ion-modal [isOpen]>`, sobre todo si el modal vive en un componente persistente (shell de tabs) — un backdrop de `ion-modal` que no se limpia bloquea TODA la app, no solo su pantalla.
+- Fecha: 2026-07-30
+
+### EF-15 — Flex item con `overflow-x:auto` sin `min-width:0` → ancho "infinito" y sin scroll
+- Qué pasó: al reestructurar el encabezado del menú (`pedir`) y meter las **categorías** (chips con scroll horizontal) dentro de un contenedor flex-column (`.pedir-menu-head__tools`), en móvil el buscador se hacía de **ancho infinito** (se salía de la pantalla) y las categorías **perdían el scroll horizontal** (los chips se salían sin poder desplazarlos).
+- Causa: un flex item tiene `min-width: auto` por defecto = **min-content**. Para una fila de chips con `flex-shrink:0`, el min-content es la suma de TODOS los chips (no envuelven) → el item se estira a ese ancho, excede el viewport ("infinito") y su `overflow-x:auto` nunca dispara (el item está dimensionado a su contenido, no acotado por el contenedor).
+- Solución: `min-width: 0` en el contenedor flex (`__tools`) **y** en el item que scrollea (`.pedir-cats`). Así el item respeta el ancho del contenedor (viewport) y su `overflow-x:auto` vuelve a desplazar los chips.
+- Regla: cualquier elemento con `overflow-x:auto`/`overflow:hidden` que sea (o esté dentro de) un flex/grid item necesita `min-width:0` en la cadena — sin eso, `min-width:auto` lo dimensiona a min-content y rompe tanto el ancho como el scroll. Es la misma familia de `min-width:0`/`max-width:100%` que ya se usó para el chart del dashboard.
+- Fecha: 2026-07-30
+
+### EF-16 — `position:fixed` dentro de `ion-content` se mide desde el content, no desde el viewport
+- Qué pasó: el FAB del carrito (`.pedir-fab`, `position:fixed`) "salía muy arriba" en móvil. Se probó `bottom:80px`, `bottom:72px`, `72px + env(safe-area)` y seguía alto; recién `bottom:16px` lo dejó bien.
+- Causa: un elemento `position:fixed` que es hijo (slotted) de `<ion-content>` NO se posiciona respecto al viewport, sino respecto al **`ion-content`** (su bloque contenedor), cuyo borde inferior ya está **por encima del tab bar**. Así que un `bottom` grande lo sube muchísimo (se le suma la altura del tab bar) y sumar `env(safe-area)` lo empeora (doble conteo). El offset se mide desde el tope del tab bar, no desde el fondo de la pantalla.
+- Regla: para posicionar un FAB/overlay `position:fixed` dentro de `ion-content`, usar offsets **pequeños** (ej. `bottom:16px`) medidos desde el borde del content — no razonar como si fuera relativo al viewport ni sumar el alto del tab bar ni el safe-area. (Relacionado: para tapar/despejar el tab bar, mejor ocultarlo por completo con una clase en `body` que pelear con z-index, ver modo inmersivo del carrito en `HiloActualFront.md`.)
+- Fecha: 2026-07-30
