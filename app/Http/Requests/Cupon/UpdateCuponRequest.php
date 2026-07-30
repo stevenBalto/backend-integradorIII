@@ -39,7 +39,9 @@ class UpdateCuponRequest extends FormRequest
             'codigo' => [
                 'required',
                 'string',
-                'max:40',
+                'min:3',
+                'max:20',
+                'regex:/^[A-Z0-9]+$/',
                 Rule::unique('cupones', 'codigo')->ignore($cuponId),
             ],
             'tipo' => ['required', 'string', Rule::in(['porcentaje', 'monto_fijo'])],
@@ -59,7 +61,9 @@ class UpdateCuponRequest extends FormRequest
     {
         return [
             'codigo.required' => 'El codigo del cupon es obligatorio.',
-            'codigo.max' => 'El codigo no puede superar los 40 caracteres.',
+            'codigo.min' => 'El codigo debe tener al menos 3 caracteres.',
+            'codigo.max' => 'El codigo no puede superar los 20 caracteres.',
+            'codigo.regex' => 'El codigo solo puede tener letras y numeros, sin espacios (ej. PASTA20).',
             'codigo.unique' => 'El codigo del cupon ya esta en uso.',
             'tipo.required' => 'El tipo de cupon es obligatorio.',
             'tipo.in' => 'El tipo debe ser "porcentaje" o "monto_fijo".',
