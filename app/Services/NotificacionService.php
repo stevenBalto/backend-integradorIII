@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Insumo;
 use App\Models\Notificacion;
 use App\Models\Pedido;
+use App\Models\Producto;
+use App\Models\Resena;
+use App\Models\User;
 use App\Repositories\NotificacionRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
@@ -61,6 +65,116 @@ final class NotificacionService
         ]);
     }
 
+    /**
+     * Notifica una o varias reseñas recién dejadas por un cliente (1 aviso por envio).
+     *
+     * @param Collection<int, Resena> $resenas
+     */
+    public function notificarResenaNueva(Collection $resenas): ?Notificacion
+    {
+        $primera = $resenas->first();
+        if ($primera === null) {
+            return null;
+        }
+        if (! $this->configuracion->notificacionActiva((int) $primera->instancia_id, 'notif_resenas_nuevas')) {
+            return null;
+        }
+
+        $cliente = optional($primera->user)->nombre ?? 'Un cliente';
+        $total = $resenas->count();
+        $promedio = round((float) $resenas->avg('calificacion'), 1);
+        $detalle = $total === 1 ? "{$primera->calificacion}★" : "{$total} reseñas · prom. {$promedio}★";
+
+        return $this->notificaciones->crear([
+            'instancia_id' => $primera->instancia_id,
+            'tipo' => 'resena_nueva',
+            'pedido_id' => $primera->pedido_id,
+            'titulo' => 'Nueva reseña',
+            'mensaje' => "{$cliente} — {$detalle}",
+            'data' => ['total' => $total, 'promedio' => $promedio, 'cliente' => $cliente],
+            'leida' => false,
+        ]);
+    }
+
+    /** Notifica que un insumo llegó a (o por debajo de) su stock minimo. */
+    public function notificarStockBajo(Insumo $insumo): ?Notificacion
+    {
+        if (! $this->configuracion->notificacionActiva((int) $insumo->instancia_id, 'notif_stock_bajo')) {
+            return null;
+        }
+
+        return $this->notificaciones->crear([
+            'instancia_id' => $insumo->instancia_id,
+            'tipo' => 'stock_bajo',
+            'pedido_id' => null,
+            'titulo' => "Stock bajo: {$insumo->nombre}",
+            'mensaje' => "Quedan {$insumo->cantidad_actual} {$insumo->unidad_medida} (mínimo {$insumo->stock_minimo})",
+            'data' => [
+                'insumo_id' => $insumo->id,
+                'cantidad_actual' => (float) $insumo->cantidad_actual,
+                'stock_minimo' => (float) $insumo->stock_minimo,
+            ],
+            'leida' => false,
+        ]);
+    }
+
+    /** Notifica que se creó un producto nuevo en el menú. */
+    public function notificarProductoNuevo(Producto $producto): ?Notificacion
+    {
+        return $this->notificaciones->crear([
+            'instancia_id' => $producto->instancia_id,
+            'tipo' => 'producto_nuevo',
+            'pedido_id' => null,
+            'titulo' => 'Nuevo producto en el menú',
+            'mensaje' => $producto->nombre,
+            'data' => ['producto_id' => $producto->id, 'nombre' => $producto->nombre],
+            'leida' => false,
+        ]);
+    }
+
+    /** Notifica que se registró un cliente nuevo. */
+    public function notificarClienteNuevo(User $cliente): ?Notificacion
+    {
+        if ($cliente->instancia_id === null) {
+            return null;
+        }
+
+        return $this->notificaciones->crear([
+            'instancia_id' => $cliente->instancia_id,
+            'tipo' => 'cliente_nuevo',
+            'pedido_id' => null,
+            'titulo' => 'Nuevo cliente registrado',
+            'mensaje' => $cliente->nombre,
+            'data' => ['cliente_id' => $cliente->id, 'nombre' => $cliente->nombre, 'email' => $cliente->email],
+            'leida' => false,
+        ]);
+    }
+
+    /** Notifica que se creó un usuario/administrador desde el panel. */
+    public function notificarUsuarioNuevo(User $usuario): ?Notificacion
+    {
+        if ($usuario->instancia_id === null) {
+            return null;
+        }
+
+        $rol = optional($usuario->role)->nombre;
+        $rolLabel = match ($rol) {
+            'super_admin', 'admin_sede' => 'administrador',
+            'cliente' => 'cliente',
+            default => 'usuario',
+        };
+
+        return $this->notificaciones->crear([
+            'instancia_id' => $usuario->instancia_id,
+            'tipo' => 'usuario_nuevo',
+            'pedido_id' => null,
+            'titulo' => 'Nuevo ' . $rolLabel,
+            'mensaje' => $usuario->nombre,
+            'data' => ['usuario_id' => $usuario->id, 'nombre' => $usuario->nombre, 'rol' => $rol],
+            'leida' => false,
+        ]);
+    }
+
     /** @return Collection<int, Notificacion> */
     public function listar(bool $soloNoLeidas = false): Collection
     {
@@ -103,5 +217,11 @@ final class NotificacionService
         }
 
         $this->notificaciones->eliminar($notificacion);
+    }
+
+    /** Borra TODAS las notificaciones de la instancia. Devuelve cuantas borró. */
+    public function eliminarTodas(): int
+    {
+        return $this->notificaciones->eliminarTodas();
     }
 }

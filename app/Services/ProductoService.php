@@ -11,6 +11,7 @@ use App\Repositories\CategoriaRepository;
 use App\Repositories\ProductoRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -21,6 +22,7 @@ final class ProductoService
     public function __construct(
         private readonly ProductoRepository $productos,
         private readonly CategoriaRepository $categorias,
+        private readonly NotificacionService $notificaciones,
     ) {
     }
 
@@ -54,7 +56,7 @@ final class ProductoService
     {
         $this->validarCategoria($dto->categoriaId);
 
-        return DB::transaction(function () use ($dto, $imagenUrl): Producto {
+        $producto = DB::transaction(function () use ($dto, $imagenUrl): Producto {
             $datos = $dto->toArray();
             $datos['imagen_url'] = $imagenUrl;
 
@@ -68,6 +70,15 @@ final class ProductoService
 
             return $producto;
         });
+
+        // Avisar a los admins de la instancia que hay un producto nuevo.
+        try {
+            $this->notificaciones->notificarProductoNuevo($producto);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo crear la notificacion de producto nuevo', ['error' => $e->getMessage()]);
+        }
+
+        return $producto;
     }
 
     /** $imagenUrl: si es null, se conserva la imagen actual del producto (no se pisa). */

@@ -11,6 +11,7 @@ use App\Repositories\InsumoMovimientoRepository;
 use App\Repositories\InsumoRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -24,6 +25,7 @@ final class InsumoService
     public function __construct(
         private readonly InsumoRepository $insumos,
         private readonly InsumoMovimientoRepository $movimientos,
+        private readonly NotificacionService $notificaciones,
     ) {
     }
 
@@ -81,7 +83,7 @@ final class InsumoService
     {
         $insumo = $this->buscarPorId($insumoId);
 
-        return DB::transaction(function () use ($insumo, $cantidadContada, $nota, $userId): array {
+        $resultado = DB::transaction(function () use ($insumo, $cantidadContada, $nota, $userId): array {
             $cantidadAnterior = (float) $insumo->cantidad_actual;
             $diferencia = $cantidadContada - $cantidadAnterior;
 
@@ -102,6 +104,17 @@ final class InsumoService
                 'movimiento' => $movimiento,
             ];
         });
+
+        // Si tras la toma el insumo quedó en o bajo su minimo, avisar a los admins.
+        try {
+            if ($resultado['insumo']->bajoStock()) {
+                $this->notificaciones->notificarStockBajo($resultado['insumo']);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo crear la notificacion de stock bajo', ['error' => $e->getMessage()]);
+        }
+
+        return $resultado;
     }
 
     /** @return Collection<int, \App\Models\InsumoMovimiento> */

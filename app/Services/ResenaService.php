@@ -9,6 +9,7 @@ use App\Models\Resena;
 use App\Repositories\ResenaRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -25,6 +26,7 @@ final class ResenaService
 {
     public function __construct(
         private readonly ResenaRepository $resenas,
+        private readonly NotificacionService $notificaciones,
     ) {
     }
 
@@ -80,7 +82,7 @@ final class ResenaService
      */
     public function resenar(int $userId, int $pedidoId, ?array $general, array $productos): Collection
     {
-        return DB::transaction(function () use ($userId, $pedidoId, $general, $productos): Collection {
+        $creadas = DB::transaction(function () use ($userId, $pedidoId, $general, $productos): Collection {
             /** @var Pedido|null $pedido */
             $pedido = Pedido::query()
                 ->where('cliente_id', $userId)
@@ -156,6 +158,15 @@ final class ResenaService
 
             return $creadas;
         });
+
+        // Notificar a los admins de la instancia (fuera de la transaccion).
+        try {
+            $this->notificaciones->notificarResenaNueva($creadas);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo crear la notificacion de reseña nueva', ['error' => $e->getMessage()]);
+        }
+
+        return $creadas;
     }
 
     /** El cliente descarta el pedido de reseña: deja de insistir para ese pedido. */

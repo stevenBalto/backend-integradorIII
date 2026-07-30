@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Repositories\RoleRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
@@ -21,6 +22,7 @@ final class AuthService
     public function __construct(
         private readonly UserRepository $usuarios,
         private readonly RoleRepository $roles,
+        private readonly NotificacionService $notificaciones,
     ) {
     }
 
@@ -39,6 +41,13 @@ final class AuthService
         $user = $this->usuarios->crearCliente($dto, $rolClienteId);
         $token = $user->createToken('auth')->plainTextToken;
         $user->load('role');
+
+        // Avisar a los admins de la instancia que se registró un cliente nuevo.
+        try {
+            $this->notificaciones->notificarClienteNuevo($user);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo crear la notificacion de cliente nuevo', ['error' => $e->getMessage()]);
+        }
 
         return ['user' => $user, 'token' => $token];
     }

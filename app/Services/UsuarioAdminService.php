@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Repositories\RoleRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -22,6 +23,7 @@ final class UsuarioAdminService
     public function __construct(
         private readonly UserRepository $usuarios,
         private readonly RoleRepository $roles,
+        private readonly NotificacionService $notificaciones,
     ) {
     }
 
@@ -51,6 +53,12 @@ final class UsuarioAdminService
 
         $user->modulos()->sync($dto->modulos);
         $user->load(['role', 'modulos']);
+
+        try {
+            $this->notificaciones->notificarUsuarioNuevo($user);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo crear la notificacion de usuario nuevo', ['error' => $e->getMessage()]);
+        }
 
         return $user;
     }

@@ -57,4 +57,12 @@ final class NotificacionController extends Controller
 
         return response()->json(['eliminada' => true]);
     }
+
+    /** DELETE /api/admin/notificaciones — borra todas las de la instancia. */
+    public function destroyTodas(): JsonResponse
+    {
+        $eliminadas = $this->notificaciones->eliminarTodas();
+
+        return response()->json(['eliminadas' => $eliminadas]);
+    }
 }

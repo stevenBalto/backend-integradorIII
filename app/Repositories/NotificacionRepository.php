@@ -71,4 +71,10 @@ final class NotificacionRepository
                 'leida_en' => now(),
             ]);
     }
+
+    /** Borra todas las notificaciones de la instancia. Devuelve cuantas borró. */
+    public function eliminarTodas(): int
+    {
+        return Notificacion::query()->delete();
+    }
 }

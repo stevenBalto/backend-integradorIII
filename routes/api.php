@@ -167,6 +167,7 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::get('/notificaciones', [NotificacionController::class, 'index']);
         Route::post('/notificaciones/leer-todas', [NotificacionController::class, 'marcarTodasLeidas']);
         Route::post('/notificaciones/{id}/leer', [NotificacionController::class, 'marcarLeida']);
+        Route::delete('/notificaciones', [NotificacionController::class, 'destroyTodas']);
         Route::delete('/notificaciones/{id}', [NotificacionController::class, 'destroy']);
 
         // Reseñas (gestión: listar/filtrar, ocultar/mostrar, eliminar, stats).
