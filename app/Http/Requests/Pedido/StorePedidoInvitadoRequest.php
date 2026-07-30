@@ -30,6 +30,7 @@ class StorePedidoInvitadoRequest extends FormRequest
             'nombre_cliente' => ['required', 'string', 'max:120'],
             'notas' => ['nullable', 'string', 'max:300'],
             'cupon_codigo' => ['nullable', 'string', 'max:20'],
+            'oferta_id' => ['nullable', 'integer', 'exists:ofertas,id'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.producto_id' => ['required', 'integer'],
             'items.*.cantidad' => ['required', 'integer', 'min:1'],

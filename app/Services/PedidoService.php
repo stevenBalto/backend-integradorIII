@@ -7,6 +7,7 @@ namespace App\Services;
 use App\DTOs\Pedido\CrearPedidoDTO;
 use App\Models\Cupon;
 use App\Models\Extra;
+use App\Models\Oferta;
 use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\ProductoExtra;
@@ -46,6 +47,7 @@ final class PedidoService
         private readonly SucursalRepository $sucursales,
         private readonly NotificacionService $notificaciones,
         private readonly CuponService $cupones,
+        private readonly OfertaService $ofertas,
     ) {
     }
 
@@ -102,6 +104,27 @@ final class PedidoService
                 $descuento = min($descuento + $descuentoCupon, $subtotalPedido);
             }
 
+            // 4.2 Canje de oferta (QR o pedido de mostrador): el descuento solo se
+            //     calcula sobre el subtotal de los productos que SI pertenecen a la
+            //     oferta (no sobre todo el pedido). Se agrega a `notas` para dejar
+            //     trazabilidad sin necesitar una columna nueva en `pedidos`.
+            /** @var Oferta|null $oferta */
+            $oferta = null;
+            $notasFinal = $dto->notas;
+            if ($dto->ofertaId !== null) {
+                $oferta = $this->ofertas->buscarActivaPorId($dto->ofertaId);
+
+                if ($oferta === null) {
+                    throw ValidationException::withMessages([
+                        'oferta_id' => ['Esta oferta no existe, está vencida o inactiva.'],
+                    ]);
+                }
+
+                $descuentoOferta = $this->ofertas->calcularDescuento($oferta, $itemsProcesados);
+                $descuento = min($descuento + $descuentoOferta, $subtotalPedido);
+                $notasFinal = trim("[Oferta: {$oferta->nombre}] " . ($notasFinal ?? ''));
+            }
+
             $total = $subtotalPedido - $descuento;
 
             // 5. Roosters ganados = 5% del total pagado (estilo Taco Bell). El invitado
@@ -120,7 +143,7 @@ final class PedidoService
                 'descuento' => $descuento,
                 'total' => $total,
                 'puntos_ganados' => $puntosGanados,
-                'notas' => $dto->notas,
+                'notas' => $notasFinal,
                 'codigo' => $codigo,
                 'pagado' => false,
                 'pagado_en' => null,

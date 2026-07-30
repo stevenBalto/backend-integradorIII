@@ -73,6 +73,63 @@ final class OfertaService
         $this->ofertas->eliminar($oferta);
     }
 
+    /**
+     * Busca una oferta vigente por id (activa, dentro de fechas). Usado por el
+     * canje via QR/pedido de mostrador.
+     */
+    public function buscarActivaPorId(int $id): ?Oferta
+    {
+        $oferta = $this->ofertas->buscarPorId($id);
+
+        if ($oferta === null || ! $oferta->activa) {
+            return null;
+        }
+
+        $hoy = now()->toDateString();
+
+        if ($oferta->fecha_inicio !== null && $oferta->fecha_inicio->toDateString() > $hoy) {
+            return null;
+        }
+
+        if ($oferta->fecha_fin !== null && $oferta->fecha_fin->toDateString() < $hoy) {
+            return null;
+        }
+
+        return $oferta;
+    }
+
+    /**
+     * Calcula el descuento de una oferta sobre los items de un pedido: solo cuenta
+     * el subtotal de los productos incluidos en la oferta (los demas items del
+     * pedido no se ven afectados).
+     *
+     * @param array<int, array{producto_id: int, subtotal: float}> $itemsProcesados
+     */
+    public function calcularDescuento(Oferta $oferta, array $itemsProcesados): float
+    {
+        $productoIds = $oferta->productos->pluck('id')->all();
+
+        $subtotalElegible = array_reduce(
+            $itemsProcesados,
+            fn (float $acc, array $item) => in_array($item['producto_id'], $productoIds, true)
+                ? $acc + $item['subtotal']
+                : $acc,
+            0.0,
+        );
+
+        if ($subtotalElegible <= 0.0) {
+            throw ValidationException::withMessages([
+                'oferta_id' => ['Ninguno de los productos del pedido corresponde a esta oferta.'],
+            ]);
+        }
+
+        $descuento = $oferta->tipo_descuento === 'porcentaje'
+            ? $subtotalElegible * ((float) $oferta->valor / 100)
+            : (float) $oferta->valor;
+
+        return min($descuento, $subtotalElegible);
+    }
+
     private function validarFechas(?string $fechaInicio, ?string $fechaFin): void
     {
         if ($fechaInicio !== null && $fechaFin !== null && $fechaFin < $fechaInicio) {

@@ -19,6 +19,8 @@ final class CrearPedidoDTO
         public readonly int $roostersAUsar = 0,
         /** Codigo de cupon a canjear (QR o checkout), opcional. */
         public readonly ?string $cuponCodigo = null,
+        /** Id de oferta a canjear (QR, pedido de mostrador), opcional. */
+        public readonly ?int $ofertaId = null,
     ) {
     }
 
@@ -43,6 +45,7 @@ final class CrearPedidoDTO
             items: $items,
             roostersAUsar: max(0, (int) ($data['roosters_a_usar'] ?? 0)),
             cuponCodigo: ! empty($data['cupon_codigo']) ? (string) $data['cupon_codigo'] : null,
+            ofertaId: ! empty($data['oferta_id']) ? (int) $data['oferta_id'] : null,
         );
     }
 
@@ -56,6 +59,7 @@ final class CrearPedidoDTO
             'items' => $this->items,
             'roosters_a_usar' => $this->roostersAUsar,
             'cupon_codigo' => $this->cuponCodigo,
+            'oferta_id' => $this->ofertaId,
         ];
     }
 }
