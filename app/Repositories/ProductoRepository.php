@@ -9,6 +9,7 @@ use App\Models\Producto;
 use App\Models\ProductoExtra;
 use App\Models\ProductoTamano;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Unica capa que consulta la tabla productos via Eloquent.
@@ -28,16 +29,30 @@ final class ProductoRepository
         return $this->cargarExtrasDeCategoria($productos);
     }
 
-    /** @return Collection<int, Producto> */
-    public function listarDisponibles(): Collection
+    /**
+     * @return Collection<int, Producto>|\Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public function listarDisponibles(?int $porPagina = null, int $pagina = 1)
     {
-        $productos = Producto::query()
+        $query = Producto::query()
             ->with(['categoria', 'tamanos'])
             ->withCount('resenasVisibles')
             ->withAvg('resenasVisibles', 'calificacion')
             ->where('disponible', true)
-            ->orderBy('nombre')
-            ->get();
+            ->orderBy('nombre');
+
+        if ($porPagina !== null) {
+            $paginator = $query->paginate($porPagina, ['*'], 'pagina', $pagina);
+
+            // Hydrate extrasCategoria for items on the current page
+            $paginator->setCollection($this->cargarExtrasDeCategoria($paginator->getCollection()));
+
+            return $paginator;
+        }
+
+        // Para respuestas publicas sin paginar, usamos cache corta para mejorar TTFB
+        $cacheKey = 'productos:disponibles:all';
+        $productos = Cache::remember($cacheKey, 30, fn () => $query->get());
 
         return $this->cargarExtrasDeCategoria($productos);
     }

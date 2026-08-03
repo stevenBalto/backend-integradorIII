@@ -47,6 +47,28 @@ final class ResenaRepository
             ->all();
     }
 
+    /**
+     * Devuelve un map pedido_id => Collection<int, int> (ids de productos reseñados)
+     * para los pedidos indicados. Util para evitar N+1 en listados.
+     *
+     * @param array<int> $pedidoIds
+     * @return \Illuminate\Support\Collection<int, \Illuminate\Support\Collection<int, int>>
+     */
+    public function productosResenadosPorPedidos(array $pedidoIds): \Illuminate\Support\Collection
+    {
+        if (empty($pedidoIds)) {
+            return collect();
+        }
+
+        $filas = Resena::query()
+            ->whereIn('pedido_id', $pedidoIds)
+            ->where('tipo', 'producto')
+            ->get(['pedido_id', 'producto_id']);
+
+        return $filas->groupBy('pedido_id')
+            ->map(fn ($grupo) => $grupo->pluck('producto_id')->map(fn ($id) => (int) $id)->unique()->values());
+    }
+
     // ── Admin ──────────────────────────────────────────────────────────────
 
     /**
@@ -54,11 +76,12 @@ final class ResenaRepository
      * q (nombre/email del cliente), estado ('publicada'|'oculta').
      *
      * @param array<string, mixed> $filtros
-     * @return Collection<int, Resena>
+     * @param int|null $porPagina Si viene, devuelve un LengthAwarePaginator en vez de la Collection completa.
+     * @return Collection<int, Resena>|\Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function listarAdmin(array $filtros): Collection
+    public function listarAdmin(array $filtros, ?int $porPagina = null, int $pagina = 1)
     {
-        return Resena::query()
+        $query = Resena::query()
             ->with(['user:id,nombre,email', 'producto:id,nombre'])
             ->when(isset($filtros['producto_id']), fn ($q) => $q->where('producto_id', $filtros['producto_id']))
             ->when(isset($filtros['calificacion']), fn ($q) => $q->where('calificacion', $filtros['calificacion']))
@@ -72,8 +95,13 @@ final class ResenaRepository
                 });
             })
             ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->get();
+            ->orderByDesc('id');
+
+        if ($porPagina !== null) {
+            return $query->paginate($porPagina, ['*'], 'pagina', $pagina);
+        }
+
+        return $query->get();
     }
 
     public function actualizar(Resena $resena, array $datos): Resena

@@ -27,6 +27,10 @@ use App\Http\Controllers\SuperAdminAuthController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\ClienteController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\LogRequestTiming;
+
+// Agrupar todas las rutas de API para registrar tiempo de respuesta (middleware)
+Route::middleware([LogRequestTiming::class])->group(function () {
 
 // ── Autenticacion ─────────────────────────────────────────────────────────────
 Route::post('/register', [AuthController::class, 'register']);
@@ -204,4 +208,7 @@ Route::prefix('superadmin')->group(function () {
         Route::post('/instancias/{id}/estado', [InstanciaController::class, 'cambiarEstado']);
         Route::delete('/instancias/{id}', [InstanciaController::class, 'destroy']);
     });
+});
+
+// Cierre del grupo de middleware LogRequestTiming
 });

@@ -23,11 +23,11 @@ final class ClienteService
     /**
      * Lista clientes con estadisticas de compra.
      *
-     * @return Collection<int, User>
+     * @return Collection<int, User>|\Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function listarConEstadisticas(): Collection
+    public function listarConEstadisticas(?int $porPagina = null, int $pagina = 1)
     {
-        return $this->clientes->listarConEstadisticas();
+        return $this->clientes->listarConEstadisticas($porPagina, $pagina);
     }
 
     /**

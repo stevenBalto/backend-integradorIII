@@ -32,10 +32,15 @@ final class ProductoService
         return $this->productos->listarTodos();
     }
 
-    /** @return Collection<int, Producto> */
-    public function listarDisponibles(): Collection
+    /**
+     * Devuelve productos disponibles. Si se pasan parámetros de paginación,
+     * devuelve un LengthAwarePaginator en lugar de la Collection completa.
+     *
+     * @return Collection<int, Producto>|\Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public function listarDisponibles(?int $porPagina = null, int $pagina = 1)
     {
-        return $this->productos->listarDisponibles();
+        return $this->productos->listarDisponibles($porPagina, $pagina);
     }
 
     public function buscarPorId(int $id): Producto

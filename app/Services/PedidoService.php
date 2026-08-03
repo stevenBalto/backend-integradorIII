@@ -550,10 +550,10 @@ final class PedidoService
         return $pedido;
     }
 
-    /** @return Collection<int, Pedido> */
-    public function listarAdmin(array $filtros): Collection
+    /** @return Collection<int, Pedido>|\Illuminate\Contracts\Pagination\LengthAwarePaginator */
+    public function listarAdmin(array $filtros, ?int $porPagina = null, int $pagina = 1)
     {
-        return $this->pedidos->listarAdmin($filtros);
+        return $this->pedidos->listarAdmin($filtros, $porPagina, $pagina);
     }
 
     public function buscarPorId(int $id): Pedido

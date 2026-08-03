@@ -25,11 +25,17 @@ final class ProductoController extends Controller
     ) {
     }
 
-    /** GET /api/productos — catalogo publico, solo disponibles. */
-    public function index(): JsonResponse
+    /** GET /api/productos — catalogo publico, solo disponibles.
+     *  Soporta paginación opcional mediante query params `por_pagina` y `pagina`.
+     */
+    public function index(Request $request): JsonResponse
     {
-        return ProductoResource::collection($this->productos->listarDisponibles())
-            ->response();
+        $porPagina = $request->query('por_pagina') !== null ? (int) $request->query('por_pagina') : null;
+        $pagina = $request->query('pagina') !== null ? (int) $request->query('pagina') : 1;
+
+        $result = $this->productos->listarDisponibles($porPagina, $pagina);
+
+        return ProductoResource::collection($result)->response();
     }
 
     /** GET /api/admin/productos — listado completo para administracion. */

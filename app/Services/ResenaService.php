@@ -51,8 +51,13 @@ final class ResenaService
             ->orderByDesc('updated_at')
             ->get();
 
-        return $pedidos->map(function (Pedido $pedido) {
-            $yaResenados = $this->resenas->productosResenados($pedido->id);
+        $pedidoIds = $pedidos->pluck('id')->values()->all();
+
+        // Obtener productos ya reseñados para todos los pedidos en UN query (evita N+1).
+        $resenadosMap = $this->resenas->productosResenadosPorPedidos($pedidoIds);
+
+        return $pedidos->map(function (Pedido $pedido) use ($resenadosMap) {
+            $yaResenados = $resenadosMap->get($pedido->id, collect())->toArray();
 
             $productos = $pedido->detalles
                 ->filter(fn ($d) => $d->producto !== null)
@@ -208,11 +213,11 @@ final class ResenaService
 
     /**
      * @param array<string, mixed> $filtros
-     * @return Collection<int, Resena>
+     * @return Collection<int, Resena>|\Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function listarAdmin(array $filtros): Collection
+    public function listarAdmin(array $filtros, ?int $porPagina = null, int $pagina = 1)
     {
-        return $this->resenas->listarAdmin($filtros);
+        return $this->resenas->listarAdmin($filtros, $porPagina, $pagina);
     }
 
     public function ocultar(int $id): Resena

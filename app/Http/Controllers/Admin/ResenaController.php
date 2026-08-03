@@ -33,7 +33,10 @@ final class ResenaController extends Controller
             'q' => $request->query('q'),
         ], fn ($v) => $v !== null && $v !== '');
 
-        return ResenaAdminResource::collection($this->resenas->listarAdmin($filtros))->response();
+        $porPagina = $request->query('por_pagina') !== null ? (int) $request->query('por_pagina') : null;
+        $pagina = (int) $request->query('pagina', 1);
+
+        return ResenaAdminResource::collection($this->resenas->listarAdmin($filtros, $porPagina, $pagina))->response();
     }
 
     /** GET /api/admin/resenas/stats — promedio + total por producto. */

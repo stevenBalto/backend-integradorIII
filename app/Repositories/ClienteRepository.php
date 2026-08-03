@@ -21,9 +21,10 @@ final class ClienteRepository
      * Lista clientes de la instancia con estadisticas agregadas de compra.
      * Excluye pedidos cancelados de los calculos.
      *
-     * @return Collection<int, User>
+     * @param int|null $porPagina Si viene, devuelve un LengthAwarePaginator en vez de la Collection completa.
+     * @return Collection<int, User>|\Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function listarConEstadisticas(): Collection
+    public function listarConEstadisticas(?int $porPagina = null, int $pagina = 1)
     {
         $instanciaId = $this->instanciaActual();
         $roleCliente = Role::query()->where('nombre', 'cliente')->first();
@@ -64,7 +65,13 @@ final class ClienteRepository
             $query->where('users.instancia_id', $instanciaId);
         }
 
-        return $query->orderByDesc('total_gastado')->get();
+        $query->orderByDesc('total_gastado');
+
+        if ($porPagina !== null) {
+            return $query->paginate($porPagina, ['*'], 'pagina', $pagina);
+        }
+
+        return $query->get();
     }
 
     /**

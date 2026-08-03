@@ -89,12 +89,20 @@ final class PedidoRepository
      * Lista pedidos para administracion con filtros.
      *
      * @param array $filtros Keys: estado, modalidad, q (busqueda en codigo o nombre cliente).
-     * @return Collection<int, Pedido>
+     * @param int|null $porPagina Si viene, devuelve un LengthAwarePaginator en vez de la Collection completa.
+     * @return Collection<int, Pedido>|\Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function listarAdmin(array $filtros): Collection
+    public function listarAdmin(array $filtros, ?int $porPagina = null, int $pagina = 1)
     {
+        // Cargar solo los campos necesarios para el listado (evita payloads enormes).
         $query = Pedido::query()
-            ->with(['cliente', 'sucursal', 'cupon', 'detalles.producto', 'detalles.extras.extra']);
+            ->with([
+                'cliente:id,nombre,email',
+                'sucursal:id,nombre',
+                'cupon:id,codigo',
+                // Solo nombre e id del producto en los detalles para el listado.
+                'detalles.producto:id,nombre',
+            ]);
 
         if (! empty($filtros['estado'])) {
             $query->where('estado', $filtros['estado']);
@@ -114,7 +122,13 @@ final class PedidoRepository
             });
         }
 
-        return $query->orderByDesc('created_at')->get();
+        $query->orderByDesc('created_at');
+
+        if ($porPagina !== null) {
+            return $query->paginate($porPagina, ['*'], 'pagina', $pagina);
+        }
+
+        return $query->get();
     }
 
     /** Busca un pedido por ID para administracion (con todas las relaciones). */

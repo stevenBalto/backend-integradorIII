@@ -8,6 +8,7 @@ use App\Http\Resources\ClienteResumenResource;
 use App\Http\Resources\PedidoResumenResource;
 use App\Services\ClienteService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * Endpoints del modulo Clientes (analitica de compra, solo lectura).
@@ -24,9 +25,12 @@ final class ClienteController extends Controller
      * GET /api/admin/clientes
      * Lista clientes con estadisticas agregadas de compra.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        return ClienteResumenResource::collection($this->clientes->listarConEstadisticas())
+        $porPagina = $request->query('por_pagina') !== null ? (int) $request->query('por_pagina') : null;
+        $pagina = (int) $request->query('pagina', 1);
+
+        return ClienteResumenResource::collection($this->clientes->listarConEstadisticas($porPagina, $pagina))
             ->response();
     }
 

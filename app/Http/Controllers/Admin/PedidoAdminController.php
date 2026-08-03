@@ -34,7 +34,10 @@ final class PedidoAdminController extends Controller
             'q' => $request->query('q'),
         ];
 
-        $pedidos = $this->pedidos->listarAdmin(array_filter($filtros));
+        $porPagina = $request->query('por_pagina') !== null ? (int) $request->query('por_pagina') : null;
+        $pagina = (int) $request->query('pagina', 1);
+
+        $pedidos = $this->pedidos->listarAdmin(array_filter($filtros), $porPagina, $pagina);
 
         return PedidoAdminResource::collection($pedidos)->response();
     }
