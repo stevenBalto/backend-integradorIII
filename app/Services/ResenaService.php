@@ -70,11 +70,17 @@ final class ResenaService
                 ->values()
                 ->all();
 
+            // Tipo sugerido segun cantidad de productos unicos en el pedido:
+            // - 1 solo producto => 'producto' (califica directamente ese producto)
+            // - varios productos => 'general' (califica la experiencia del pedido completo)
+            $tipoSugerido = count($productos) === 1 ? 'producto' : 'general';
+
             return [
                 'pedido_id' => $pedido->id,
                 'codigo' => $pedido->codigo,
                 'fecha' => $pedido->created_at?->toIso8601String(),
                 'productos' => $productos,
+                'tipo_sugerido' => $tipoSugerido,
             ];
         })->all();
     }

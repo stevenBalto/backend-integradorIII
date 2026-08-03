@@ -15,11 +15,22 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 final class ResenaAdminResource extends JsonResource
 {
+    /**
+     * Mapa de etiquetas humanas para el tipo de resena.
+     * El valor almacenado en BD es 'general' o 'producto' (CHECK constraint),
+     * pero mostramos un label mas descriptivo al frontend.
+     */
+    private const TIPO_LABELS = [
+        'general' => 'Pedido',
+        'producto' => 'Producto',
+    ];
+
     public function toArray(Request $request): array
     {
         return [
             'id' => $this->id,
             'tipo' => $this->tipo,
+            'tipo_label' => self::TIPO_LABELS[$this->tipo] ?? $this->tipo,
             'calificacion' => $this->calificacion,
             'comentario' => $this->comentario,
             'estado' => $this->estado,

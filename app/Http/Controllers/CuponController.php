@@ -10,6 +10,7 @@ use App\Http\Requests\Cupon\StoreCuponRequest;
 use App\Http\Requests\Cupon\UpdateCuponRequest;
 use App\Http\Requests\Cupon\ValidarCuponRequest;
 use App\Http\Resources\CuponResource;
+use App\Services\CloudinaryService;
 use App\Services\CuponService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -21,6 +22,7 @@ final class CuponController extends Controller
 {
     public function __construct(
         private readonly CuponService $cupones,
+        private readonly CloudinaryService $cloudinary,
     ) {
     }
 
@@ -47,15 +49,23 @@ final class CuponController extends Controller
     /** POST /api/admin/cupones */
     public function store(StoreCuponRequest $request): JsonResponse
     {
-        $cupon = $this->cupones->crear(CrearCuponDTO::fromArray($request->validated()));
+        $imagenUrl = $request->hasFile('imagen')
+            ? $this->cloudinary->subirImagenCupon($request->file('imagen'))
+            : null;
+
+        $cupon = $this->cupones->crear(CrearCuponDTO::fromArray($request->validated()), $imagenUrl);
 
         return (new CuponResource($cupon))->response()->setStatusCode(201);
     }
 
-    /** PUT/PATCH /api/admin/cupones/{id} */
+    /** PUT/PATCH /api/admin/cupones/{id} (via POST + _method para poder mandar el archivo) */
     public function update(UpdateCuponRequest $request, int $id): CuponResource
     {
-        $cupon = $this->cupones->actualizar($id, ActualizarCuponDTO::fromArray($request->validated()));
+        $imagenUrl = $request->hasFile('imagen')
+            ? $this->cloudinary->subirImagenCupon($request->file('imagen'))
+            : null;
+
+        $cupon = $this->cupones->actualizar($id, ActualizarCuponDTO::fromArray($request->validated()), $imagenUrl);
 
         return new CuponResource($cupon);
     }

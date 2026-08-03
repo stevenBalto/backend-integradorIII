@@ -21,6 +21,7 @@ final class OfertaResource extends JsonResource
             'fecha_inicio' => $this->fecha_inicio?->toDateString(),
             'fecha_fin' => $this->fecha_fin?->toDateString(),
             'activa' => (bool) $this->activa,
+            'imagen_url' => $this->imagen_url,
             'productos' => $this->whenLoaded('productos', fn () => $this->productos->map(fn ($p) => [
                 'id' => $p->id,
                 'nombre' => $p->nombre,

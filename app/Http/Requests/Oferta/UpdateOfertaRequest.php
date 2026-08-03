@@ -48,6 +48,7 @@ class UpdateOfertaRequest extends FormRequest
             'activa' => ['nullable', 'boolean'],
             'producto_ids' => ['nullable', 'array'],
             'producto_ids.*' => ['integer', 'exists:productos,id'],
+            'imagen' => ['nullable', 'image', 'max:2048'],
         ];
     }
 
@@ -70,6 +71,8 @@ class UpdateOfertaRequest extends FormRequest
             'producto_ids.array' => 'Los productos deben ser un arreglo.',
             'producto_ids.*.integer' => 'Cada ID de producto debe ser un entero.',
             'producto_ids.*.exists' => 'Uno de los productos seleccionados no existe.',
+            'imagen.image' => 'El archivo debe ser una imagen valida.',
+            'imagen.max' => 'La imagen no puede superar los 2MB.',
         ];
     }
 }

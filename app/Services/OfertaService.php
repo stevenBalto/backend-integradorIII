@@ -48,22 +48,32 @@ final class OfertaService
         return $oferta;
     }
 
-    public function crear(CrearOfertaDTO $dto): Oferta
+    /** $imagenUrl: si se subio una imagen nueva a Cloudinary, su secure_url. */
+    public function crear(CrearOfertaDTO $dto, ?string $imagenUrl = null): Oferta
     {
         $this->validarFechas($dto->fechaInicio, $dto->fechaFin);
         $this->validarProductosExisten($dto->productoIds);
 
-        return $this->ofertas->crear($dto->toArray(), $dto->productoIds);
+        $datos = $dto->toArray();
+        $datos['imagen_url'] = $imagenUrl;
+
+        return $this->ofertas->crear($datos, $dto->productoIds);
     }
 
-    public function actualizar(int $id, ActualizarOfertaDTO $dto): Oferta
+    /** $imagenUrl: si es null, se conserva la imagen actual de la oferta (no se pisa). */
+    public function actualizar(int $id, ActualizarOfertaDTO $dto, ?string $imagenUrl = null): Oferta
     {
         $oferta = $this->buscarPorId($id);
 
         $this->validarFechas($dto->fechaInicio, $dto->fechaFin);
         $this->validarProductosExisten($dto->productoIds);
 
-        return $this->ofertas->actualizar($oferta, $dto->toArray(), $dto->productoIds);
+        $datos = $dto->toArray();
+        if ($imagenUrl !== null) {
+            $datos['imagen_url'] = $imagenUrl;
+        }
+
+        return $this->ofertas->actualizar($oferta, $datos, $dto->productoIds);
     }
 
     public function eliminar(int $id): void

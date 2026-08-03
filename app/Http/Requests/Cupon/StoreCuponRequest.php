@@ -42,6 +42,7 @@ class StoreCuponRequest extends FormRequest
             'fecha_fin' => ['nullable', 'date'],
             'usos_max' => ['nullable', 'integer', 'min:1'],
             'activo' => ['nullable', 'boolean'],
+            'imagen' => ['nullable', 'image', 'max:2048'],
         ];
     }
 
@@ -67,6 +68,8 @@ class StoreCuponRequest extends FormRequest
             'fecha_fin.date' => 'La fecha de fin debe ser una fecha valida.',
             'usos_max.integer' => 'Los usos maximos deben ser un numero entero.',
             'usos_max.min' => 'Los usos maximos deben ser al menos 1.',
+            'imagen.image' => 'El archivo debe ser una imagen valida.',
+            'imagen.max' => 'La imagen no puede superar los 2MB.',
         ];
     }
 }
