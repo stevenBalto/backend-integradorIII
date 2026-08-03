@@ -107,6 +107,13 @@ final class AnaliticasExportService
         $inicio = $inicio->copy()->locale('es');
         $fin = $fin->copy()->locale('es');
 
+        if ($granularidad === 'rango') {
+            $fechaDesde = $inicio->format('d/m/Y');
+            $fechaHasta = $fin->format('d/m/Y');
+
+            return "Del {$fechaDesde} al {$fechaHasta}";
+        }
+
         if ($granularidad === 'dia') {
             return self::capitalizar($inicio->translatedFormat('l d \d\e F \d\e Y'));
         }
