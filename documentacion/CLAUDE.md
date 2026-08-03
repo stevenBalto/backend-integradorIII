@@ -56,7 +56,10 @@ intención es simple aunque toque un dominio pesado, bajá de tier automáticame
   `producto_tamanos.descripcion` agregadas 2026-07-19 (aprobado, sin tabla
   nueva). `extras.categoria_id`
   ahora es nullable (extra "general" = `es_general=true`+`categoria_id NULL`,
-  CHECK garantiza que no coexistan). Ningún agente agrega tablas nuevas sin
+  CHECK garantiza que no coexistan). Columnas aprobadas 2026-08-03:
+  `usuario_modulo.permiso` (varchar(20), NOT NULL, DEFAULT 'lectura', CHECK
+  ('lectura','editor')), `ofertas.imagen_url` (varchar(255) NULL),
+  `cupones.imagen_url` (varchar(255) NULL). Ningún agente agrega tablas nuevas sin
   aprobación explícita del usuario.
 - No existe tabla `direcciones` (no hay delivery en esta versión).
 - Horarios viven en `configuraciones` (clave-valor), no en tabla separada.

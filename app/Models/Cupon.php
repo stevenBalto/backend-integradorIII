@@ -30,6 +30,7 @@ class Cupon extends Model
         'usos_max',
         'usos_actuales',
         'activo',
+        'imagen_url',
     ];
 
     protected function casts(): array

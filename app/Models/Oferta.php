@@ -29,6 +29,7 @@ class Oferta extends Model
         'fecha_inicio',
         'fecha_fin',
         'activa',
+        'imagen_url',
     ];
 
     protected function casts(): array

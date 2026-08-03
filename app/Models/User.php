@@ -85,7 +85,8 @@ class User extends Authenticatable
     /** Modulos del panel a los que este usuario tiene acceso (permisos individuales). */
     public function modulos(): BelongsToMany
     {
-        return $this->belongsToMany(Modulo::class, 'usuario_modulo', 'user_id', 'modulo_id');
+        return $this->belongsToMany(Modulo::class, 'usuario_modulo', 'user_id', 'modulo_id')
+            ->withPivot('permiso');
     }
 
     /** Rol del usuario (super_admin / admin_sede / cliente). */

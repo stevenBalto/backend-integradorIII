@@ -37,6 +37,11 @@ final class UserRepository
         return User::query()->where('email', $email)->first();
     }
 
+    public function buscarPorUsuario(string $usuario): ?User
+    {
+        return User::query()->where('usuario', $usuario)->first();
+    }
+
     public function existeUsuario(string $usuario): bool
     {
         return User::query()->where('usuario', $usuario)->exists();

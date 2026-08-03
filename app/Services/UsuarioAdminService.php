@@ -15,8 +15,15 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * CRUD de usuarios de una instancia (panel admin).
+ *
  * AISLAMIENTO: todo se filtra/crea con el instancia_id del admin autenticado;
  * jamas se acepta instancia_id desde el cliente.
+ *
+ * REGLA DE PASSWORD (ITEM 21): La password solo se fija en el ALTA. El modulo
+ * usuarios NO permite a un admin cambiar la password de otro usuario. Los
+ * unicos flujos validos para cambio de password son: (a) alta, (b) flujo de
+ * expiracion self-service (POST /api/auth/password-expirada), (c) reset por
+ * correo (POST /api/forgot-password + POST /api/reset-password).
  */
 final class UsuarioAdminService
 {
@@ -37,7 +44,11 @@ final class UsuarioAdminService
     {
         $this->assertRolAsignable($dto->roleId);
 
-        // Password temporal: debe cambiarla en el primer inicio de sesion.
+        // Calcular fecha de expiracion de password (hoy + dias_expiracion_password).
+        // NO se marca password_temporal ni cambio_password_obligatorio: la password
+        // es FIJA desde el principio; solo expirara segun dias_expiracion_password.
+        $passwordExpiraEn = now()->addDays($dto->diasExpiracionPassword)->toDateString();
+
         $user = $this->usuarios->crear([
             'instancia_id' => $instanciaId,
             'role_id' => $dto->roleId,
@@ -47,8 +58,10 @@ final class UsuarioAdminService
             'telefono' => $dto->telefono,
             'password' => $dto->password, // cast 'hashed'
             'activo' => true,
-            'password_temporal' => true,
-            'cambio_password_obligatorio' => true,
+            'password_temporal' => false,
+            'cambio_password_obligatorio' => false,
+            'dias_expiracion_password' => $dto->diasExpiracionPassword,
+            'password_expira_en' => $passwordExpiraEn,
         ]);
 
         $user->modulos()->sync($dto->modulos);
@@ -63,6 +76,9 @@ final class UsuarioAdminService
         return $user;
     }
 
+    /**
+     * Actualiza un usuario. NOTA: La password NO se cambia aqui (ver docblock de la clase).
+     */
     public function actualizar(int $id, ActualizarUsuarioDTO $dto, int $instanciaId): User
     {
         $user = $this->obtenerEnInstancia($id, $instanciaId);
@@ -77,6 +93,24 @@ final class UsuarioAdminService
             $user->modulos()->sync($dto->modulos);
         }
 
+        $user->load(['role', 'modulos']);
+
+        return $user;
+    }
+
+    /**
+     * Cambia el estado activo/inactivo de un usuario (toggle).
+     */
+    public function cambiarEstado(int $id, bool $activo, int $instanciaId, int $actorId): User
+    {
+        if ($id === $actorId) {
+            throw ValidationException::withMessages([
+                'id' => ['No podés desactivar tu propia cuenta.'],
+            ]);
+        }
+
+        $user = $this->obtenerEnInstancia($id, $instanciaId);
+        $this->usuarios->actualizar($user, ['activo' => $activo]);
         $user->load(['role', 'modulos']);
 
         return $user;

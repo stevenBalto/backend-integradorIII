@@ -333,3 +333,23 @@ Formato sugerido:
 - Pendiente:
   - Nada pendiente conocido del backend de este batch. Falta probar la descarga real end-to-end desde el navegador (solo se probó a nivel de servicio con `tinker`, no se levantó `php artisan serve` + `ionic serve` juntos en esta sesión).
 - NO TOCAR / nota: `config/database.php` sigue con un cambio local sin commitear (defaults de `DB_DATABASE`/`DB_PASSWORD`, ajeno a esta sesión, ya documentado en la sesión 2026-07-25) — no se tocó ni se commiteó. `comparacion_mes_anterior` ya NO existe en la respuesta del endpoint — si algún consumidor viejo la esperaba, actualizar a `comparacion_periodo_anterior`.
+
+## Sesion 2026-08-03 — Esquema: permiso por modulo + imagen en ofertas/cupones
+- Hecho:
+  - **Esquema nuevo** (aprobado explicitamente):
+    - `usuario_modulo.permiso`: varchar(20) NOT NULL DEFAULT 'lectura', CHECK ('lectura','editor'). Permite diferenciar si un usuario tiene acceso de solo lectura o de edicion en cada modulo asignado.
+    - `ofertas.imagen_url`: varchar(255) NULL. Permite banners/imagenes promocionales.
+    - `cupones.imagen_url`: varchar(255) NULL. Idem.
+  - Migraciones SQL en `bd-doc/migracion_2026-08-03_usuario_modulo_permiso.sql` y `bd-doc/migracion_2026-08-03_ofertas_cupones_imagen.sql`. Re-ejecutables.
+  - **Modelos actualizados**:
+    - `User::modulos()` ahora lleva `->withPivot('permiso')`.
+    - `Modulo::usuarios()` nueva relacion inversa con `->withPivot('permiso')`.
+    - `Oferta::$fillable` y `Cupon::$fillable` incluyen `imagen_url`.
+  - **DTOs actualizados**: `CrearUsuarioDTO::$modulos` y `ActualizarUsuarioDTO::$modulos` ahora aceptan tanto lista simple de IDs (default 'lectura') como mapa `{modulo_id: {permiso: 'editor'}}`. Metodo `normalizarModulos()` convierte ambos formatos al formato sync de Laravel.
+  - **Resource actualizado**: `AdminUserResource::modulos` ahora expone `id`, `clave`, `nombre` y `permiso` por cada modulo asignado (antes solo IDs).
+  - SQL aplicado a la BD via `php artisan tinker`. Verificado con information_schema que las columnas existen.
+  - **Tarea 3 (borrar extras "Categoria")**: investigado — no existen filas en la tabla `extras` con nombre ILIKE 'categor%'. Los 19 extras actuales son todos validos (de prueba tipo "Extra Queso", "Demo Tocineta", etc). Nada que borrar.
+- Pendiente:
+  - El frontend del panel admin no usa todavia el permiso por modulo (la UI para asignar 'lectura' vs 'editor' queda para cuando se pida).
+  - Integracion de imagen en el frontend de Ofertas/Cupones (crear, editar, mostrar en Home/kiosko).
+- NO TOCAR / nota: la BD sigue por SQL, no por `php artisan migrate`. El sync de modulos en `UsuarioAdminService::crear()`/`actualizar()` ya usa el formato mapa con permiso — compatible hacia atras con listas simples de IDs (default 'lectura').
