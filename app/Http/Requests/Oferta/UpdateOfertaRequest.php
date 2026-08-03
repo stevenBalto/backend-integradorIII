@@ -49,6 +49,8 @@ class UpdateOfertaRequest extends FormRequest
             'producto_ids' => ['nullable', 'array'],
             'producto_ids.*' => ['integer', 'exists:productos,id'],
             'imagen' => ['nullable', 'image', 'max:2048'],
+            // Imagen por defecto del sistema (URL/ruta de asset) cuando no se sube archivo.
+            'imagen_url' => ['nullable', 'string', 'max:500'],
         ];
     }
 

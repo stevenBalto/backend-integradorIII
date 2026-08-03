@@ -49,9 +49,10 @@ final class CuponController extends Controller
     /** POST /api/admin/cupones */
     public function store(StoreCuponRequest $request): JsonResponse
     {
+        // Imagen: archivo subido (→ Cloudinary) o una imagen por defecto del sistema (imagen_url string).
         $imagenUrl = $request->hasFile('imagen')
             ? $this->cloudinary->subirImagenCupon($request->file('imagen'))
-            : null;
+            : $request->input('imagen_url');
 
         $cupon = $this->cupones->crear(CrearCuponDTO::fromArray($request->validated()), $imagenUrl);
 
@@ -61,9 +62,10 @@ final class CuponController extends Controller
     /** PUT/PATCH /api/admin/cupones/{id} (via POST + _method para poder mandar el archivo) */
     public function update(UpdateCuponRequest $request, int $id): CuponResource
     {
+        // Imagen: archivo subido (→ Cloudinary), imagen por defecto (imagen_url string), o null = conservar la actual.
         $imagenUrl = $request->hasFile('imagen')
             ? $this->cloudinary->subirImagenCupon($request->file('imagen'))
-            : null;
+            : $request->input('imagen_url');
 
         $cupon = $this->cupones->actualizar($id, ActualizarCuponDTO::fromArray($request->validated()), $imagenUrl);
 

@@ -52,6 +52,8 @@ class UpdateCuponRequest extends FormRequest
             'usos_max' => ['nullable', 'integer', 'min:1'],
             'activo' => ['nullable', 'boolean'],
             'imagen' => ['nullable', 'image', 'max:2048'],
+            // Imagen por defecto del sistema (URL/ruta de asset) cuando no se sube archivo.
+            'imagen_url' => ['nullable', 'string', 'max:500'],
         ];
     }
 

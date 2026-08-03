@@ -47,9 +47,10 @@ final class OfertaController extends Controller
     /** POST /api/admin/ofertas */
     public function store(StoreOfertaRequest $request): JsonResponse
     {
+        // Imagen: archivo subido (→ Cloudinary) o una imagen por defecto del sistema (imagen_url string).
         $imagenUrl = $request->hasFile('imagen')
             ? $this->cloudinary->subirImagenOferta($request->file('imagen'))
-            : null;
+            : $request->input('imagen_url');
 
         $oferta = $this->ofertas->crear(CrearOfertaDTO::fromArray($request->validated()), $imagenUrl);
 
@@ -59,9 +60,10 @@ final class OfertaController extends Controller
     /** PUT/PATCH /api/admin/ofertas/{id} (via POST + _method para poder mandar el archivo) */
     public function update(UpdateOfertaRequest $request, int $id): OfertaResource
     {
+        // Imagen: archivo subido (→ Cloudinary), imagen por defecto (imagen_url string), o null = conservar la actual.
         $imagenUrl = $request->hasFile('imagen')
             ? $this->cloudinary->subirImagenOferta($request->file('imagen'))
-            : null;
+            : $request->input('imagen_url');
 
         $oferta = $this->ofertas->actualizar($id, ActualizarOfertaDTO::fromArray($request->validated()), $imagenUrl);
 
