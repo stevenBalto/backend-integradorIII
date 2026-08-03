@@ -115,6 +115,6 @@ final class AuthController extends Controller
     /** GET /api/me — usuario autenticado. */
     public function me(Request $request): UserResource
     {
-        return new UserResource($request->user()->load('role'));
+        return new UserResource($request->user()->load('role', 'modulos'));
     }
 }
