@@ -39,6 +39,7 @@ final class ResenaAdminResource extends JsonResource
             'producto' => $this->whenLoaded('producto', fn () => $this->producto ? [
                 'id' => $this->producto->id,
                 'nombre' => $this->producto->nombre,
+                'imagen_url' => $this->producto->imagen_url,
             ] : null),
             'cliente' => $this->whenLoaded('user', fn () => $this->user ? [
                 'nombre' => $this->user->nombre,
