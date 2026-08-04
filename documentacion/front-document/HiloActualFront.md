@@ -12,6 +12,24 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-03 — Batch grande de ajustes al admin (30 ítems) + cliente
+- Contexto: el usuario pidió 30 ajustes numerados sobre el panel admin (más algunos del cliente). Se orquestó con subagentes (db-specialist, backend-developer, frontend-developer) por repos disjuntos; el hilo principal integró y commiteó por lote. Todo verificado con `ng build --configuration development` (exit 0) y `php artisan route:list` / `php -l` en backend.
+- Hecho (por área):
+  - **Dashboard**: verificado que el filtro "Últimos pedidos" tenga todas sus opciones (8, todas mapeadas a estados reales) — sin cambio (item 1).
+  - **Admin-shell**: swipe horizontal abre/cierra el sidebar en móvil vía `GestureController` (item 2). Fix del header que desaparecía al navegar entre módulos: la limpieza de acciones se movió de `NavigationEnd` a `NavigationStart` para garantizar el orden clear→publish (item 23, ver AntierroresFront EF-17). Botón de usuario del header abre modal de perfil con datos + accesos por módulo/nivel (item 30; `/me` ahora trae `modulos` con `permiso`).
+  - **Pedidos**: en móvil los botones de "Pedidos recientes" van en dos filas y el título dice solo "Pedidos" (`admin-section-card` ganó input `titleShort` + head que envuelve en móvil) (items 3-4). Filas y cards coloreadas por tipo de cliente (verde=registrado, ámbar=invitado, vía `es_invitado`) + botón "?" en el header con modal explicativo (item 29).
+  - **Menú**: quitada la UI de "sugerencias de destacado" (div + botón Destacar/etiqueta Sugerido) manteniendo el destacado manual (item 5). File inputs de "Crear extra" y "Nuevo producto" contenidos (no desbordan) con nombre en marquee (items 6, 9). Imagen opcional (lógica + etiqueta clara) (item 10). Al asignar extra a producto se muestra su miniatura si tiene (item 8).
+  - **Inventario**: placeholder del buscador = "Buscar por insumo" (item 11).
+  - **Ofertas y cupones**: subir imagen (archivo o imagen por defecto del sistema) con preview + galería; modales responsive apilando campos en móvil (items 12-13). Backend: `imagen_url` en `ofertas`/`cupones` (esquema aprobado 2026-08-03), controllers aceptan archivo `imagen` (Cloudinary) o `imagen_url` string.
+  - **Clientes**: filtro por fecha de última compra (Todos/Hoy/Semana/Mes/Año/Fecha) junto al buscador (item 14).
+  - **Usuarios y roles**: quitado el rol "administrador" del alta; el acceso se define por módulos con nivel lectura/editor vía modal (item 16, requiere columna `usuario_modulo.permiso`). Quitados KPIs (Usuarios totales/Administradores) y botones Todos/Administradores (item 17); toolbar = buscador + total (item 18). Sin contraseña temporal: contraseña fija + expiración 15/30/60 días; al expirar, el login abre modal para cambiarla (contraseña vencida + nueva x2) → definitiva vía `POST /auth/password-expirada` (item 19). Botón deshabilitar/habilitar cuenta (item 20). El editor de usuarios hace todo menos cambiar contraseñas (no existe endpoint de cambio desde ese módulo; update no acepta password) (item 21).
+  - **Analíticas**: export Excel arreglado (item 22, ver AntierroresBack). Rango de fechas específico (desde/hasta) además de mes/semana/día, en resumen y export (item 24).
+  - **Reseñas**: quitado KPI "Ocultas"; el tipo "general" ahora se muestra como "Pedido" (label del backend; el valor en BD no cambia por el CHECK `chk_resenas_tipo`) + `tipo_sugerido` por cantidad de ítems (item 25). Filtro de producto desplegable con imagen (item 26). Cliente: el prompt de reseña aparece en tiempo real (polling ~25 s) y solo para clientes registrados; el botón "No volver a pedir" ahora dice "No enviar reseña" (items 27-28).
+- Pendiente:
+  - **Item 7**: no hay extras llamadas "Categoría" en BD (las 19 son válidas); esperando captura del usuario para decidir si es data a borrar o UI a ajustar (probablemente son extras de categoría que por diseño no se togglean por producto).
+  - **Seguridad (diferido)**: la autorización a nivel de ruta por módulo+permiso (lectura vs editor) NO está implementada en backend; los permisos se guardan/exponen y el FE los usa para mostrar/ocultar, pero falta un middleware que la haga cumplir. Recomendado como pase de `security-reviewer`.
+- NO TOCAR / nota: `admin-section-card` ahora tiene `titleShort` (título corto en móvil) y su head envuelve en móvil — cambio compartido, verificar antes de tocar. El login devuelve `{debe_cambiar_password, motivo, usuario, email}` sin token cuando la contraseña expiró.
+
 ## Sesión 2026-07-30 (cont.) — QR legible + auto-completar oferta + botón de header que se perdía
 - Contexto: batch de correcciones puntuales tras probar en dispositivo real el canje por QR (ver sesiones anteriores de este mismo hilo) y un bug de UX detectado por separado en el header admin.
 - Hecho:
