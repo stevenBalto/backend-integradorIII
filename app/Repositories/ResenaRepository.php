@@ -82,7 +82,7 @@ final class ResenaRepository
     public function listarAdmin(array $filtros, ?int $porPagina = null, int $pagina = 1)
     {
         $query = Resena::query()
-            ->with(['user:id,nombre,email', 'producto:id,nombre'])
+            ->with(['user:id,nombre,email', 'producto:id,nombre,imagen_url'])
             ->when(isset($filtros['producto_id']), fn ($q) => $q->where('producto_id', $filtros['producto_id']))
             ->when(isset($filtros['calificacion']), fn ($q) => $q->where('calificacion', $filtros['calificacion']))
             ->when(isset($filtros['estado']), fn ($q) => $q->where('estado', $filtros['estado']))

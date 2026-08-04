@@ -21,7 +21,7 @@ final class ResenaAdminResource extends JsonResource
      * pero mostramos un label mas descriptivo al frontend.
      */
     private const TIPO_LABELS = [
-        'general' => 'Pedido',
+        'general' => 'Varios productos',
         'producto' => 'Producto',
     ];
 
