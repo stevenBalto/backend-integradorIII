@@ -12,6 +12,18 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-05 — Buscadores colapsables + reforma header/inmersivo de Pedidos + estándar de altos
+- **Buscador colapsable unificado**: el componente compartido `admin/shared/search-input.component.ts` (`admin-search-input`) pasó a ser colapsable/animado (solo la lupa; al tocar se despliega el input en overlay con transición; cierra al click-fuera vía `@HostListener('document:click')`; input angosto `min(240px,74vw)`). Al abrir marca su fila con la clase `.admin-search-open` → regla en `global.scss` oculta los filtros hermanos de esa fila. `@Output() openChange` para vistas cuyos filtros NO son hermanos (reseñas oculta su cuerpo). Se propagó a las 6 páginas admin. **Clientes** se consolidó a este componente (se borró su buscador custom). En cada página la lupa va a la derecha de su fila (pedidos: en `.ped-headrow`; reseñas: `card-action` de "Filtrar"; usuarios: toolbar `flex-end`). `pedir` (menú cliente) NO se colapsó (buscador a la izquierda de las categorías + es búsqueda primaria; quedó pendiente de decisión).
+- **Reseñas**: KPIs "Calificación promedio" + "Total reseñas" en la misma fila (`.res-kpis` faltaba `display:grid`; `.admin-grid-2` no existe en global.scss).
+- **Pedidos (header + inmersivo)**:
+  - Nuevo portal de header `[adminHeaderLead]` (directiva `admin-header-lead.directive.ts` + `AdminHeaderService.lead$`, gemelo de `adminHeaderActions`, respeta EF-13/EF-17). En tablet+ (>=640px) los KPIs de Pedidos van al header (izq→der, clickeables = filtro por estado) y se oculta el título/breadcrumb (clase `--haslead`, solo cuando una página publica lead → solo Pedidos). En móvil los KPIs quedan en el cuerpo.
+  - 5º KPI **Entregados** (header + cuerpo). KPIs del header con **ancho fijo uniforme** (108×44), no estirados.
+  - Botón expandir (scan) y "?" van al header en móvil; el "?" ("Colores") es **siempre solo ícono** (32×32).
+  - **Modo inmersivo** de "ver todos" (`abrirPantallaCompleta`): se limpió la vista `.ped-fs` (sin título/count/chips/X, solo el grid de cards). Cierra con **Esc** y **swipe izq→der** (GestureController). Al abrir: oculta el sidebar en PC (clase `body.admin-inmersivo` + regla global `@media (min-width:1024px)`), deja el header, y entra en fullscreen del navegador (`requestFullscreen`, best-effort). Esc/`fullscreenchange` revierte; limpieza en `ionViewWillLeave`/`ngOnDestroy` (no se filtra a otras páginas).
+- **Estándar de altos** (nuevo doc `EstandaresUI.md`): botones de ícono del header 32×32; controles de toolbar (chips/calendario/expandir/lupa) 36px; KPI del header 108×44 fijo. Se aplicó a Pedidos.
+- Verificación: Playwright (Chrome headless, iPhone/tablet/PC) + `ng build` exit 0. Bug ~765px de filtros descolgados: corregido.
+- Pendiente: `pedir` (colapsar o no el buscador del menú); revisar visualmente ofertas/menú/inventario/usuarios por si el colapsable quedó raro en alguna.
+
 ## Sesión 2026-08-04 — Cierre de feedback (items 3, 12, 13, 15) con verificación visual en Chrome
 - Contexto: continuación del batch. El usuario dio feedback de que los items 13 y 15 "seguían cortados" y pidió que lo verificara yo mismo en navegador. Se usó **Playwright (chromium headless) emulando iPhone** (390×844 y un viewport corto de 640 para simular la barra de URL) para reproducir, medir `getBoundingClientRect()` y sacar capturas. Todo con `ng build --configuration development` exit 0.
 - Hecho:
