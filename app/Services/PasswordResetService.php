@@ -117,11 +117,14 @@ final class PasswordResetService
 
         $user = $this->usuarios->buscarPorEmail($email);
         if ($user instanceof User) {
-            // Al fijar su propia contraseña, deja de ser temporal/obligatoria.
+            // Al fijar su propia contrasena, deja de ser temporal/obligatoria.
+            // Recalcular password_expira_en segun dias_expiracion_password del usuario.
+            $dias = $user->dias_expiracion_password ?? 30;
             $user->update([
                 'password' => $password,
                 'password_temporal' => false,
                 'cambio_password_obligatorio' => false,
+                'password_expira_en' => now()->addDays($dias)->toDateString(),
             ]);
         }
     }

@@ -9,6 +9,7 @@ use App\DTOs\Oferta\CrearOfertaDTO;
 use App\Http\Requests\Oferta\StoreOfertaRequest;
 use App\Http\Requests\Oferta\UpdateOfertaRequest;
 use App\Http\Resources\OfertaResource;
+use App\Services\CloudinaryService;
 use App\Services\OfertaService;
 use Illuminate\Http\JsonResponse;
 
@@ -19,6 +20,7 @@ final class OfertaController extends Controller
 {
     public function __construct(
         private readonly OfertaService $ofertas,
+        private readonly CloudinaryService $cloudinary,
     ) {
     }
 
@@ -45,15 +47,25 @@ final class OfertaController extends Controller
     /** POST /api/admin/ofertas */
     public function store(StoreOfertaRequest $request): JsonResponse
     {
-        $oferta = $this->ofertas->crear(CrearOfertaDTO::fromArray($request->validated()));
+        // Imagen: archivo subido (→ Cloudinary) o una imagen por defecto del sistema (imagen_url string).
+        $imagenUrl = $request->hasFile('imagen')
+            ? $this->cloudinary->subirImagenOferta($request->file('imagen'))
+            : $request->input('imagen_url');
+
+        $oferta = $this->ofertas->crear(CrearOfertaDTO::fromArray($request->validated()), $imagenUrl);
 
         return (new OfertaResource($oferta))->response()->setStatusCode(201);
     }
 
-    /** PUT/PATCH /api/admin/ofertas/{id} */
+    /** PUT/PATCH /api/admin/ofertas/{id} (via POST + _method para poder mandar el archivo) */
     public function update(UpdateOfertaRequest $request, int $id): OfertaResource
     {
-        $oferta = $this->ofertas->actualizar($id, ActualizarOfertaDTO::fromArray($request->validated()));
+        // Imagen: archivo subido (→ Cloudinary), imagen por defecto (imagen_url string), o null = conservar la actual.
+        $imagenUrl = $request->hasFile('imagen')
+            ? $this->cloudinary->subirImagenOferta($request->file('imagen'))
+            : $request->input('imagen_url');
+
+        $oferta = $this->ofertas->actualizar($id, ActualizarOfertaDTO::fromArray($request->validated()), $imagenUrl);
 
         return new OfertaResource($oferta);
     }

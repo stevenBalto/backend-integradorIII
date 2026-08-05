@@ -23,6 +23,7 @@ final class CuponResource extends JsonResource
             'usos_max' => $this->usos_max,
             'usos_actuales' => (int) $this->usos_actuales,
             'activo' => (bool) $this->activo,
+            'imagen_url' => $this->imagen_url,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

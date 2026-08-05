@@ -27,7 +27,7 @@ final class AnaliticasController extends Controller
     }
 
     /**
-     * GET /api/admin/analiticas?granularidad=mes|semana|dia&mes=YYYY-MM&fecha=YYYY-MM-DD&sucursal_id=N
+     * GET /api/admin/analiticas?granularidad=mes|semana|dia|rango&mes=YYYY-MM&fecha=YYYY-MM-DD&sucursal_id=N&desde=YYYY-MM-DD&hasta=YYYY-MM-DD
      */
     public function index(AnaliticasRequest $request): JsonResponse
     {
@@ -35,14 +35,16 @@ final class AnaliticasController extends Controller
         $mes = $request->validated('mes');
         $fecha = $request->validated('fecha');
         $sucursalId = $request->validated('sucursal_id') ? (int) $request->validated('sucursal_id') : null;
+        $desde = $request->validated('desde');
+        $hasta = $request->validated('hasta');
 
-        $datos = $this->analiticas->resumen($granularidad, $mes, $fecha, $sucursalId);
+        $datos = $this->analiticas->resumen($granularidad, $mes, $fecha, $sucursalId, $desde, $hasta);
 
         return (new AnaliticasResource($datos))->response();
     }
 
     /**
-     * GET /api/admin/analiticas/exportar/excel?granularidad=mes|semana|dia&mes=YYYY-MM&fecha=YYYY-MM-DD&sucursal_id=N
+     * GET /api/admin/analiticas/exportar/excel?granularidad=mes|semana|dia|rango&mes=YYYY-MM&fecha=YYYY-MM-DD&sucursal_id=N&desde=YYYY-MM-DD&hasta=YYYY-MM-DD
      */
     public function exportarExcel(AnaliticasRequest $request): BinaryFileResponse
     {
@@ -55,7 +57,7 @@ final class AnaliticasController extends Controller
     }
 
     /**
-     * GET /api/admin/analiticas/exportar/pdf?granularidad=mes|semana|dia&mes=YYYY-MM&fecha=YYYY-MM-DD&sucursal_id=N
+     * GET /api/admin/analiticas/exportar/pdf?granularidad=mes|semana|dia|rango&mes=YYYY-MM&fecha=YYYY-MM-DD&sucursal_id=N&desde=YYYY-MM-DD&hasta=YYYY-MM-DD
      */
     public function exportarPdf(AnaliticasRequest $request): Response
     {
@@ -84,10 +86,12 @@ final class AnaliticasController extends Controller
         $mes = $request->validated('mes');
         $fecha = $request->validated('fecha');
         $sucursalId = $request->validated('sucursal_id') ? (int) $request->validated('sucursal_id') : null;
+        $desde = $request->validated('desde');
+        $hasta = $request->validated('hasta');
 
-        $datos = $this->analiticas->resumen($granularidad, $mes, $fecha, $sucursalId);
+        $datos = $this->analiticas->resumen($granularidad, $mes, $fecha, $sucursalId, $desde, $hasta);
 
-        [$granularidadResuelta, $periodo] = $this->analiticas->resolverPeriodo($granularidad, $mes, $fecha);
+        [$granularidadResuelta, $periodo] = $this->analiticas->resolverPeriodo($granularidad, $mes, $fecha, $desde, $hasta);
         [$inicio, $fin] = $this->analiticas->rango($granularidadResuelta, $periodo);
         $etiqueta = AnaliticasExportService::etiquetaPeriodo($granularidadResuelta, $inicio, $fin);
 

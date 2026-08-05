@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\DTOs\Auth\CredencialesDTO;
 use App\DTOs\Auth\RegistrarUsuarioDTO;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\PasswordExpiradaRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\SuperAdminResource;
 use App\Http\Resources\UserResource;
@@ -16,7 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Endpoints de autenticacion (registro, login, logout, me).
+ * Endpoints de autenticacion (registro, login, logout, me, password expirada).
  */
 final class AuthController extends Controller
 {
@@ -39,8 +40,14 @@ final class AuthController extends Controller
 
     /**
      * POST /api/login — login UNIFICADO (una sola puerta).
+     *
      * Primero intenta como superadmin (tabla aparte); si no, como usuario normal.
      * Devuelve `tipo` para que el frontend enrute al panel correcto.
+     *
+     * ITEM 19: Si el usuario esta activo y credenciales correctas pero la password
+     * esta vencida (password_expira_en en el pasado o cambio_password_obligatorio),
+     * NO emite token normal; responde con debe_cambiar_password=true y el motivo.
+     * El frontend debe redirigir a la pantalla de cambio de password expirada.
      */
     public function login(LoginRequest $request): JsonResponse
     {
@@ -58,6 +65,39 @@ final class AuthController extends Controller
         // 2. Usuario normal (admin de sede / cliente) — flujo existente.
         $result = $this->auth->login($creds);
 
+        // ¿Debe cambiar password? (sin token)
+        if (isset($result['debe_cambiar_password']) && $result['debe_cambiar_password'] === true) {
+            return response()->json([
+                'debe_cambiar_password' => true,
+                'motivo' => $result['motivo'],
+                'usuario' => $result['usuario'],
+                'email' => $result['email'],
+            ], 200);
+        }
+
+        // Login exitoso normal.
+        return (new UserResource($result['user']))
+            ->additional(['token' => $result['token'], 'tipo' => 'usuario'])
+            ->response()
+            ->setStatusCode(200);
+    }
+
+    /**
+     * POST /api/auth/password-expirada — cambio de password por expiracion (self-service).
+     *
+     * Endpoint publico: se autentica con las credenciales vencidas (login + password_actual).
+     * Si todo bien, cambia la password, recalcula password_expira_en, y emite token normal.
+     */
+    public function passwordExpirada(PasswordExpiradaRequest $request): JsonResponse
+    {
+        $datos = $request->validated();
+
+        $result = $this->auth->cambiarPasswordExpirada(
+            (string) $datos['login'],
+            (string) $datos['password_actual'],
+            (string) $datos['password_nueva'],
+        );
+
         return (new UserResource($result['user']))
             ->additional(['token' => $result['token'], 'tipo' => 'usuario'])
             ->response()
@@ -69,12 +109,12 @@ final class AuthController extends Controller
     {
         $this->auth->logout($request->user());
 
-        return response()->json(['message' => 'Sesión cerrada correctamente.']);
+        return response()->json(['message' => 'Sesion cerrada correctamente.']);
     }
 
     /** GET /api/me — usuario autenticado. */
     public function me(Request $request): UserResource
     {
-        return new UserResource($request->user()->load('role'));
+        return new UserResource($request->user()->load('role', 'modulos'));
     }
 }

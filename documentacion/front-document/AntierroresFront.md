@@ -13,7 +13,7 @@ Formato sugerido por entrada:
 - Fecha: YYYY-MM-DD
 ```
 
-### EF-19 — Imágenes locales de productos: falta la regla `/storage` en el proxy y el pipe `imagenUrl`
+### EF-22 — Imágenes locales de productos: falta la regla `/storage` en el proxy y el pipe `imagenUrl`
 - Qué pasó: al preparar la tabla "Productos más vendidos" (Analíticas) para mostrar la foto del producto, se detectó que en cuanto se suban imágenes LOCALES (en vez de las URLs absolutas de Wikimedia que siembra `DemoRoosterSeeder`), las fotos no van a cargar en ninguna pantalla.
 - Causa: dos capas independientes.
   1. `proxy.conf.json` del dev-server solo reenviaba `/api` al backend (`127.0.0.1:8000`). Laravel publica las subidas en `/storage/**`, ruta que NO estaba proxeada: el pedido se lo quedaba el dev-server de Angular y devolvía el `index.html` de la SPA, dando una imagen rota difícil de diagnosticar (no es un 404 limpio).
@@ -25,13 +25,13 @@ Formato sugerido por entrada:
   - Requiere `php artisan storage:link` hecho una vez en el backend, o `/storage/**` no resuelve a `storage/app/public/`.
 - Fecha: 2026-08-05
 
-### EF-18 — Cambios en el contrato de Analíticas no se ven por la caché de 30 min del backend
+### EF-21 — Cambios en el contrato de Analíticas no se ven por la caché de 30 min del backend
 - Qué pasó: dos veces seguidas (al agregar `ingresos` y luego `imagen_url` a `top_productos`) el campo nuevo no aparecía en el frontend aunque el código del backend ya estaba correcto. Se perdió tiempo buscando el bug en el frontend.
 - Causa: `AnaliticasService::resumen()` envuelve la respuesta en `Cache::remember(..., 30 min)` con clave por instancia/sucursal/granularidad/período. Tras cambiar la FORMA de la respuesta, el backend sigue sirviendo los payloads viejos (sin el campo nuevo) hasta que cada clave expira. Como hay una clave por período visitado, quedan muchos payloads viejos conviviendo.
 - Regla: después de cualquier cambio en la estructura de la respuesta de analíticas hay que limpiar la caché ANTES de concluir que el frontend está mal. `php artisan cache:clear`, o —si no hay un PHP de la versión que pide el proyecto— con `CACHE_STORE=file` basta con borrar los archivos de `storage/framework/cache/data/` (dejando el `.gitignore`). Para diagnosticar sin adivinar: `grep` del campo nuevo dentro de esos archivos; si no aparece en ninguno, el problema es la caché y no el frontend.
 - Fecha: 2026-08-05
 
-### EF-17 — Tooltip fantasma del navegador por pasar `title` como atributo estático a un componente
+### EF-20 — Tooltip fantasma del navegador por pasar `title` como atributo estático a un componente
 - Qué pasó: en Analíticas aparecía una caja negra flotante con el texto "Tendencia de ventas" encima del gráfico vecino ("Horas pico"), en una posición que no correspondía a ningún tooltip propio de ese gráfico.
 - Causa: `<admin-section-card title="Tendencia de ventas">` — el componente declara `@Input() title`, pero al escribirlo como atributo ESTÁTICO Angular además lo deja reflejado como atributo HTML nativo `title` en el elemento host. `title` es el atributo que dispara el tooltip nativo del navegador al hacer hover, así que la caja negra la dibujaba el navegador, no la app.
 - Regla: cuando un `@Input()` se llama igual que un atributo HTML nativo con comportamiento propio (`title`, `hidden`, `draggable`, `tabindex`…), el componente debe neutralizarlo en el host: `host: { '[attr.title]': 'null' }` (así quedó `admin-section-card.component.ts`). Si aparece un tooltip/comportamiento raro que no está en el código de la app, revisar primero si es comportamiento nativo del navegador.
@@ -170,3 +170,24 @@ Formato sugerido por entrada:
 - Causa: un elemento `position:fixed` que es hijo (slotted) de `<ion-content>` NO se posiciona respecto al viewport, sino respecto al **`ion-content`** (su bloque contenedor), cuyo borde inferior ya está **por encima del tab bar**. Así que un `bottom` grande lo sube muchísimo (se le suma la altura del tab bar) y sumar `env(safe-area)` lo empeora (doble conteo). El offset se mide desde el tope del tab bar, no desde el fondo de la pantalla.
 - Regla: para posicionar un FAB/overlay `position:fixed` dentro de `ion-content`, usar offsets **pequeños** (ej. `bottom:16px`) medidos desde el borde del content — no razonar como si fuera relativo al viewport ni sumar el alto del tab bar ni el safe-area. (Relacionado: para tapar/despejar el tab bar, mejor ocultarlo por completo con una clase en `body` que pelear con z-index, ver modo inmersivo del carrito en `HiloActualFront.md`.)
 - Fecha: 2026-07-30
+
+### EF-17 — Botón del header admin desaparece a veces al navegar (condición de carrera clear/publish)
+- Qué pasó: pese al fix EF anterior (la directiva `adminHeaderActions` re-publica en `ionViewWillEnter`, sesión 2026-07-30), el botón del header seguía desapareciendo **a veces** al cambiar de módulo; había que refrescar para recuperarlo.
+- Causa: el shell (`admin-shell.page.ts`) limpiaba las acciones con `setActions(null)` en `NavigationEnd`, esperando que la página entrante las re-publicara después. Pero el orden entre ese `NavigationEnd` (síncrono) y el `ionViewWillEnter`/microtask de la página entrante NO es determinista: si la página publica ANTES de que el shell limpie, el `setActions(null)` del shell pisa la publicación → header vacío hasta refrescar (que sí recrea la página y republica en `ngOnInit`).
+- Solución: mover la limpieza a **`NavigationStart`** (cuando se ESTÁ SALIENDO), no a `NavigationEnd`. Así el orden queda garantizado: NavigationStart limpia → la página entra (NavigationEnd, luego `ionViewWillEnter`/`ngOnInit`) → publica. Clear siempre precede a publish, sin carrera. Se quitó el `setActions(null)` de `actualizarSeccion()` (que corre en NavigationEnd) y se agregó una suscripción a `NavigationStart` en `ngOnInit`.
+- Regla: para un "portal" de acciones compartido (un slot del shell que cada página llena), limpiar el slot en `NavigationStart` (salida), NO en `NavigationEnd` (llegada) — limpiar en la llegada compite con la publicación de la página entrante. El clear debe ocurrir estrictamente antes que el publish.
+- Fecha: 2026-08-03
+
+### EF-18 — Modales `position:fixed` recortados en móvil: `.ion-page` tiene `contain:size` (es el containing block), NO el viewport
+- Qué pasó: los modales de Ofertas/Cupones (`.order-modal`) y Crear usuario (`.usr-modal`) se veían cortados en móvil — el header quedaba bajo el status bar y/o el CTA bajo la barra de URL. Se probó `100dvh` + `env(safe-area-inset-*)` y "mejoró pero seguía cortado abajo".
+- Causa: Ionic aplica `contain: size layout style` a TODO `.ion-page` (el host de cada página del router). `contain` (con `layout`/`size`) convierte al host en el **containing block** de los `position:fixed` descendientes. El modal, aunque está fuera de `ion-content`, sigue dentro del `.ion-page`, así que su `position:fixed` se posiciona respecto al host (que va del borde inferior del header global al fondo del viewport — más bajo que el viewport), pero su `max-height: calc(100vh - 32px)` (o `100dvh`) se medía contra el VIEWPORT → el panel quedaba más alto que el host y desbordaba por abajo. Medido con Playwright: `panelRect.bottom = 901` con viewport de 844 (host de 771).
+- Solución: el modal debe llenar el HOST, no el viewport. `position:fixed; inset:0` (llena exacto el `.ion-page`, que además ya excluye el header y respeta el área visible real, también en iOS con su barra de URL) + panel `max-height: 100%` (100% del host). Nada de `100vh`/`100dvh` ni `env(safe-area)`.
+- Regla: para un overlay `position:fixed` dentro de una página Ionic, NO asumir que se mide contra el viewport — `.ion-page` tiene `contain:size` y es su containing block. Dimensionar el overlay con `inset:0` + panel `max-height:100%` (relativo al host), nunca con `100vh`/`100dvh`. Verificar con captura real (Playwright/emulación móvil) midiendo `getBoundingClientRect()` del panel vs `innerHeight`.
+- Fecha: 2026-08-04
+
+### EF-19 — Override dentro de `@media` que NO aplica por ir ANTES de la regla base (misma especificidad)
+- Qué pasó: al compactar los chips de fecha de Pedidos en móvil (`.ped-datechip { padding; font-size }` dentro de `@media (max-width:767px)`), no cambiaba nada — medido con Playwright, el `scrollWidth` de la fila quedaba idéntico.
+- Causa: el bloque `@media` estaba escrito ANTES en el archivo que la regla base `.ped-datechip` (SCSS `&--...` anidado más abajo). Las media queries NO agregan especificidad; entre selectores de IGUAL especificidad gana el que va DESPUÉS en el orden del código. Como la base venía después, pisaba al override del `@media`. (Los overrides del `--date` sí aplicaban porque usaban props sin competidor base — `position:absolute`/`inset` — o antes tenían el ancestro `.ped-toolbar` que subía la especificidad.)
+- Solución: subir la especificidad del override anidándolo bajo un ancestro (ej. `.ped-datefilter .ped-datechip`) para ganarle a la base sin depender del orden. (Alternativa: mover el bloque `@media` al final del archivo.)
+- Regla: un override dentro de `@media` solo gana si tiene MAYOR especificidad que la base o si va DESPUÉS en el código. Si el `@media` está antes de la base con la misma especificidad, el override se ignora en silencio — subir especificidad o reubicar el bloque. Verificar el efecto real (no asumir que por estar en `@media` ya pisa).
+- Fecha: 2026-08-04

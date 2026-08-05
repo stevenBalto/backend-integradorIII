@@ -22,16 +22,18 @@ final class AnaliticasService
     }
 
     /**
-     * Genera el resumen de analiticas para un periodo (mes, semana o dia).
+     * Genera el resumen de analiticas para un periodo (mes, semana, dia o rango).
      *
-     * @param string|null $granularidad mes|semana|dia, default mes.
+     * @param string|null $granularidad mes|semana|dia|rango, default mes.
      * @param string|null $mes Formato YYYY-MM, usado cuando granularidad=mes (default mes actual).
      * @param string|null $fecha Formato YYYY-MM-DD, fecha ancla usada cuando granularidad=semana|dia (default hoy).
      * @param int|null $sucursalId Filtrar por sucursal (null = todas).
+     * @param string|null $desde Formato YYYY-MM-DD, inicio del rango (obligatorio si granularidad=rango).
+     * @param string|null $hasta Formato YYYY-MM-DD, fin del rango (obligatorio si granularidad=rango).
      */
-    public function resumen(?string $granularidad, ?string $mes, ?string $fecha, ?int $sucursalId): array
+    public function resumen(?string $granularidad, ?string $mes, ?string $fecha, ?int $sucursalId, ?string $desde = null, ?string $hasta = null): array
     {
-        [$granularidad, $periodo] = $this->resolverPeriodo($granularidad, $mes, $fecha);
+        [$granularidad, $periodo] = $this->resolverPeriodo($granularidad, $mes, $fecha, $desde, $hasta);
         $instanciaId = $this->instanciaActual();
         $sucursalKey = $sucursalId ?? 'all';
 
@@ -54,11 +56,12 @@ final class AnaliticasService
      *
      * @return array{0: string, 1: string}
      */
-    public function resolverPeriodo(?string $granularidad, ?string $mes, ?string $fecha): array
+    public function resolverPeriodo(?string $granularidad, ?string $mes, ?string $fecha, ?string $desde = null, ?string $hasta = null): array
     {
         $granularidad = $granularidad ?? 'mes';
 
         $periodo = match ($granularidad) {
+            'rango' => "{$desde}_{$hasta}",
             'semana', 'dia' => $fecha ?? Carbon::now()->format('Y-m-d'),
             default => $mes ?? Carbon::now()->format('Y-m'),
         };
@@ -79,7 +82,7 @@ final class AnaliticasService
     /**
      * Calcula todas las metricas del resumen (sin cache).
      *
-     * @param string $periodo YYYY-MM cuando granularidad=mes, YYYY-MM-DD cuando granularidad=semana|dia.
+     * @param string $periodo YYYY-MM cuando granularidad=mes, YYYY-MM-DD cuando granularidad=semana|dia, YYYY-MM-DD_YYYY-MM-DD cuando granularidad=rango.
      */
     private function calcularResumen(string $granularidad, string $periodo, ?int $sucursalId): array
     {
@@ -93,7 +96,7 @@ final class AnaliticasService
         $modalidad = $this->calcularPorcentajesModalidad($modalidadRaw, $pedidosMes);
 
         // Comparacion vs periodo anterior equivalente
-        $comparacionPeriodoAnterior = $this->calcularComparacionPeriodoAnterior($granularidad, $inicio, $sucursalId, $ventasMes, $pedidosMes);
+        $comparacionPeriodoAnterior = $this->calcularComparacionPeriodoAnterior($granularidad, $inicio, $fin, $sucursalId, $ventasMes, $pedidosMes);
 
         return [
             'ventas_mes' => $ventasMes,
@@ -109,13 +112,14 @@ final class AnaliticasService
     }
 
     /**
-     * Calcula la variacion porcentual vs el periodo (mes/semana/dia) anterior equivalente.
+     * Calcula la variacion porcentual vs el periodo (mes/semana/dia/rango) anterior equivalente.
      *
      * @return array{ventas_pct: float|null, pedidos_pct: float|null, ventas_mes_anterior: float, pedidos_mes_anterior: int}
      */
-    private function calcularComparacionPeriodoAnterior(string $granularidad, Carbon $inicioActual, ?int $sucursalId, float $ventasActual, int $pedidosActual): array
+    private function calcularComparacionPeriodoAnterior(string $granularidad, Carbon $inicioActual, Carbon $finActual, ?int $sucursalId, float $ventasActual, int $pedidosActual): array
     {
         [$inicioAnt, $finAnt] = match ($granularidad) {
+            'rango' => $this->calcularRangoAnterior($inicioActual, $finActual),
             'semana' => [
                 $inicioActual->copy()->subWeek()->startOfWeek(Carbon::MONDAY),
                 $inicioActual->copy()->subWeek()->endOfWeek(Carbon::SUNDAY),
@@ -145,18 +149,48 @@ final class AnaliticasService
     }
 
     /**
+     * Calcula el rango anterior equivalente para granularidad 'rango'.
+     * El periodo anterior tiene la misma cantidad de dias y termina el dia anterior al inicio actual.
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function calcularRangoAnterior(Carbon $inicioActual, Carbon $finActual): array
+    {
+        $dias = $inicioActual->diffInDays($finActual);
+        $finAnterior = $inicioActual->copy()->subDay()->endOfDay();
+        $inicioAnterior = $finAnterior->copy()->subDays($dias)->startOfDay();
+
+        return [$inicioAnterior, $finAnterior];
+    }
+
+    /**
      * Calcula el rango de fechas segun granularidad.
      *
-     * @param string $periodo YYYY-MM cuando granularidad=mes, YYYY-MM-DD cuando granularidad=semana|dia.
+     * @param string $periodo YYYY-MM cuando granularidad=mes, YYYY-MM-DD cuando granularidad=semana|dia, YYYY-MM-DD_YYYY-MM-DD cuando granularidad=rango.
      * @return array{0: Carbon, 1: Carbon}
      */
     private function rangoPeriodo(string $granularidad, string $periodo): array
     {
         return match ($granularidad) {
+            'rango' => $this->rangoCustom($periodo),
             'semana' => $this->rangoSemana($periodo),
             'dia' => $this->rangoDia($periodo),
             default => $this->rangoMes($periodo),
         };
+    }
+
+    /**
+     * Parsea el rango custom desde el periodo en formato "YYYY-MM-DD_YYYY-MM-DD".
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function rangoCustom(string $periodo): array
+    {
+        [$desde, $hasta] = explode('_', $periodo);
+        $inicio = Carbon::createFromFormat('Y-m-d', $desde)->startOfDay();
+        $fin = Carbon::createFromFormat('Y-m-d', $hasta)->endOfDay();
+
+        return [$inicio, $fin];
     }
 
     /**

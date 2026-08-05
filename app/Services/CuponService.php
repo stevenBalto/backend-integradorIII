@@ -46,22 +46,32 @@ final class CuponService
         return $cupon;
     }
 
-    public function crear(CrearCuponDTO $dto): Cupon
+    /** $imagenUrl: si se subio una imagen nueva a Cloudinary, su secure_url. */
+    public function crear(CrearCuponDTO $dto, ?string $imagenUrl = null): Cupon
     {
         $this->validarFechas($dto->fechaInicio, $dto->fechaFin);
         $this->validarCodigoUnico($dto->codigo);
 
-        return $this->cupones->crear($dto->toArray());
+        $datos = $dto->toArray();
+        $datos['imagen_url'] = $imagenUrl;
+
+        return $this->cupones->crear($datos);
     }
 
-    public function actualizar(int $id, ActualizarCuponDTO $dto): Cupon
+    /** $imagenUrl: si es null, se conserva la imagen actual del cupon (no se pisa). */
+    public function actualizar(int $id, ActualizarCuponDTO $dto, ?string $imagenUrl = null): Cupon
     {
         $cupon = $this->buscarPorId($id);
 
         $this->validarFechas($dto->fechaInicio, $dto->fechaFin);
         $this->validarCodigoUnico($dto->codigo, $cupon->id);
 
-        return $this->cupones->actualizar($cupon, $dto->toArray());
+        $datos = $dto->toArray();
+        if ($imagenUrl !== null) {
+            $datos['imagen_url'] = $imagenUrl;
+        }
+
+        return $this->cupones->actualizar($cupon, $datos);
     }
 
     public function eliminar(int $id): void

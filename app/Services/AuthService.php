@@ -53,9 +53,13 @@ final class AuthService
     }
 
     /**
-     * Valida credenciales y devuelve el usuario + token.
+     * Valida credenciales y devuelve el usuario + token O indica que debe cambiar password.
      *
-     * @return array{user: User, token: string}
+     * Si el usuario esta activo, credenciales correctas, pero password vencida
+     * (password_expira_en en el pasado o cambio_password_obligatorio=true), NO
+     * emite token normal; devuelve debe_cambiar_password=true con motivo.
+     *
+     * @return array{user: User, token: string}|array{debe_cambiar_password: bool, motivo: string, usuario: string, email: string}
      *
      * @throws ValidationException credenciales invalidas o cuenta inactiva
      */
@@ -83,6 +87,78 @@ final class AuthService
             ]);
         }
 
+        // ITEM 19: Verificar si la password esta vencida o requiere cambio obligatorio.
+        // En ese caso NO emitimos token; el frontend debe redirigir al flujo de cambio.
+        if ($user->debeCambiarPassword()) {
+            $motivo = $this->determinarMotivoExpiracion($user);
+
+            return [
+                'debe_cambiar_password' => true,
+                'motivo' => $motivo,
+                'usuario' => (string) $user->usuario,
+                'email' => $user->email,
+            ];
+        }
+
+        // Login exitoso: crear token y actualizar ultimo_acceso_en.
+        $token = $user->createToken('auth')->plainTextToken;
+        $user->update(['ultimo_acceso_en' => now()]);
+        $user->load('role');
+
+        return ['user' => $user, 'token' => $token];
+    }
+
+    /**
+     * Cambia la password de un usuario cuya password esta vencida (flujo self-service).
+     *
+     * @return array{user: User, token: string}
+     *
+     * @throws ValidationException credenciales invalidas, cuenta inactiva, o password incorrecta
+     */
+    public function cambiarPasswordExpirada(
+        string $login,
+        string $passwordActual,
+        string $passwordNueva,
+    ): array {
+        // Buscar por email o por usuario.
+        $user = $this->usuarios->buscarPorEmail($login)
+            ?? $this->usuarios->buscarPorUsuario($login);
+
+        if ($user === null) {
+            throw ValidationException::withMessages([
+                'login' => ['Credenciales inválidas.'],
+            ]);
+        }
+
+        if (! $user->activo) {
+            throw ValidationException::withMessages([
+                'login' => ['La cuenta está inactiva.'],
+            ]);
+        }
+
+        if (! Hash::check($passwordActual, $user->password)) {
+            throw ValidationException::withMessages([
+                'password_actual' => ['La contraseña actual no es correcta.'],
+            ]);
+        }
+
+        if (Hash::check($passwordNueva, $user->password)) {
+            throw ValidationException::withMessages([
+                'password_nueva' => ['La nueva contraseña no puede ser igual a la actual.'],
+            ]);
+        }
+
+        // Recalcular password_expira_en segun dias_expiracion_password del usuario.
+        $dias = $user->dias_expiracion_password ?? 30;
+        $user->update([
+            'password' => $passwordNueva, // cast 'hashed'
+            'password_temporal' => false,
+            'cambio_password_obligatorio' => false,
+            'password_expira_en' => now()->addDays($dias)->toDateString(),
+            'ultimo_acceso_en' => now(),
+        ]);
+
+        // Emitir token normal.
         $token = $user->createToken('auth')->plainTextToken;
         $user->load('role');
 
@@ -93,5 +169,25 @@ final class AuthService
     public function logout(User $user): void
     {
         $user->currentAccessToken()?->delete();
+    }
+
+    /**
+     * Determina el motivo por el cual el usuario debe cambiar su password.
+     */
+    private function determinarMotivoExpiracion(User $user): string
+    {
+        if ($user->cambio_password_obligatorio) {
+            return 'obligatorio';
+        }
+
+        if ($user->password_temporal) {
+            return 'temporal';
+        }
+
+        if ($user->password_expira_en !== null && $user->password_expira_en->isPast()) {
+            return 'expirada';
+        }
+
+        return 'expirada';
     }
 }

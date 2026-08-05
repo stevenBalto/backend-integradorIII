@@ -12,6 +12,9 @@ use OpenSpout\Writer\XLSX\Writer;
 /**
  * Genera los archivos de exportacion (Excel) del resumen de analiticas.
  * Recibe el mismo array que produce AnaliticasService::resumen().
+ *
+ * NOTA: Usa la API de OpenSpout 4.x. Metodos como setFontBold(), setFontSize(),
+ * setBackgroundColor(), setFontColor() en lugar de withFontBold(), etc.
  */
 final class AnaliticasExportService
 {
@@ -27,15 +30,17 @@ final class AnaliticasExportService
         $writer = new Writer();
         $writer->openToFile($path);
 
-        $tituloStyle = (new Style())->withFontBold(true)->withFontSize(13);
-        $headerStyle = (new Style())->withFontBold(true)->withBackgroundColor('E13642')->withFontColor('FFFFFF');
+        // OpenSpout 4.x API: usamos setters en lugar de fluent with*()
+        $tituloStyle = (new Style())->setFontBold()->setFontSize(13);
+        $headerStyle = (new Style())->setFontBold()->setBackgroundColor('E13642')->setFontColor('FFFFFF');
 
         // Hoja 1: Resumen
+        // OpenSpout 4.x: Row::fromValues($values, $style) en lugar de fromValuesWithStyle
         $writer->getCurrentSheet()->setName('Resumen');
-        $writer->addRow(Row::fromValuesWithStyle(["Reportes y analíticas — {$etiquetaPeriodo}"], $tituloStyle));
+        $writer->addRow(Row::fromValues(["Reportes y analíticas — {$etiquetaPeriodo}"], $tituloStyle));
         $writer->addRow(Row::fromValues(["Sucursal: {$sucursalNombre}"]));
         $writer->addRow(Row::fromValues([]));
-        $writer->addRow(Row::fromValuesWithStyle(['Indicador', 'Valor'], $headerStyle));
+        $writer->addRow(Row::fromValues(['Indicador', 'Valor'], $headerStyle));
         $writer->addRow(Row::fromValues(['Ventas', $data['ventas_mes']]));
         $writer->addRow(Row::fromValues(['Pedidos', $data['pedidos_mes']]));
         $writer->addRow(Row::fromValues(['Ticket promedio', $data['ticket_promedio']]));
@@ -48,35 +53,35 @@ final class AnaliticasExportService
 
         // Hoja 2: Ventas por dia
         $writer->addNewSheetAndMakeItCurrent()->setName('Ventas por dia');
-        $writer->addRow(Row::fromValuesWithStyle(['Fecha', 'Total'], $headerStyle));
+        $writer->addRow(Row::fromValues(['Fecha', 'Total'], $headerStyle));
         foreach ($data['ventas_por_dia'] as $v) {
             $writer->addRow(Row::fromValues([$v['fecha'], $v['total']]));
         }
 
         // Hoja 3: Horas pico
         $writer->addNewSheetAndMakeItCurrent()->setName('Horas pico');
-        $writer->addRow(Row::fromValuesWithStyle(['Hora', 'Pedidos'], $headerStyle));
+        $writer->addRow(Row::fromValues(['Hora', 'Pedidos'], $headerStyle));
         foreach ($data['horas_pico'] as $h) {
             $writer->addRow(Row::fromValues([sprintf('%02d:00', (int) $h['hora']), $h['cantidad']]));
         }
 
         // Hoja 4: Top productos
         $writer->addNewSheetAndMakeItCurrent()->setName('Top productos');
-        $writer->addRow(Row::fromValuesWithStyle(['#', 'Producto', 'Unidades', 'Ingresos'], $headerStyle));
+        $writer->addRow(Row::fromValues(['#', 'Producto', 'Unidades', 'Ingresos'], $headerStyle));
         foreach ($data['top_productos'] as $i => $p) {
             $writer->addRow(Row::fromValues([$i + 1, $p['nombre'], $p['unidades'], $p['ingresos']]));
         }
 
         // Hoja 5: Modalidad
         $writer->addNewSheetAndMakeItCurrent()->setName('Modalidad');
-        $writer->addRow(Row::fromValuesWithStyle(['Modalidad', 'Pedidos', 'Porcentaje'], $headerStyle));
+        $writer->addRow(Row::fromValues(['Modalidad', 'Pedidos', 'Porcentaje'], $headerStyle));
         foreach ($data['modalidad'] as $m) {
             $writer->addRow(Row::fromValues([self::nombreModalidad($m['modalidad']), $m['cantidad'], "{$m['pct']}%"]));
         }
 
         // Hoja 6: Ventas por categoria
         $writer->addNewSheetAndMakeItCurrent()->setName('Ventas por categoria');
-        $writer->addRow(Row::fromValuesWithStyle(['Categoría', 'Total'], $headerStyle));
+        $writer->addRow(Row::fromValues(['Categoría', 'Total'], $headerStyle));
         foreach ($data['ventas_por_categoria'] as $c) {
             $writer->addRow(Row::fromValues([$c['categoria'], $c['total']]));
         }
@@ -101,6 +106,13 @@ final class AnaliticasExportService
     {
         $inicio = $inicio->copy()->locale('es');
         $fin = $fin->copy()->locale('es');
+
+        if ($granularidad === 'rango') {
+            $fechaDesde = $inicio->format('d/m/Y');
+            $fechaHasta = $fin->format('d/m/Y');
+
+            return "Del {$fechaDesde} al {$fechaHasta}";
+        }
 
         if ($granularidad === 'dia') {
             return self::capitalizar($inicio->translatedFormat('l d \d\e F \d\e Y'));

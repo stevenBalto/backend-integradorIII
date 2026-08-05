@@ -40,6 +40,10 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [PasswordResetController::class, 'forgot'])->middleware('throttle:6,1');
 Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:6,1');
 
+// ── Cambio de contraseña expirada (self-service, publico, con limite) ────────
+// El usuario se autentica con sus credenciales vencidas y proporciona nueva password.
+Route::post('/auth/password-expirada', [AuthController::class, 'passwordExpirada'])->middleware('throttle:6,1');
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
@@ -134,7 +138,11 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
         Route::get('/usuarios/opciones', [UsuarioController::class, 'opciones']);
         Route::post('/usuarios', [UsuarioController::class, 'store']);
         Route::match(['put', 'patch'], '/usuarios/{id}', [UsuarioController::class, 'update']);
+        Route::patch('/usuarios/{id}/estado', [UsuarioController::class, 'cambiarEstado']);
         Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy']);
+
+        // Catalogo de modulos (para el modal de asignacion de permisos del frontend).
+        Route::get('/modulos', [UsuarioController::class, 'modulos']);
 
         // Extras / acompañamientos (CRUD completo + asignacion puntual a productos).
         Route::get('/extras', [ExtraController::class, 'index']);

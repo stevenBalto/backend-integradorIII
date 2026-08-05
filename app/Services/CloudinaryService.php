@@ -52,4 +52,24 @@ final class CloudinaryService
 
         return (string) $resultado['secure_url'];
     }
+
+    /** Sube la imagen de una oferta y devuelve su secure_url. */
+    public function subirImagenOferta(UploadedFile $archivo): string
+    {
+        $resultado = $this->cliente()->uploadApi()->upload($archivo->getRealPath(), [
+            'folder' => 'rooster-pizza/ofertas',
+        ]);
+
+        return (string) $resultado['secure_url'];
+    }
+
+    /** Sube la imagen de un cupon y devuelve su secure_url. */
+    public function subirImagenCupon(UploadedFile $archivo): string
+    {
+        $resultado = $this->cliente()->uploadApi()->upload($archivo->getRealPath(), [
+            'folder' => 'rooster-pizza/cupones',
+        ]);
+
+        return (string) $resultado['secure_url'];
+    }
 }
