@@ -13,6 +13,30 @@ Formato sugerido por entrada:
 - Fecha: YYYY-MM-DD
 ```
 
+### EF-19 — Imágenes locales de productos: falta la regla `/storage` en el proxy y el pipe `imagenUrl`
+- Qué pasó: al preparar la tabla "Productos más vendidos" (Analíticas) para mostrar la foto del producto, se detectó que en cuanto se suban imágenes LOCALES (en vez de las URLs absolutas de Wikimedia que siembra `DemoRoosterSeeder`), las fotos no van a cargar en ninguna pantalla.
+- Causa: dos capas independientes.
+  1. `proxy.conf.json` del dev-server solo reenviaba `/api` al backend (`127.0.0.1:8000`). Laravel publica las subidas en `/storage/**`, ruta que NO estaba proxeada: el pedido se lo quedaba el dev-server de Angular y devolvía el `index.html` de la SPA, dando una imagen rota difícil de diagnosticar (no es un 404 limpio).
+  2. El backend devuelve `imagen_url` CRUDO (`ProductoResource`, `ExtraResource` y `top_productos` de analíticas exponen `$this->imagen_url` sin `Storage::url()` ni `asset()`), y **todas** las plantillas ligan `[src]="p.imagen_url"` directo. Con una ruta relativa (`productos/x.jpg`), el navegador la resuelve contra el origen del FRONTEND, no del backend.
+- Regla:
+  - La regla `/storage` en `proxy.conf.json` debe existir junto a la de `/api` — si alguien recrea ese archivo, tiene que llevar las dos.
+  - Toda plantilla que muestre una imagen del backend debe pasar el valor por el pipe `imagenUrl` (`shared/pipes/imagen-url.pipe.ts`): `[src]="p.imagen_url | imagenUrl"`. El pipe normaliza absoluta / `/storage/x` / `productos/x` / `public/x` a una URL pedible.
+  - Alternativa de fondo (evita tocar plantillas): que el backend exponga la URL ya absoluta con `Storage::url()` en `ProductoResource` y `ExtraResource`. Si se toma este camino, el pipe igual es inofensivo (deja pasar las absolutas tal cual).
+  - Requiere `php artisan storage:link` hecho una vez en el backend, o `/storage/**` no resuelve a `storage/app/public/`.
+- Fecha: 2026-08-05
+
+### EF-18 — Cambios en el contrato de Analíticas no se ven por la caché de 30 min del backend
+- Qué pasó: dos veces seguidas (al agregar `ingresos` y luego `imagen_url` a `top_productos`) el campo nuevo no aparecía en el frontend aunque el código del backend ya estaba correcto. Se perdió tiempo buscando el bug en el frontend.
+- Causa: `AnaliticasService::resumen()` envuelve la respuesta en `Cache::remember(..., 30 min)` con clave por instancia/sucursal/granularidad/período. Tras cambiar la FORMA de la respuesta, el backend sigue sirviendo los payloads viejos (sin el campo nuevo) hasta que cada clave expira. Como hay una clave por período visitado, quedan muchos payloads viejos conviviendo.
+- Regla: después de cualquier cambio en la estructura de la respuesta de analíticas hay que limpiar la caché ANTES de concluir que el frontend está mal. `php artisan cache:clear`, o —si no hay un PHP de la versión que pide el proyecto— con `CACHE_STORE=file` basta con borrar los archivos de `storage/framework/cache/data/` (dejando el `.gitignore`). Para diagnosticar sin adivinar: `grep` del campo nuevo dentro de esos archivos; si no aparece en ninguno, el problema es la caché y no el frontend.
+- Fecha: 2026-08-05
+
+### EF-17 — Tooltip fantasma del navegador por pasar `title` como atributo estático a un componente
+- Qué pasó: en Analíticas aparecía una caja negra flotante con el texto "Tendencia de ventas" encima del gráfico vecino ("Horas pico"), en una posición que no correspondía a ningún tooltip propio de ese gráfico.
+- Causa: `<admin-section-card title="Tendencia de ventas">` — el componente declara `@Input() title`, pero al escribirlo como atributo ESTÁTICO Angular además lo deja reflejado como atributo HTML nativo `title` en el elemento host. `title` es el atributo que dispara el tooltip nativo del navegador al hacer hover, así que la caja negra la dibujaba el navegador, no la app.
+- Regla: cuando un `@Input()` se llama igual que un atributo HTML nativo con comportamiento propio (`title`, `hidden`, `draggable`, `tabindex`…), el componente debe neutralizarlo en el host: `host: { '[attr.title]': 'null' }` (así quedó `admin-section-card.component.ts`). Si aparece un tooltip/comportamiento raro que no está en el código de la app, revisar primero si es comportamiento nativo del navegador.
+- Fecha: 2026-08-05
+
 ### EF-11 — Sesión compartida entre pestañas por usar `@ionic/storage-angular` (IndexedDB) para el token
 - Qué pasó: con el panel admin abierto en una pestaña, al registrar un cliente nuevo en OTRA pestaña del mismo navegador y luego recargar (F5) la pestaña del admin, esta se rompía con `403 Forbidden` ("No tenés permiso para realizar esta acción.") en vez de mostrar el panel.
 - Causa: `TokenStorageService` (y, con el mismo patrón, `SuperAdminAuthService`) guardaban el token/usuario con `@ionic/storage-angular`, cuyo driver por defecto es IndexedDB — un almacén a nivel de ORIGEN, compartido por todas las pestañas/ventanas abiertas del mismo `localhost:puerto`, no aislado por pestaña. `AuthService.init()` (llamado por `APP_INITIALIZER` en cada carga/recarga de página) relee el token desde ese store compartido. Como registrar/loguear en cualquier pestaña sobreescribe las mismas claves (`auth_token`/`auth_user`), la ÚLTIMA sesión iniciada en CUALQUIER pestaña ganaba para TODAS las pestañas la próxima vez que alguna de ellas recargara.

@@ -62,9 +62,9 @@ final class AnaliticasExportService
 
         // Hoja 4: Top productos
         $writer->addNewSheetAndMakeItCurrent()->setName('Top productos');
-        $writer->addRow(Row::fromValuesWithStyle(['#', 'Producto', 'Unidades'], $headerStyle));
+        $writer->addRow(Row::fromValuesWithStyle(['#', 'Producto', 'Unidades', 'Ingresos'], $headerStyle));
         foreach ($data['top_productos'] as $i => $p) {
-            $writer->addRow(Row::fromValues([$i + 1, $p['nombre'], $p['unidades']]));
+            $writer->addRow(Row::fromValues([$i + 1, $p['nombre'], $p['unidades'], $p['ingresos']]));
         }
 
         // Hoja 5: Modalidad

@@ -100,15 +100,17 @@ final class AnaliticasRepository
 
     /**
      * Top productos mas vendidos: join detalles_pedido -> productos, SUM(cantidad).
+     * Incluye ingresos calculados desde detalle_pedido.subtotal (precio base/tamano * cantidad,
+     * SIN extras — los extras son ingresos de los propios extras, no del producto).
      *
-     * @return array<int, array{nombre: string, unidades: int}>
+     * @return array<int, array{nombre: string, unidades: int, ingresos: float, imagen_url: string|null}>
      */
     public function topProductos(Carbon $inicio, Carbon $fin, ?int $sucursalId, int $limite = 10): array
     {
         $query = DB::table('detalle_pedido')
             ->join('pedidos', 'detalle_pedido.pedido_id', '=', 'pedidos.id')
             ->join('productos', 'detalle_pedido.producto_id', '=', 'productos.id')
-            ->selectRaw('productos.nombre, SUM(detalle_pedido.cantidad)::int as unidades')
+            ->selectRaw('productos.nombre, productos.imagen_url, SUM(detalle_pedido.cantidad)::int as unidades, SUM(detalle_pedido.subtotal)::numeric(12,2) as ingresos')
             ->where('pedidos.estado', 'entregado')
             ->whereBetween('pedidos.created_at', [$inicio, $fin]);
 
@@ -123,13 +125,15 @@ final class AnaliticasRepository
         }
 
         return $query
-            ->groupBy('productos.id', 'productos.nombre')
+            ->groupBy('productos.id', 'productos.nombre', 'productos.imagen_url')
             ->orderByDesc('unidades')
             ->limit($limite)
             ->get()
             ->map(fn ($row) => [
                 'nombre' => $row->nombre,
                 'unidades' => (int) $row->unidades,
+                'ingresos' => (float) $row->ingresos,
+                'imagen_url' => $row->imagen_url,
             ])
             ->toArray();
     }

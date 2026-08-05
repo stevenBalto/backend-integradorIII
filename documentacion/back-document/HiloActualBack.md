@@ -333,3 +333,42 @@ Formato sugerido:
 - Pendiente:
   - Nada pendiente conocido del backend de este batch. Falta probar la descarga real end-to-end desde el navegador (solo se probó a nivel de servicio con `tinker`, no se levantó `php artisan serve` + `ionic serve` juntos en esta sesión).
 - NO TOCAR / nota: `config/database.php` sigue con un cambio local sin commitear (defaults de `DB_DATABASE`/`DB_PASSWORD`, ajeno a esta sesión, ya documentado en la sesión 2026-07-25) — no se tocó ni se commiteó. `comparacion_mes_anterior` ya NO existe en la respuesta del endpoint — si algún consumidor viejo la esperaba, actualizar a `comparacion_periodo_anterior`.
+
+## Sesion 2026-08-05 — Analiticas: campo `ingresos` en top_productos + fix granularidad semana
+- Contexto: el frontend rediseno la tarjeta "Productos mas vendidos" como tabla de 3 columnas (PRODUCTO/CANTIDAD/INGRESOS), pero `top_productos` solo devolvia `nombre` y `unidades`. Ademas, `granularidad=semana` devolvia dias de todo el mes en vez de solo los 7 dias de la semana (el frontend tenia un filtro defensivo `filtrarSemana()` para compensar).
+- **PEDIDO 1 — campo `ingresos` en `top_productos`**:
+  - `AnaliticasRepository::topProductos()`: agregado `SUM(detalle_pedido.subtotal)::numeric(12,2) as ingresos` al `selectRaw` y mapeado a `'ingresos' => (float) $row->ingresos` en la respuesta. Docblock actualizado para reflejar el nuevo shape `{nombre: string, unidades: int, ingresos: float}`.
+  - **IMPORTANTE — `ingresos` NO incluye extras**: `detalle_pedido.subtotal` es `precio_unitario * cantidad` (precio del producto con tamano, sin extras). Los extras se guardan en `detalle_pedido_extras` y contribuyen al `subtotal_con_extras` del pedido, pero NO al `subtotal` de la linea. Esto es correcto para "ingresos por producto" — los extras son ingresos de los propios extras, no del producto principal. Si a futuro se quiere "ingresos totales de la linea (producto + extras)", habria que hacer un JOIN con `detalle_pedido_extras` y sumar `precio * cantidad` de cada extra.
+  - **Coherencia con `ventas_mes`**: la suma de `ingresos` de todos los productos NO iguala `ventas_mes` porque: (1) `ventas_mes` usa `pedidos.total` que incluye extras, descuentos de cupon, canje de puntos, etc.; (2) `top_productos` suma `subtotal` que es el precio base/tamano sin extras ni descuentos. La diferencia es esperada y correcta.
+  - `AnaliticasResource.php`: NO requiere cambios — ya pasa `$data['top_productos']` tal cual, sin whitelist de campos.
+  - `AnaliticasExportService.php` (export Excel): agregada columna "Ingresos" a la hoja "Top productos".
+  - `resources/views/exports/analiticas.blade.php` (export PDF): agregada columna "Ingresos" a la seccion "Productos mas vendidos".
+- **PEDIDO 2 — fix de `granularidad=semana`**:
+  - `AnaliticasService::rangoSemana()`: cambiado de `startOfWeek()` / `endOfWeek()` (depende del locale del servidor) a `startOfWeek(Carbon::MONDAY)` / `endOfWeek(Carbon::SUNDAY)` (explicito ISO 8601, independiente del locale). Esto asegura que la semana siempre sea lunes-domingo sin importar la configuracion del servidor.
+  - `AnaliticasService::calcularComparacionPeriodoAnterior()`: mismo fix aplicado al calculo del rango de la semana anterior.
+  - **Nota**: el bug probablemente era causado por un locale del servidor de produccion que considera domingo como primer dia de la semana (ej. en_US). Con el fix explicito, el comportamiento es consistente en cualquier entorno.
+  - El frontend puede remover el filtro defensivo `filtrarSemana()` de `analiticas.page.ts` una vez verificado el fix.
+- Archivos modificados:
+  - `app/Repositories/AnaliticasRepository.php` (linea ~106, metodo `topProductos`)
+  - `app/Services/AnaliticasService.php` (metodos `rangoSemana`, `calcularComparacionPeriodoAnterior`)
+  - `app/Services/AnaliticasExportService.php` (hoja "Top productos")
+  - `resources/views/exports/analiticas.blade.php` (seccion "Productos mas vendidos")
+- NO se pudo verificar end-to-end porque el entorno local tiene PHP 8.1 (incompatible con el proyecto que exige 8.4+). Cambios verificados solo a nivel de sintaxis.
+- Pendiente:
+  - Verificar en entorno con PHP 8.4+ que el endpoint devuelve exactamente 7 dias cuando `granularidad=semana`.
+  - Frontend: remover filtro defensivo `filtrarSemana()` de `analiticas.page.ts` una vez confirmado el fix.
+- NO TOCAR / nota: el contrato de API de `top_productos` CAMBIO (nuevo campo `ingresos`). El frontend ya lo espera como opcional (`ingresos?: number | null`), asi que es backwards-compatible.
+
+## Sesion 2026-08-05 — Analiticas: imagen_url en top_productos
+- Hecho:
+  - `AnaliticasRepository::topProductos()`: agregado `productos.imagen_url` al `selectRaw` y al `groupBy` (PostgreSQL exige que columnas no agregadas esten en GROUP BY). Mapeado a `'imagen_url' => $row->imagen_url` en la respuesta.
+  - Docblock actualizado para reflejar el nuevo shape `{nombre: string, unidades: int, ingresos: float, imagen_url: string|null}`.
+  - **Formato de URL**: se devuelve el valor TAL CUAL viene de la base de datos, sin transformacion (`Storage::url()`, `asset()`, etc.). Esto es CONSISTENTE con `ProductoResource` (linea 22: `'imagen_url' => $this->imagen_url`) que tampoco transforma el valor. El frontend ya recibe la URL en el mismo formato que en `/api/productos`.
+  - `AnaliticasResource.php`: NO requiere cambios — ya pasa `$data['top_productos']` tal cual, sin whitelist de campos.
+  - `AnaliticasExportService.php` (export Excel): NO requiere cambios — una miniatura no aporta valor en Excel.
+  - `resources/views/exports/analiticas.blade.php` (export PDF): NO requiere cambios — mismo razonamiento.
+- Archivos modificados:
+  - `app/Repositories/AnaliticasRepository.php` (metodo `topProductos`)
+- NO se pudo verificar end-to-end porque el entorno local tiene PHP 8.1 (incompatible con el proyecto que exige 8.4+, ver EB-12 en AntierroresBack.md). Cambios verificados solo a nivel de sintaxis.
+- Pendiente: nada.
+- NO TOCAR / nota: el contrato de API de `top_productos` CAMBIO nuevamente (nuevo campo `imagen_url`). El frontend ya lo espera (el pedido venia del frontend). `imagen_url` puede ser `null` si el producto no tiene foto; el frontend ya maneja ese caso con un icono generico.

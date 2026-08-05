@@ -116,7 +116,10 @@ final class AnaliticasService
     private function calcularComparacionPeriodoAnterior(string $granularidad, Carbon $inicioActual, ?int $sucursalId, float $ventasActual, int $pedidosActual): array
     {
         [$inicioAnt, $finAnt] = match ($granularidad) {
-            'semana' => [$inicioActual->copy()->subWeek(), $inicioActual->copy()->subWeek()->endOfWeek()],
+            'semana' => [
+                $inicioActual->copy()->subWeek()->startOfWeek(Carbon::MONDAY),
+                $inicioActual->copy()->subWeek()->endOfWeek(Carbon::SUNDAY),
+            ],
             'dia' => [$inicioActual->copy()->subDay(), $inicioActual->copy()->subDay()->endOfDay()],
             default => $this->rangoMes($inicioActual->copy()->subMonth()->format('Y-m')),
         };
@@ -171,13 +174,16 @@ final class AnaliticasService
 
     /**
      * Calcula el rango de fechas para la semana calendario (lunes-domingo) que contiene $fecha.
+     * Usa Carbon::MONDAY explicitamente para evitar dependencia del locale del servidor.
      *
      * @return array{0: Carbon, 1: Carbon}
      */
     private function rangoSemana(string $fecha): array
     {
-        $inicio = Carbon::createFromFormat('Y-m-d', $fecha)->startOfWeek();
-        $fin = $inicio->copy()->endOfWeek();
+        $fechaCarbon = Carbon::createFromFormat('Y-m-d', $fecha);
+        // Forzar lunes como inicio de semana (ISO 8601), independiente del locale del servidor
+        $inicio = $fechaCarbon->startOfWeek(Carbon::MONDAY);
+        $fin = $inicio->copy()->endOfWeek(Carbon::SUNDAY);
 
         return [$inicio, $fin];
     }

@@ -75,10 +75,10 @@
     <h2>Productos más vendidos</h2>
     @if (count($data['top_productos']) > 0)
         <table>
-            <thead><tr><th>#</th><th>Producto</th><th>Unidades</th></tr></thead>
+            <thead><tr><th>#</th><th>Producto</th><th>Unidades</th><th>Ingresos</th></tr></thead>
             <tbody>
             @foreach ($data['top_productos'] as $i => $p)
-                <tr><td>{{ $i + 1 }}</td><td>{{ $p['nombre'] }}</td><td>{{ $p['unidades'] }}</td></tr>
+                <tr><td>{{ $i + 1 }}</td><td>{{ $p['nombre'] }}</td><td>{{ $p['unidades'] }}</td><td>₡{{ number_format($p['ingresos'], 0, ',', '.') }}</td></tr>
             @endforeach
             </tbody>
         </table>
