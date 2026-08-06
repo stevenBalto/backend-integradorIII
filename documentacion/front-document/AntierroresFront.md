@@ -13,6 +13,18 @@ Formato sugerido por entrada:
 - Fecha: YYYY-MM-DD
 ```
 
+### EF-24 — `ion-toggle` (u otros controles animados con `transform`) traspasan el header sticky de la tabla al hacer scroll
+- Qué pasó: en tablas admin (`.admin-table`) con `ion-toggle` en celdas (Inicio/home, ofertas, cupones, menú), al hacer scroll los toggles de las filas se pintaban ENCIMA del encabezado `sticky` — pese a que el `thead th` ya tenía `z-index: 2` y fondo opaco (`--admin-panel: #f7f5f2`).
+- Causa: `ion-toggle` se anima con `transform` → vive en su propia **capa de composición GPU**. Una capa compositada puede pintarse por encima de un `position: sticky` que NO está promovido a capa, ignorando el `z-index` (el orden de pintado lo decide el compositor, no el z-index del DOM).
+- Regla: promover el `thead th` sticky a su propia capa con `will-change: transform` **y** subir el `z-index` (usamos 5). Con ambas capas compositadas el z-index vuelve a respetarse y el header tapa el contenido que sube. Aplica a `.admin-table` y `.of-table` (global.scss).
+- Fecha: 2026-08-06
+
+### EF-23 — Portal del header (KPIs/acciones) desaparece al volver a una página cacheada; supersede EF-17
+- Qué pasó: al llevar los KPIs (`adminHeaderLead`) y las acciones (`adminHeaderActions`) al header por portal, navegar A→B y VOLVER a una sección ya visitada dejaba el header SIN KPIs ni botones hasta refrescar (y en Pedidos reaparecía el título en PC). Flujo repro: dashboard→menú→pedidos→menú→pedidos.
+- Causa: `IonicRouteStrategy` cachea las páginas → al volver, `ngOnInit` NO re-corre, así que el portal no se re-publicaba (el shell limpia en `NavigationStart`). Dos intentos fallidos: (a) re-publicar en el evento DOM `ionViewWillEnter` — **sólo dispara de forma fiable en páginas que implementan algún método de ciclo de vida Ionic** (Pedidos implementa `ionViewWillLeave` → funcionaba; el resto NO); (b) detectar la página activa mirando el DOM (`.ion-page:not(.ion-page-hidden)`) durante la transición — en un frame la ÚNICA visible era la página **saliente**, así que se publicaba su template y luego su `ngOnDestroy` lo borraba (verificado logueando el servicio: en menú(2) se publicaba el TPL de pedidos, no el de menú).
+- Regla: para re-publicar templates de portal en páginas cacheadas, cada directiva guarda **su ruta** (`this.pathOf(router.url)` en `ngOnInit`) y se re-publica en cada `NavigationEnd` cuyo `urlAfterRedirects` (path, sin query) coincida, forzando `ApplicationRef.tick()` (el handler corre fuera del CD de una página que se re-crea). NO depender de eventos de ciclo de vida Ionic ni de inspeccionar el DOM en transición. **Reproducir SIEMPRE volviendo a una página cacheada (A→B→A), no sólo primeras visitas** — las primeras siempre funcionan por el `ngOnInit`.
+- Fecha: 2026-08-06
+
 ### EF-22 — Imágenes locales de productos: falta la regla `/storage` en el proxy y el pipe `imagenUrl`
 - Qué pasó: al preparar la tabla "Productos más vendidos" (Analíticas) para mostrar la foto del producto, se detectó que en cuanto se suban imágenes LOCALES (en vez de las URLs absolutas de Wikimedia que siembra `DemoRoosterSeeder`), las fotos no van a cargar en ninguna pantalla.
 - Causa: dos capas independientes.

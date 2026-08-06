@@ -18,6 +18,17 @@ API REST — no comparten subagentes.
    `.md` pertinentes (como mínimo el `HiloActual*` de lo que se tocó; `Antierrores*` si
    se aprendió algo nuevo; `ContextoGeneral.md` si cambió el estado de un módulo).
 
+## Restricción de dependencias — paquetes npm PROHIBIDOS (OBLIGATORIO)
+Ninguno de los 4 desarrolladores (**Reyman, Steven, Bryan, Christian**) puede **instalar
+ni agregar paquetes npm nuevos**. Queda **totalmente prohibido**: nada de
+`npm install <paquete>`, ni agregar dependencias a `package.json`, ni traer librerías
+de terceros para resolver una feature. Todo se hace con lo que **ya** está en el proyecto
+(Angular / Ionic / RxJS del stack base) o con **código propio** (ejemplo: los logos de
+Excel/PDF se hicieron como **SVG inline**, no con una librería de íconos). Para el backend
+rige la misma filosofía con **Composer**: no agregar dependencias nuevas. Si una tarea
+parece necesitar un paquete nuevo, NO instalarlo: buscar la solución con lo existente o
+consultar al usuario primero.
+
 ## Protocolo de enrutamiento
 El enrutamiento es automático en cada turno (lo hace el hilo principal con esta
 matriz; el protocolo global está en `~/.claude/CLAUDE.md`). Antes de delegar o

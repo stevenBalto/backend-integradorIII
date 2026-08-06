@@ -16,7 +16,9 @@ vecinos según esta tabla.** Verificá con `getBoundingClientRect().height` (no 
 |---|---|---|---|
 | **Botones de ícono del header** | campana (`.admin-header__bell`), ayuda `?` (`.ped-help-btn` en móvil), expandir-header (`.ped-expand-btn--header`) | **32×32px** | Cuadrados, `border-radius: 8px`, ícono 16px. Icono-only = cuadrado (no pill ancho). |
 | **Controles de toolbar de tabla** | chips de filtro (`.ped-datechip`), calendario (`.ped-datechip--date`), botón expandir en toolbar (`.ped-expand-btn`), lupa del buscador (`admin-search-input .asi__toggle`) | **36px** de alto | Todos los de una misma fila comparten 36px. La lupa del buscador compartido ya es 36px → el resto se iguala a eso. |
-| **KPI chips del header** (`.ped-hkpi`) | tarjetas-filtro proyectadas al header (`adminHeaderLead`) | **108×44px** | Ancho **fijo uniforme** (`flex: 0 0 108px`), NO `flex:1` (se estiran y quedan "deformes"), NO content-size (quedan disparejos). Contenido centrado. |
+| **KPI chips del header — estándar global** (`.admin-hkpi` en `global.scss`) | KPIs de TODAS las secciones proyectados al header (`adminHeaderLead`): dashboard, inicio, menú, inventario, ofertas/cupones, clientes, analíticas, reseñas | **116×50px** | Ancho **fijo uniforme** (`flex: 0 0 116px`). Estructura: `__label` (10px) + `__value` (16px) + `__delta` opcional (9px, variación). `--active` = filtro activo (borde rojo). `--static` = métrica no clicable (reseñas/analíticas). Montos largos se acortan con `montoCorto()` (`₡1,3 M`). En tablet+ viven en el header y el cuerpo se oculta (`.admin-kpis-body`); en móvil el header los oculta y el cuerpo los muestra. |
+| **KPI chips del header — Pedidos** (`.ped-hkpi`) | tarjetas-filtro de Pedidos (5 conteos por estado) | **108×44px** | Variante propia de Pedidos (sin línea de variación). Ancho fijo uniforme, NO `flex:1` (se estiran/"deformes"), NO content-size (disparejos). |
+| **Botones de acción del header** (`admin-btn [iconOnly]`, `.an-export-btn`) | crear/nuevo/canjear + export Excel/PDF + sync (analíticas) | **32×32px** | En PC/tablet **solo ícono** (sin texto), cuadrado 32×32 con `aria-label`/`title`. Los logos Excel/PDF son **SVG de marca inline** (verde X + rojo Acrobat "A"), no librería de íconos (ver regla no-npm). |
 | **Avatar del header** | (`.admin-header__user` avatar) | círculo ~= alto de los botones del header | Mismo alto visual que campana/botones. |
 
 ## Reglas
@@ -33,3 +35,8 @@ vecinos según esta tabla.** Verificá con `getBoundingClientRect().height` (no 
 ## Historial
 - 2026-08-05: creado tras estandarizar Pedidos (KPIs del header 108×44 uniformes; chips
   de fecha + expandir + lupa a 36px; `?` móvil a 32×32 cuadrado; campana/expand-header ya 32×32).
+- 2026-08-06: **KPIs al header en las 8 secciones** con clase global `.admin-hkpi` (116×50
+  uniforme, label+valor+variación). Botones del header **solo ícono 32×32** en PC/tablet
+  (menú/inventario/ofertas/usuarios + export). **Encabezado de sección**: sin título/subtítulo
+  en tablet+ (los KPIs ocupan su lugar); en **móvil se muestra solo el título** (clase
+  `.admin-header__left--kpimode`). Logos **Excel/PDF = SVG de marca inline** (no librería).

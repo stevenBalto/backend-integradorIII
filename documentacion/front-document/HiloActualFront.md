@@ -12,6 +12,18 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-06 — Reforma de UX del header admin: KPIs al header, botones solo-ícono, logos Excel/PDF, títulos en móvil + 3 bugs
+- Contexto: batch de mejoras de UX del panel admin pedidas por el usuario, más 3 bugs reales (uno encontrado reproduciendo el flujo en Chrome con Playwright).
+- Hecho:
+  - **Header sin título/subtítulo** en dashboard, inicio, menú, inventario, ofertas, clientes, usuarios, analíticas, notificaciones, reseñas, configuración. Mecanismo: flag `ocultarHeaderTexto` (set en `admin-shell.page.ts`) → clase `.admin-header__left--kpimode`. **En móvil se muestra SOLO el título** (sin subtítulo/breadcrumb); en tablet+ el título se oculta (los KPIs ocupan su lugar). Pedidos y Pedido de mostrador conservan su encabezado.
+  - **Botones del header solo-ícono 32×32** en PC/tablet (móvil ya lo era): `admin-btn` con `@Input() iconOnly` + `ariaLabel` (tooltip). Aplicado a menú (Categoría/Extras/Nuevo producto), inventario, ofertas (Canjear/Nueva oferta-cupón), usuarios (Crear usuario).
+  - **Analíticas — export Excel/PDF**: iterado bastante con el usuario hasta quedar en **logos de marca inline (SVG)**: Excel = documento con "X" verde + cuadrícula; PDF = cuadrado rojo con la "A" de Adobe Acrobat. Botón neutro 32×32; el de sync también solo-ícono. (Se descartaron: badge con texto "XLS/PDF", glifos de línea genéricos — el usuario quería los logos oficiales.)
+  - **KPIs al header en 8 secciones** (dashboard, inicio, menú, inventario, ofertas/cupones —por tab—, clientes, analíticas, reseñas), misma dinámica de Pedidos. Clase **global** `.admin-hkpi(s)` (116×50 uniforme: label+valor+variación) + `.admin-kpis-body` (se oculta en tablet+; `.an-kpis`/`.res-kpis` se ocultan en su propio SCSS por encapsulación). Montos largos acortados con `shared/utils/monto.ts::montoCorto` (`₡1,3 M`). Chips clicables = filtro (mismo que las cards); analíticas/reseñas = `--static` (métrica). Ver `EstandaresUI.md`.
+  - **Bug — toggles traspasan el sticky header de la tabla** (Inicio/ofertas/cupones/menú): `will-change: transform` + `z-index:5` al `thead th` (global.scss). Ver **EF-24**.
+  - **Bug — portal del header desaparece al volver a una sección** (KPIs/botones): causa raíz = páginas cacheadas por `IonicRouteStrategy` no re-publican; el evento `ionViewWillEnter` y la detección por DOM en transición eran poco fiables. Fix: `adminHeaderLead`/`adminHeaderActions` guardan **su ruta** y se re-publican en `NavigationEnd` que coincida + `ApplicationRef.tick()`. Ver **EF-23**. Verificado con Playwright reproduciendo dashboard→menú→pedidos→menú→pedidos (todas las revisitas con KPIs+botones).
+- Verificado: `ng build --configuration development` exit 0 en cada iteración; el fix del portal verificado en vivo (Playwright, login admin@rooster.com) midiendo el DOM del header en el flujo de revisitas.
+- NO tocar / nota: el estándar de KPIs del header es la clase global `.admin-hkpi` (116×50); Pedidos mantiene su `.ped-hkpi` propia (108×44, 5 conteos). Para re-publicar templates de portal en páginas cacheadas, usar SIEMPRE el patrón por-ruta de EF-23 (no eventos de ciclo de vida Ionic).
+
 ## Sesión 2026-08-05 — Rediseño del módulo Analíticas (gráficos, tabla de productos, comparativos)
 - Contexto: batch de ajustes visuales sobre `admin/analiticas` pedidos por el usuario a partir de mockups, más dos bugs reales encontrados en el camino.
 - Hecho:
