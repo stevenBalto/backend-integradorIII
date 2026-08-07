@@ -12,6 +12,11 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-07 (4) — Menú: toolbar en una fila (≤767) + encabezados sticky en móvil
+- **Toolbar de Menú en una sola fila** a `≤767px`: antes el `@media` apilaba en columna (modos / categorías / buscador = 3 filas). Ahora es fila única — modos (Productos/Extras) + categorías (con **scroll horizontal** si no caben, no bajan de fila) y el **buscador pegado a la derecha** (`margin-left:auto`). Verificado en Chrome a 762px: los 3 grupos en el mismo `cy` (varianza 0) y el borde derecho del buscador = borde de la toolbar.
+- **Encabezados sticky también en móvil** en las 2 tablas de Menú (productos y extras): mismo patrón que Inicio (ver **EF-27**) — wrap 2D + tabla `display:table`. Verificado a 390px: scroll H (416px), scroll V y `th` a 1px del tope.
+- Verificado con `puppeteer-core` + Chrome del sistema. `ng build` exit 0.
+
 ## Sesión 2026-08-07 (3) — Inicio (sticky móvil) + Pedidos (tabla igual a Dashboard, orden) + modality-pill con ícono
 - Contexto: pulido de tablas del panel. Verificado en Chrome real con `puppeteer-core` (ya está en node_modules — NO se instaló nada) manejando el Chrome del sistema, login admin@rooster.com, viewport 390/1200.
 - Hecho:
