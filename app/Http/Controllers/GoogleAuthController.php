@@ -41,8 +41,13 @@ final class GoogleAuthController extends Controller
             $destino = '';
         }
 
+        // El front manda su propio origen (cada dev levanta en el puerto que
+        // quiere: 4200 con ng serve, 8100 con ionic serve, o la URL del tunel).
+        // El service lo valida contra la lista blanca.
+        $origen = (string) $request->query('origen', '');
+
         try {
-            return redirect()->away($this->google->urlDeAutorizacion($destino));
+            return redirect()->away($this->google->urlDeAutorizacion($destino, $origen));
         } catch (Throwable $e) {
             return $this->volverAlFrontConError($e->getMessage());
         }
@@ -63,7 +68,8 @@ final class GoogleAuthController extends Controller
         }
 
         try {
-            ['codigo' => $codigo, 'destino' => $destino] = $this->google->procesarCallback($code, $state);
+            ['codigo' => $codigo, 'destino' => $destino, 'origen' => $origen] =
+                $this->google->procesarCallback($code, $state);
         } catch (Throwable $e) {
             Log::warning('Fallo el callback de Google', ['error' => $e->getMessage()]);
 
@@ -73,7 +79,7 @@ final class GoogleAuthController extends Controller
         // El codigo va en el FRAGMENTO (#) y no en la query: el fragmento no se
         // manda al servidor, no queda en los access logs ni se filtra por Referer.
         return redirect()->away(
-            $this->urlDelFront($destino).'#google_codigo='.urlencode($codigo)
+            $this->urlDelFront($destino, $origen).'#google_codigo='.urlencode($codigo)
         );
     }
 
@@ -95,9 +101,13 @@ final class GoogleAuthController extends Controller
             ->response();
     }
 
-    private function urlDelFront(string $destino = ''): string
+    /**
+     * URL del front a la que volver. $origen viene validado por el service
+     * (lista blanca); si no hay, se cae al del .env.
+     */
+    private function urlDelFront(string $destino = '', string $origen = ''): string
     {
-        $base = rtrim((string) config('services.google.frontend_url'), '/');
+        $base = rtrim($origen !== '' ? $origen : (string) config('services.google.frontend_url'), '/');
 
         return $destino !== '' ? $base.$destino : $base.'/login';
     }

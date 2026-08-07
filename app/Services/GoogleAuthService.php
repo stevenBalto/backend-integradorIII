@@ -46,19 +46,29 @@ final class GoogleAuthService
      * URL de Google a la que hay que mandar al usuario.
      *
      * @param  string|null  $destino  Ruta del front a la que volver despues de entrar.
+     * @param  string|null  $origen   Origen del front (http://localhost:4200, :8100, tunel...).
+     *                                Debe estar en la lista blanca; si no, se usa el del .env.
      */
-    public function urlDeAutorizacion(?string $destino): string
+    public function urlDeAutorizacion(?string $destino, ?string $origen = null): string
     {
         $this->exigirConfiguracion();
 
+        $origen = $this->origenValido($origen);
+
         // El `state` ata esta respuesta a esta peticion: si vuelve uno que no
-        // emitimos nosotros (o ya vencido), el callback lo rechaza.
+        // emitimos nosotros (o ya vencido), el callback lo rechaza. Guardamos ahi
+        // el origen porque el intercambio del code exige EXACTAMENTE el mismo
+        // redirect_uri que se uso al pedir la autorizacion.
         $state = Str::random(40);
-        Cache::put($this->claveState($state), $destino ?? '', self::TTL_STATE);
+        Cache::put(
+            $this->claveState($state),
+            ['destino' => $destino ?? '', 'origen' => $origen],
+            self::TTL_STATE,
+        );
 
         $parametros = [
             'client_id' => (string) config('services.google.client_id'),
-            'redirect_uri' => (string) config('services.google.redirect'),
+            'redirect_uri' => $this->redirectUri($origen),
             'response_type' => 'code',
             'scope' => 'openid email profile',
             'state' => $state,
@@ -73,27 +83,33 @@ final class GoogleAuthService
      * Procesa la vuelta de Google: valida, resuelve el usuario y deja listo un
      * codigo de un solo uso.
      *
-     * @return array{codigo: string, destino: string}
+     * @return array{codigo: string, destino: string, origen: string}
      */
     public function procesarCallback(string $code, string $state): array
     {
         $this->exigirConfiguracion();
 
         $claveState = $this->claveState($state);
-        $destino = Cache::get($claveState);
-        if ($destino === null) {
+        $guardado = Cache::get($claveState);
+        if (! is_array($guardado)) {
             throw new RuntimeException('La sesion con Google vencio o no es valida. Volve a intentar.');
         }
         // Un `state` sirve una sola vez.
         Cache::forget($claveState);
 
-        $datos = $this->datosDeGoogle($code);
+        $origen = $this->origenValido($guardado['origen'] ?? null);
+
+        $datos = $this->datosDeGoogle($code, $origen);
         $user = $this->resolverUsuario($datos);
 
         $codigo = Str::random(64);
         Cache::put($this->claveCodigo($codigo), $user->id, self::TTL_CODIGO);
 
-        return ['codigo' => $codigo, 'destino' => is_string($destino) ? $destino : ''];
+        return [
+            'codigo' => $codigo,
+            'destino' => is_string($guardado['destino'] ?? null) ? $guardado['destino'] : '',
+            'origen' => $origen,
+        ];
     }
 
     /**
@@ -127,13 +143,14 @@ final class GoogleAuthService
      *
      * @return array{sub: string, email: string, nombre: string}
      */
-    private function datosDeGoogle(string $code): array
+    private function datosDeGoogle(string $code, string $origen): array
     {
         $respuesta = Http::asForm()->post('https://oauth2.googleapis.com/token', [
             'code' => $code,
             'client_id' => (string) config('services.google.client_id'),
             'client_secret' => (string) config('services.google.client_secret'),
-            'redirect_uri' => (string) config('services.google.redirect'),
+            // Google exige el MISMO redirect_uri que se envio al pedir el code.
+            'redirect_uri' => $this->redirectUri($origen),
             'grant_type' => 'authorization_code',
         ]);
 
@@ -266,15 +283,39 @@ final class GoogleAuthService
         }
     }
 
+    /**
+     * Devuelve el origen si esta en la lista blanca; si no, el del .env.
+     *
+     * La lista blanca es lo que impide que alguien arme un enlace con
+     * `origen=https://sitio-malo` y termine recibiendo el codigo de acceso.
+     */
+    private function origenValido(?string $origen): string
+    {
+        $permitidos = (array) config('services.google.origins', []);
+        $origen = is_string($origen) ? rtrim($origen, '/') : '';
+
+        if ($origen !== '' && in_array($origen, $permitidos, true)) {
+            return $origen;
+        }
+
+        return rtrim((string) config('services.google.frontend_url'), '/');
+    }
+
+    /** URI de callback para un origen dado (tiene que existir en Google Cloud Console). */
+    private function redirectUri(string $origen): string
+    {
+        return $origen.'/api/auth/google/callback';
+    }
+
     private function exigirConfiguracion(): void
     {
-        $faltan = collect(['client_id', 'client_secret', 'redirect'])
+        $faltan = collect(['client_id', 'client_secret'])
             ->filter(fn (string $clave): bool => blank(config("services.google.$clave")))
             ->isNotEmpty();
 
         if ($faltan) {
             throw new RuntimeException(
-                'Falta configurar GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI en el .env.'
+                'Falta configurar GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET en el .env.'
             );
         }
     }

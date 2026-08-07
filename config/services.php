@@ -51,7 +51,20 @@ return [
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
         // A donde vuelve el navegador del usuario despues del login (el front).
-        'frontend_url' => env('GOOGLE_FRONTEND_URL', env('FRONTEND_URL', 'http://localhost:8100')),
+        // Solo se usa como respaldo: normalmente el origen lo manda el propio front
+        // (cada dev levanta en el puerto que quiere: 4200 con ng serve, 8100 con
+        // ionic serve, o la URL del tunel en una demo).
+        'frontend_url' => env('GOOGLE_FRONTEND_URL', env('FRONTEND_URL', 'http://localhost:4200')),
+
+        // Origenes permitidos para volver. Lista blanca: sin esto, cualquiera podria
+        // usar nuestro endpoint para redirigir a un sitio externo (open redirect) o
+        // para llevarse el codigo de acceso a otro dominio.
+        // OJO: cada origen de esta lista tambien tiene que estar cargado como "URI de
+        // redireccionamiento autorizado" en Google Cloud Console, con /api/auth/google/callback.
+        'origins' => array_filter(array_map(
+            'trim',
+            explode(',', (string) env('GOOGLE_ALLOWED_ORIGINS', 'http://localhost:4200,http://localhost:8100'))
+        )),
     ],
 
     'cloudinary' => [

@@ -96,6 +96,37 @@ proxy hay que reiniciar `ionic serve`.
 
 ---
 
+## 3.2 Inicio de sesión con Google (una sola vez por máquina)
+
+Las credenciales de Google son **compartidas por el equipo**: hay UN solo cliente
+OAuth para todos, no hace falta que cada quien cree el suyo.
+
+1. Pedile a Steven el `GOOGLE_CLIENT_ID` y el `GOOGLE_CLIENT_SECRET` (van por
+   canal privado — WhatsApp o Drive, **nunca** al repo: es público).
+2. Pegalos en tu `.env` junto con las otras dos claves que ya están en
+   `.env.example`:
+   ```
+   GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=GOCSPX-...
+   GOOGLE_ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8100
+   GOOGLE_FRONTEND_URL=http://localhost:4200
+   ```
+3. `php artisan config:clear` y reiniciá `php artisan serve`.
+
+Funciona levantando el front en 4200 (`npm start`) o en 8100 (`ionic serve`): el
+front le manda su origen al backend y este arma el `redirect_uri` con ese mismo
+puerto. Si usás **otro** puerto o un túnel, hay que agregarlo en DOS lugares: en
+tu `GOOGLE_ALLOWED_ORIGINS` y en Google Cloud Console → Clientes → `Rooster web`
+→ URI de redireccionamiento autorizados (con `/api/auth/google/callback`).
+
+### Si te sale un error
+
+| Error | Qué significa |
+|---|---|
+| `redirect_uri_mismatch` | El origen desde el que entrás no está cargado en Google Cloud Console. |
+| `Acceso bloqueado` | Tu cuenta de Google no está en la lista de usuarios de prueba (o la app no está publicada). |
+| `cURL error 60: SSL certificate ...` | Tu PHP no tiene los certificados raíz. Bajá https://curl.se/ca/cacert.pem y en tu `php.ini` poné `curl.cainfo` y `openssl.cafile` apuntando a ese archivo. Reiniciá el server. **No** desactives la verificación TLS: por ese canal viaja el `client_secret`. |
+
 ## 4. Probar el Módulo 1 — Autenticación (funcional)
 Con backend + frontend arriba:
 1. Abrir `http://localhost:8100` → carga el **login**.
