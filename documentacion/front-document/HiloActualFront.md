@@ -12,6 +12,10 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-07 (7) — Pedidos: productos en mayúscula (pantalla completa) + fix scroll de la tira de KPIs
+- **Pedidos, vista pantalla completa**: la línea de producto (cantidad + nombre + tamaño) en MAYÚSCULA (`.ped-fs-card__prod-name { text-transform: uppercase }`).
+- **Bug real (EF-28) — la flecha de la tira de KPIs no llegaba al final**: al scrollear con la flecha derecha quedaba un pedazo del último KPI cortado y hacía falta un segundo click. Causa: en `admin-hkpi-strip`, las flechas eran items **flex en el flujo**; al aparecer la flecha izquierda durante el scroll, robaba ~32px de ancho al viewport, y el `scrollTo(scrollWidth)` (que se cambió de `scrollBy` 80%) aterrizaba corto porque el `clientWidth` cambiaba a mitad de scroll. Fix: flechas en **overlay absoluto** (`position:absolute` sobre el `.hkpi-strip`, `position:relative`) → el `clientWidth` del viewport queda **constante** aparezcan o no las flechas → `scrollTo(scrollWidth)` llega EXACTO al final de un solo click. `box-shadow` de fade en la flecha para no cortar visualmente el chip de abajo. Verificado en Chrome (Pedidos, 5 KPIs, 820px): `scrollLeft = scrollWidth − clientWidth`, `atEnd`, último KPI sin recorte. Ver **EF-28**.
+
 ## Sesión 2026-08-07 (6) — Analíticas: filtro de periodo dentro de card blanca + espaciado
 - **Filtro de periodo (Mes/Semana/Día/Rango + navegador de fecha) dentro de una card blanca**: `.an-filtro` ahora lleva `background: var(--admin-card)` + `border` + `border-radius:12px` + `padding:14px 16px` (mismo look que las secciones).
 - **Centrado en móvil/tablet-retrato**: el layout en fila pasó a `@media (min-width:766px)`; a ≤765 se apila y se **centra** (`align-items:center`). A ≥766 queda en fila (tabs izquierda, navegador derecha).
