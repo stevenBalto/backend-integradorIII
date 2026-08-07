@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\Espera;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -85,9 +86,10 @@ class AppServiceProvider extends ServiceProvider
     private function respuesta429(Request $request, array $headers)
     {
         $segundos = (int) ($headers['Retry-After'] ?? 60);
+        $espera = Espera::legible($segundos);
 
         return response()->json([
-            'message' => "Demasiados intentos. Espera {$segundos} segundos y volve a probar.",
+            'message' => "Demasiados intentos. Espera {$espera} y volve a probar.",
             'retry_after' => $segundos,
         ], 429, $headers);
     }

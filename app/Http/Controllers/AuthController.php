@@ -13,6 +13,7 @@ use App\Http\Resources\SuperAdminResource;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use App\Services\SuperAdminAuthService;
+use App\Support\Espera;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -52,10 +53,10 @@ final class AuthController extends Controller
      * El frontend debe redirigir a la pantalla de cambio de password expirada.
      */
     /** Cuantos intentos FALLIDOS se toleran antes de bloquear la cuenta un rato. */
-    private const INTENTOS_FALLIDOS = 5;
+    private const INTENTOS_FALLIDOS = 4;
 
     /** Cuanto dura el bloqueo tras agotar los intentos (segundos). */
-    private const BLOQUEO_SEGUNDOS = 60;
+    private const BLOQUEO_SEGUNDOS = 120;
 
     public function login(LoginRequest $request): JsonResponse
     {
@@ -165,9 +166,15 @@ final class AuthController extends Controller
         }
 
         $segundos = RateLimiter::availableIn($clave);
+        $espera = Espera::legible($segundos);
 
+        // Se corta ACA, antes de buscar el usuario y antes de comparar la
+        // contrasena. Eso es lo que hace util al limite: lo caro de un login no
+        // es la consulta sino el bcrypt (lento a proposito). Si igual llegaramos
+        // a comprobar la contrasena, un atacante podria tumbar el servidor por
+        // CPU aunque nunca acertara.
         abort(response()->json([
-            'message' => "Demasiados intentos fallidos. Espera {$segundos} segundos y volve a probar.",
+            'message' => "Demasiados intentos fallidos. Espera {$espera} y volve a probar.",
             'retry_after' => $segundos,
         ], 429));
     }
