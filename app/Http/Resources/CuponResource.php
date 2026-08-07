@@ -24,6 +24,11 @@ final class CuponResource extends JsonResource
             'usos_actuales' => (int) $this->usos_actuales,
             'activo' => (bool) $this->activo,
             'imagen_url' => $this->imagen_url,
+            'alcance' => $this->alcance,
+            'clientes' => $this->whenLoaded('clientes', fn () => $this->clientes->map(fn ($c) => [
+                'id' => $c->id,
+                'nombre' => $c->nombre,
+            ])),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

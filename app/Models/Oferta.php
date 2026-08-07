@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * Sin SoftDeletes: el borrado es fisico (DELETE real).
  * GLOBAL (no aislada por instancia): las promos son nacionales, iguales para
  * todas las sucursales (estilo Papa John's).
+ * `alcance` = 'todos' (visible para cualquier cliente) o 'especifico' (solo
+ * los clientes en la relacion `clientes`, ver `oferta_cliente`).
  */
 class Oferta extends Model
 {
@@ -30,6 +32,7 @@ class Oferta extends Model
         'fecha_fin',
         'activa',
         'imagen_url',
+        'alcance',
     ];
 
     protected function casts(): array
@@ -46,5 +49,11 @@ class Oferta extends Model
     public function productos(): BelongsToMany
     {
         return $this->belongsToMany(Producto::class, 'oferta_producto');
+    }
+
+    /** Clientes a los que se les asigna esta oferta cuando alcance = 'especifico'. */
+    public function clientes(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'oferta_cliente', 'oferta_id', 'cliente_id');
     }
 }

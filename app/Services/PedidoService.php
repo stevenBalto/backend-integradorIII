@@ -122,7 +122,7 @@ final class PedidoService
             /** @var Cupon|null $cupon */
             $cupon = null;
             if ($dto->cuponCodigo !== null) {
-                $cupon = $this->cupones->buscarActivoPorCodigo($dto->cuponCodigo);
+                $cupon = $this->cupones->buscarActivoPorCodigo($dto->cuponCodigo, $userId);
 
                 if ($cupon === null) {
                     throw ValidationException::withMessages([

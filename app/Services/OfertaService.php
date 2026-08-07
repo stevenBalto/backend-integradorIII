@@ -30,9 +30,9 @@ final class OfertaService
     }
 
     /** @return Collection<int, Oferta> */
-    public function listarActivas(): Collection
+    public function listarActivas(?int $clienteId = null): Collection
     {
-        return $this->ofertas->listarActivas();
+        return $this->ofertas->listarActivas($clienteId);
     }
 
     public function buscarPorId(int $id): Oferta
@@ -57,7 +57,7 @@ final class OfertaService
         $datos = $dto->toArray();
         $datos['imagen_url'] = $imagenUrl;
 
-        return $this->ofertas->crear($datos, $dto->productoIds);
+        return $this->ofertas->crear($datos, $dto->productoIds, $dto->clienteIds);
     }
 
     /** $imagenUrl: si es null, se conserva la imagen actual de la oferta (no se pisa). */
@@ -73,7 +73,7 @@ final class OfertaService
             $datos['imagen_url'] = $imagenUrl;
         }
 
-        return $this->ofertas->actualizar($oferta, $datos, $dto->productoIds);
+        return $this->ofertas->actualizar($oferta, $datos, $dto->productoIds, $dto->clienteIds);
     }
 
     public function eliminar(int $id): void

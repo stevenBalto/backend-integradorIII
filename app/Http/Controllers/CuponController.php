@@ -13,6 +13,7 @@ use App\Http\Resources\CuponResource;
 use App\Services\CloudinaryService;
 use App\Services\CuponService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -26,10 +27,16 @@ final class CuponController extends Controller
     ) {
     }
 
-    /** GET /api/cupones — listado publico de cupones activos. */
+    /**
+     * GET /api/cupones — listado publico de cupones activos.
+     * Ruta sin middleware de auth: si viene un Bearer token valido (cliente logueado)
+     * se incluyen tambien los cupones 'especifico' asignados a el; invitados solo ven 'todos'.
+     */
     public function indexPublic(): JsonResponse
     {
-        return CuponResource::collection($this->cupones->listarActivos())
+        $clienteId = Auth::guard('sanctum')->user()?->id;
+
+        return CuponResource::collection($this->cupones->listarActivos($clienteId))
             ->response();
     }
 

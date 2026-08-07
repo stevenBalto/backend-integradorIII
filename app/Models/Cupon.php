@@ -6,12 +6,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * Cupon de descuento canjeable en pedidos. Mapea `cupones`.
  * Sin SoftDeletes: el borrado es fisico (DELETE real).
  * GLOBAL (no aislado por instancia): los cupones son nacionales, iguales para
  * todas las sucursales (estilo Papa John's).
+ * `alcance` = 'todos' (visible/aplicable para cualquier cliente) o 'especifico'
+ * (solo los clientes en la relacion `clientes`, ver `cupon_cliente`).
  */
 class Cupon extends Model
 {
@@ -31,6 +34,7 @@ class Cupon extends Model
         'usos_actuales',
         'activo',
         'imagen_url',
+        'alcance',
     ];
 
     protected function casts(): array
@@ -44,5 +48,11 @@ class Cupon extends Model
             'usos_max' => 'integer',
             'usos_actuales' => 'integer',
         ];
+    }
+
+    /** Clientes a los que se les asigna este cupon cuando alcance = 'especifico'. */
+    public function clientes(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'cupon_cliente', 'cupon_id', 'cliente_id');
     }
 }

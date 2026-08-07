@@ -6,6 +6,7 @@ namespace App\DTOs\Cupon;
 
 final class CrearCuponDTO
 {
+    /** @param array<int> $clienteIds */
     public function __construct(
         public readonly string $codigo,
         public readonly string $tipo,
@@ -15,6 +16,8 @@ final class CrearCuponDTO
         public readonly ?string $fechaFin,
         public readonly ?int $usosMax,
         public readonly bool $activo,
+        public readonly string $alcance,
+        public readonly array $clienteIds,
     ) {
     }
 
@@ -29,6 +32,8 @@ final class CrearCuponDTO
             fechaFin: $data['fecha_fin'] ?? null,
             usosMax: isset($data['usos_max']) ? (int) $data['usos_max'] : null,
             activo: (bool) ($data['activo'] ?? true),
+            alcance: (string) ($data['alcance'] ?? 'todos'),
+            clienteIds: array_map('intval', $data['cliente_ids'] ?? []),
         );
     }
 
@@ -43,6 +48,7 @@ final class CrearCuponDTO
             'fecha_fin' => $this->fechaFin,
             'usos_max' => $this->usosMax,
             'activo' => $this->activo,
+            'alcance' => $this->alcance,
         ];
     }
 }

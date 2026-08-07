@@ -8,6 +8,7 @@ final class CrearOfertaDTO
 {
     /**
      * @param array<int> $productoIds
+     * @param array<int> $clienteIds
      */
     public function __construct(
         public readonly string $nombre,
@@ -18,6 +19,8 @@ final class CrearOfertaDTO
         public readonly ?string $fechaFin,
         public readonly bool $activa,
         public readonly array $productoIds,
+        public readonly string $alcance,
+        public readonly array $clienteIds,
     ) {
     }
 
@@ -32,6 +35,8 @@ final class CrearOfertaDTO
             fechaFin: $data['fecha_fin'] ?? null,
             activa: (bool) ($data['activa'] ?? true),
             productoIds: array_map('intval', $data['producto_ids'] ?? []),
+            alcance: (string) ($data['alcance'] ?? 'todos'),
+            clienteIds: array_map('intval', $data['cliente_ids'] ?? []),
         );
     }
 
@@ -45,6 +50,7 @@ final class CrearOfertaDTO
             'fecha_inicio' => $this->fechaInicio,
             'fecha_fin' => $this->fechaFin,
             'activa' => $this->activa,
+            'alcance' => $this->alcance,
         ];
     }
 }

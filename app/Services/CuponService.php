@@ -28,9 +28,9 @@ final class CuponService
     }
 
     /** @return Collection<int, Cupon> */
-    public function listarActivos(): Collection
+    public function listarActivos(?int $clienteId = null): Collection
     {
-        return $this->cupones->listarActivos();
+        return $this->cupones->listarActivos($clienteId);
     }
 
     public function buscarPorId(int $id): Cupon
@@ -55,7 +55,7 @@ final class CuponService
         $datos = $dto->toArray();
         $datos['imagen_url'] = $imagenUrl;
 
-        return $this->cupones->crear($datos);
+        return $this->cupones->crear($datos, $dto->clienteIds);
     }
 
     /** $imagenUrl: si es null, se conserva la imagen actual del cupon (no se pisa). */
@@ -71,7 +71,7 @@ final class CuponService
             $datos['imagen_url'] = $imagenUrl;
         }
 
-        return $this->cupones->actualizar($cupon, $datos);
+        return $this->cupones->actualizar($cupon, $datos, $dto->clienteIds);
     }
 
     public function eliminar(int $id): void
@@ -85,9 +85,9 @@ final class CuponService
      * Busca un cupon vigente por codigo (activo, dentro de fechas, con usos disponibles).
      * Usado por el canje via QR/pedido de mostrador y por el checkout normal.
      */
-    public function buscarActivoPorCodigo(string $codigo): ?Cupon
+    public function buscarActivoPorCodigo(string $codigo, ?int $clienteId = null): ?Cupon
     {
-        return $this->cupones->buscarActivoPorCodigo($codigo);
+        return $this->cupones->buscarActivoPorCodigo($codigo, $clienteId);
     }
 
     /**

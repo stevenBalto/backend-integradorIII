@@ -45,6 +45,9 @@ class StoreCuponRequest extends FormRequest
             'imagen' => ['nullable', 'image', 'max:2048'],
             // Imagen por defecto del sistema (URL/ruta de asset) cuando no se sube archivo.
             'imagen_url' => ['nullable', 'string', 'max:500'],
+            'alcance' => ['nullable', 'string', Rule::in(['todos', 'especifico'])],
+            'cliente_ids' => ['nullable', 'array'],
+            'cliente_ids.*' => ['integer', 'exists:users,id'],
         ];
     }
 

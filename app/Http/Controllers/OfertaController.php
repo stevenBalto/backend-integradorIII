@@ -12,6 +12,7 @@ use App\Http\Resources\OfertaResource;
 use App\Services\CloudinaryService;
 use App\Services\OfertaService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Endpoints de administracion de ofertas.
@@ -24,10 +25,16 @@ final class OfertaController extends Controller
     ) {
     }
 
-    /** GET /api/ofertas — listado publico de ofertas activas. */
+    /**
+     * GET /api/ofertas — listado publico de ofertas activas.
+     * Ruta sin middleware de auth: si viene un Bearer token valido (cliente logueado)
+     * se incluyen tambien las ofertas 'especifico' asignadas a el; invitados solo ven 'todos'.
+     */
     public function indexPublic(): JsonResponse
     {
-        return OfertaResource::collection($this->ofertas->listarActivas())
+        $clienteId = Auth::guard('sanctum')->user()?->id;
+
+        return OfertaResource::collection($this->ofertas->listarActivas($clienteId))
             ->response();
     }
 

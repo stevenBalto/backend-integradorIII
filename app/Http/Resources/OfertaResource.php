@@ -22,11 +22,16 @@ final class OfertaResource extends JsonResource
             'fecha_fin' => $this->fecha_fin?->toDateString(),
             'activa' => (bool) $this->activa,
             'imagen_url' => $this->imagen_url,
+            'alcance' => $this->alcance,
             'productos' => $this->whenLoaded('productos', fn () => $this->productos->map(fn ($p) => [
                 'id' => $p->id,
                 'nombre' => $p->nombre,
             ])),
             'productos_count' => $this->productos->count(),
+            'clientes' => $this->whenLoaded('clientes', fn () => $this->clientes->map(fn ($c) => [
+                'id' => $c->id,
+                'nombre' => $c->nombre,
+            ])),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

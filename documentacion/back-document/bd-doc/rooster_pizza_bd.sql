@@ -141,8 +141,36 @@ CREATE TABLE public.cupones (
     activo boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone,
     updated_at timestamp without time zone,
-    instancia_id bigint
+    instancia_id bigint,
+    alcance character varying(20) DEFAULT 'todos'::character varying NOT NULL,
+    imagen_url character varying(255),
+    CONSTRAINT cupones_alcance_check CHECK (((alcance)::text = ANY ((ARRAY['todos'::character varying, 'especifico'::character varying])::text[])))
 );
+
+
+--
+-- Name: cupon_cliente; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cupon_cliente (
+    id bigint NOT NULL,
+    cupon_id bigint NOT NULL,
+    cliente_id bigint NOT NULL
+);
+
+
+--
+-- Name: cupon_cliente_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cupon_cliente_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public.cupon_cliente_id_seq OWNED BY public.cupon_cliente.id;
 
 
 --
@@ -526,8 +554,36 @@ CREATE TABLE public.ofertas (
     activa boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone,
     updated_at timestamp without time zone,
-    instancia_id bigint
+    instancia_id bigint,
+    alcance character varying(20) DEFAULT 'todos'::character varying NOT NULL,
+    imagen_url character varying(255),
+    CONSTRAINT ofertas_alcance_check CHECK (((alcance)::text = ANY ((ARRAY['todos'::character varying, 'especifico'::character varying])::text[])))
 );
+
+
+--
+-- Name: oferta_cliente; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.oferta_cliente (
+    id bigint NOT NULL,
+    oferta_id bigint NOT NULL,
+    cliente_id bigint NOT NULL
+);
+
+
+--
+-- Name: oferta_cliente_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.oferta_cliente_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public.oferta_cliente_id_seq OWNED BY public.oferta_cliente.id;
 
 
 --
@@ -1197,6 +1253,20 @@ ALTER TABLE ONLY public.oferta_producto ALTER COLUMN id SET DEFAULT nextval('pub
 
 
 --
+-- Name: oferta_cliente id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oferta_cliente ALTER COLUMN id SET DEFAULT nextval('public.oferta_cliente_id_seq'::regclass);
+
+
+--
+-- Name: cupon_cliente id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cupon_cliente ALTER COLUMN id SET DEFAULT nextval('public.cupon_cliente_id_seq'::regclass);
+
+
+--
 -- Name: ofertas id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1442,6 +1512,28 @@ ALTER TABLE ONLY public.modulos
 
 ALTER TABLE ONLY public.oferta_producto
     ADD CONSTRAINT oferta_producto_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: oferta_cliente oferta_cliente_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oferta_cliente
+    ADD CONSTRAINT oferta_cliente_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.oferta_cliente
+    ADD CONSTRAINT oferta_cliente_unique UNIQUE (oferta_id, cliente_id);
+
+
+--
+-- Name: cupon_cliente cupon_cliente_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cupon_cliente
+    ADD CONSTRAINT cupon_cliente_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.cupon_cliente
+    ADD CONSTRAINT cupon_cliente_unique UNIQUE (cupon_id, cliente_id);
 
 
 --
@@ -1957,6 +2049,38 @@ ALTER TABLE ONLY public.metodos_pago
 
 ALTER TABLE ONLY public.ofertas
     ADD CONSTRAINT fk_ofertas_instancia FOREIGN KEY (instancia_id) REFERENCES public.instancias(id);
+
+
+--
+-- Name: oferta_cliente fk_oc_oferta; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oferta_cliente
+    ADD CONSTRAINT fk_oc_oferta FOREIGN KEY (oferta_id) REFERENCES public.ofertas(id) ON DELETE CASCADE;
+
+
+--
+-- Name: oferta_cliente fk_oc_cliente; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.oferta_cliente
+    ADD CONSTRAINT fk_oc_cliente FOREIGN KEY (cliente_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: cupon_cliente fk_cc_cupon; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cupon_cliente
+    ADD CONSTRAINT fk_cc_cupon FOREIGN KEY (cupon_id) REFERENCES public.cupones(id) ON DELETE CASCADE;
+
+
+--
+-- Name: cupon_cliente fk_cc_cliente; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cupon_cliente
+    ADD CONSTRAINT fk_cc_cliente FOREIGN KEY (cliente_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
