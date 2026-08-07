@@ -20,6 +20,7 @@ Incluye: pedidos comer aquí / para llevar, catálogo, ofertas y cupones, puntos
 Excluye (no agregar sin instrucción explícita del usuario): delivery, menús distintos por sucursal, push marketing automatizado, pagos online.
 Pago: único método = **pagar en caja** (no hay pagos online ni pasarela). Las tablas `metodos_pago`/`pagos` del esquema quedan para escalabilidad; no se usan en esta versión.
 Sucursales: **una sola** en esta versión, pero el diseño debe ser **escalable a múltiples sucursales** a futuro (horarios, datos y disponibilidad por local).
+Dependencias: **prohibido agregar paquetes npm o Composer nuevos** (los 4 devs: Reyman, Steven, Bryan, Christian). Se resuelve todo con lo ya instalado o con código propio. Regla completa en `CLAUDE.md`.
 
 ## Módulos — Cliente (usuario final)
 - **Home**: bebidas, pizzas, pastas, grill, descuentos, configuración inicial (acumulación de puntos explícita).

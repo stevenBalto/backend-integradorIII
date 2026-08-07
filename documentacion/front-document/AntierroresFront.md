@@ -13,6 +13,47 @@ Formato sugerido por entrada:
 - Fecha: YYYY-MM-DD
 ```
 
+### EF-26 — `text-overflow: ellipsis` no recorta dentro de un flex row: falta `flex-shrink` + `min-width: 0`
+- Qué pasó: en los KPI chips del header de Analíticas, el subtexto de comparación ("↓ 100.0% vs anterior") se **salía del chip** en vez de recortarse, aunque ya tenía `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`.
+- Causa: el subtexto es un flex item, y un flex item tiene `min-width: auto` (= min-content) y, en la práctica, no se encoge por debajo de su contenido. Como nunca se achica, su caja termina siendo del tamaño del texto completo → `overflow: hidden` no tiene nada que recortar y el texto desborda al contenedor. Es el mismo `min-width: auto` de EF-15, pero manifestado como texto que se sale en lugar de scroll que no funciona.
+- Solución: en el item que debe ceder, `flex: 0 1 auto; min-width: 0;` (ahí sí se elipsa), y en el que NO debe recortarse nunca (el valor del KPI), `flex: 0 0 auto`. Como red de contención, `overflow: hidden; max-width: 100%` en el contenedor de texto.
+- Regla: `text-overflow: ellipsis` dentro de un contenedor flex solo funciona si el item puede encogerse: `min-width: 0` + `flex-shrink` distinto de 0. Decidir explícitamente **quién cede** (el detalle) y **quién no** (el dato principal) en vez de dejarlo al reparto por defecto.
+- Fecha: 2026-08-06
+
+### EF-25 — Filtro "hoy" vacío deja la tabla vacía por diferencia de zona horaria server (UTC) vs local (CR, UTC-6)
+- Qué pasó: la tabla "Últimos pedidos" del dashboard salía vacía aunque había 15 pedidos creados hoy. Al mandar el rango de fechas **vacío** (para que el backend usara "hoy" por defecto), no devolvía nada.
+- Causa: el server corre en **UTC** (`config('app.timezone')='UTC'`), así que `Carbon::today()` del backend era **08-07** mientras en Costa Rica (UTC-6) todavía era **08-06**. Los pedidos guardados el 08-06 quedaban fuera del "hoy" del server. Confirmado en tinker: `now()=2026-08-07 01:17 UTC`, `whereDate(created_at,'2026-08-06')=15`.
+- Regla: para "hoy" en filtros de fecha, mandar SIEMPRE la **fecha local del navegador** (`hoyLocalISO()` con `getFullYear/Month/Date`, no `toISOString()` que es UTC) — nunca delegar el "hoy" al backend cuando el server puede estar en otra TZ. Los `<input type=date>` pueden mostrarse vacíos por UX, pero el valor que se ENVÍA usa la fecha local como fallback (`this.desde || hoyLocalISO()`).
+- Fecha: 2026-08-06
+
+### EF-24 — `ion-toggle` (u otros controles animados con `transform`) traspasan el header sticky de la tabla al hacer scroll
+- Qué pasó: en tablas admin (`.admin-table`) con `ion-toggle` en celdas (Inicio/home, ofertas, cupones, menú), al hacer scroll los toggles de las filas se pintaban ENCIMA del encabezado `sticky` — pese a que el `thead th` ya tenía `z-index: 2` y fondo opaco (`--admin-panel: #f7f5f2`).
+- Causa: `ion-toggle` se anima con `transform` → vive en su propia **capa de composición GPU**. Una capa compositada puede pintarse por encima de un `position: sticky` que NO está promovido a capa, ignorando el `z-index` (el orden de pintado lo decide el compositor, no el z-index del DOM).
+- Regla: promover el `thead th` sticky a su propia capa con `will-change: transform` **y** subir el `z-index` (usamos 5). Con ambas capas compositadas el z-index vuelve a respetarse y el header tapa el contenido que sube. Aplica a `.admin-table` y `.of-table` (global.scss).
+- Fecha: 2026-08-06
+
+### EF-23 — Portal del header (KPIs/acciones) desaparece al volver a una página cacheada; supersede EF-17
+- Qué pasó: al llevar los KPIs (`adminHeaderLead`) y las acciones (`adminHeaderActions`) al header por portal, navegar A→B y VOLVER a una sección ya visitada dejaba el header SIN KPIs ni botones hasta refrescar (y en Pedidos reaparecía el título en PC). Flujo repro: dashboard→menú→pedidos→menú→pedidos.
+- Causa: `IonicRouteStrategy` cachea las páginas → al volver, `ngOnInit` NO re-corre, así que el portal no se re-publicaba (el shell limpia en `NavigationStart`). Dos intentos fallidos: (a) re-publicar en el evento DOM `ionViewWillEnter` — **sólo dispara de forma fiable en páginas que implementan algún método de ciclo de vida Ionic** (Pedidos implementa `ionViewWillLeave` → funcionaba; el resto NO); (b) detectar la página activa mirando el DOM (`.ion-page:not(.ion-page-hidden)`) durante la transición — en un frame la ÚNICA visible era la página **saliente**, así que se publicaba su template y luego su `ngOnDestroy` lo borraba (verificado logueando el servicio: en menú(2) se publicaba el TPL de pedidos, no el de menú).
+- Regla: para re-publicar templates de portal en páginas cacheadas, cada directiva guarda **su ruta** (`this.pathOf(router.url)` en `ngOnInit`) y se re-publica en cada `NavigationEnd` cuyo `urlAfterRedirects` (path, sin query) coincida, forzando `ApplicationRef.tick()` (el handler corre fuera del CD de una página que se re-crea). NO depender de eventos de ciclo de vida Ionic ni de inspeccionar el DOM en transición. **Reproducir SIEMPRE volviendo a una página cacheada (A→B→A), no sólo primeras visitas** — las primeras siempre funcionan por el `ngOnInit`.
+- Complemento (verificado leyendo `@ionic/angular` 8.8.12, misma sesión, otro dev):
+  el intento (a) no podía funcionar en NINGUNA página por dos razones de la propia
+  librería. Primera: `StackController.transition()` hace
+  `enteringEl.classList.add('ion-page')` **de forma asíncrona** (dentro de la promesa
+  de `setActive()`), después del `ngOnInit` de la página, así que el
+  `closest('.ion-page')` de la directiva devolvía `null` y el listener nunca se
+  enganchaba. Segunda: esos eventos se despachan con **`bubbles: false`**
+  (`new CustomEvent(e, {bubbles:false})` en el helper `transition` de `@ionic/core`),
+  así que tampoco servía escucharlos desde un ancestro.
+- Precisión sobre la ruta propia: conviene leerla del **`ActivatedRoute`**
+  (`snapshot.pathFromRoot`) y no de `router.url`, porque durante la activación
+  `router.url` todavía apunta a la URL ANTERIOR (`urlUpdateStrategy: 'deferred'`, el
+  default). El proxy de ruta de Ionic copia el snapshot real
+  (`proxy.snapshot = activatedRoute.snapshot`), así que es confiable. El match debe ser
+  por ruta exacta o hija, o `/admin/pedidos` se dispara con `/admin/pedidos-mostrador`.
+  Cubierto por `admin-header-portal.spec.ts` (4 tests).
+- Fecha: 2026-08-06
+
 ### EF-22 — Imágenes locales de productos: falta la regla `/storage` en el proxy y el pipe `imagenUrl`
 - Qué pasó: al preparar la tabla "Productos más vendidos" (Analíticas) para mostrar la foto del producto, se detectó que en cuanto se suban imágenes LOCALES (en vez de las URLs absolutas de Wikimedia que siembra `DemoRoosterSeeder`), las fotos no van a cargar en ninguna pantalla.
 - Causa: dos capas independientes.
@@ -191,22 +232,3 @@ Formato sugerido por entrada:
 - Solución: subir la especificidad del override anidándolo bajo un ancestro (ej. `.ped-datefilter .ped-datechip`) para ganarle a la base sin depender del orden. (Alternativa: mover el bloque `@media` al final del archivo.)
 - Regla: un override dentro de `@media` solo gana si tiene MAYOR especificidad que la base o si va DESPUÉS en el código. Si el `@media` está antes de la base con la misma especificidad, el override se ignora en silencio — subir especificidad o reubicar el bloque. Verificar el efecto real (no asumir que por estar en `@media` ya pisa).
 - Fecha: 2026-08-04
-
-### EF-20 — El portal del header NO se puede reconstruir con `ionViewWillEnter` sobre `.ion-page` (la clase se agrega DESPUÉS del `ngOnInit`)
-- Qué pasó: los KPIs y los botones que las páginas admin proyectan al header (`[adminHeaderLead]`/`[adminHeaderActions]`) desaparecían al salir del módulo y volver a entrar; había que refrescar. Ya existían dos intentos previos de arreglarlo (EF-13: escuchar el evento DOM `ionViewWillEnter` sobre el `.ion-page`; EF-17: mover la limpieza del shell a `NavigationStart`) y el bug seguía.
-- Causa (verificada leyendo el código de `@ionic/angular` 8.8.12, no por deducción): **dos hechos que juntos anulan el parche de EF-13**.
-  1. `StackController.transition()` hace `enteringEl.classList.add('ion-page')`, y esa transición corre **de forma asíncrona** (dentro de la promesa de `stackCtrl.setActive()`, después de que `activateWith()` creó el componente). El `ngOnInit` de la página corre ANTES → `elRef.nativeElement.parentElement?.closest('.ion-page')` devuelve **`null`**, el `addEventListener` nunca se engancha y, como `IonicRouteStrategy` cachea la página (no se re-ejecuta `ngOnInit`), al volver no hay quién re-publique. El bug se veía "intermitente" porque la primera visita sí publica (por el microtask de `ngOnInit`).
-  2. Los eventos de ciclo de vida se despachan con **`bubbles: false`** (`new CustomEvent(e, {bubbles:false})` en el helper `transition` de `@ionic/core`), así que tampoco sirve escucharlos desde un ancestro: hay que acertarle al elemento exacto.
-- Solución: **no depender del ciclo de vida de Ionic ni del DOM**. Cada directiva de portal recuerda la ruta de SU página y se re-publica en cada `NavigationEnd` que caiga en ella (`admin-header-portal.util.ts` → `alEntrarALaPagina(router, route)`). Funciona igual si la página se recreó o si vino del caché, y corre dentro de la zona de Angular.
-  - La ruta se lee del **`ActivatedRoute`**, no de `router.url`: durante la activación `router.url` todavía apunta a la URL ANTERIOR (`urlUpdateStrategy: 'deferred'`). El proxy de ruta que inyecta Ionic sí copia el snapshot real (`proxy.snapshot = activatedRoute.snapshot`), así que `snapshot.pathFromRoot` es confiable.
-  - El match es por ruta exacta o hija (`url === propia || url.startsWith(propia + '/')`), para no dispararse en hermanas de nombre parecido (`/admin/pedidos` vs `/admin/pedidos-mostrador`).
-  - Cubierto por `admin-header-portal.spec.ts` (4 tests), que simula la directiva viva sin re-inicializar = el caché de `IonicRouteStrategy`.
-- Regla: para "efectos que deben repetirse en cada entrada a una página" con `IonicRouteStrategy`, preferir **eventos del Router** (`NavigationEnd` + ruta propia del `ActivatedRoute`) antes que los hooks/eventos DOM de Ionic. Los hooks de Ionic sirven dentro del componente-página (`ionViewWillEnter` como método de la clase, EF-13 sigue válido para timers), pero **no** para código que vive en una directiva y necesita encontrar el `.ion-page` por sí solo. Y si un fix "ya está aplicado" pero el bug persiste, verificar en el código de la librería que la premisa del fix sea cierta, en vez de agregarle otra capa encima.
-- Fecha: 2026-08-06
-
-### EF-21 — `text-overflow: ellipsis` no recorta dentro de un flex row: falta `flex-shrink` + `min-width: 0`
-- Qué pasó: en los KPI chips del header de Analíticas, el subtexto de comparación ("↓ 100.0% vs anterior") se **salía del chip** en vez de recortarse, aunque ya tenía `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`.
-- Causa: el subtexto es un flex item, y un flex item tiene `min-width: auto` (= min-content) y, en la práctica, no se encoge por debajo de su contenido. Como nunca se achica, su caja termina siendo del tamaño del texto completo → `overflow: hidden` no tiene nada que recortar y el texto desborda al contenedor. Es el mismo `min-width: auto` de EF-15, pero manifestado como texto que se sale en lugar de scroll que no funciona.
-- Solución: en el item que debe ceder, `flex: 0 1 auto; min-width: 0;` (ahí sí se elipsa), y en el que NO debe recortarse nunca (el valor del KPI), `flex: 0 0 auto`. Como red de contención, `overflow: hidden; max-width: 100%` en el contenedor de texto.
-- Regla: `text-overflow: ellipsis` dentro de un contenedor flex solo funciona si el item puede encogerse: `min-width: 0` + `flex-shrink` distinto de 0. Decidir explícitamente **quién cede** (el detalle) y **quién no** (el dato principal) en vez de dejarlo al reparto por defecto.
-- Fecha: 2026-08-06

@@ -49,4 +49,19 @@ final class DashboardRepository
             ->limit($limite)
             ->get();
     }
+
+    /**
+     * @return Collection<int, Pedido> Pedidos creados en el rango [desde, hasta] (cualquier
+     * estado), del mas nuevo al mas viejo, con cliente + suma de cantidades. Tope $limite.
+     */
+    public function ultimosEnRango(Carbon $desde, Carbon $hasta, int $limite = 50): Collection
+    {
+        return Pedido::query()
+            ->with(['cliente'])
+            ->withSum('detalles as detalles_sum_cantidad', 'cantidad')
+            ->whereBetween('created_at', [$desde, $hasta])
+            ->orderByDesc('created_at')
+            ->limit($limite)
+            ->get();
+    }
 }
