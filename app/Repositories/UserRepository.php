@@ -7,6 +7,7 @@ namespace App\Repositories;
 use App\DTOs\Auth\RegistrarUsuarioDTO;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 
 /**
  * Unica capa que consulta la tabla users via Eloquent.
@@ -35,6 +36,50 @@ final class UserRepository
     public function buscarPorEmail(string $email): ?User
     {
         return User::query()->where('email', $email)->first();
+    }
+
+    public function buscarPorId(int $id): ?User
+    {
+        return User::query()->find($id);
+    }
+
+    /** Cuenta ya vinculada a una cuenta de Google (claim "sub" del ID token). */
+    public function buscarPorGoogleId(string $googleId): ?User
+    {
+        return User::query()->where('google_id', $googleId)->first();
+    }
+
+    /** Ata una cuenta que ya existia (email + contrasena) a su cuenta de Google. */
+    public function vincularGoogle(User $user, string $googleId): User
+    {
+        $user->google_id = $googleId;
+        $user->save();
+
+        return $user;
+    }
+
+    /**
+     * Cliente nuevo que entra por primera vez con Google.
+     *
+     * `password` es NOT NULL en el esquema y esta cuenta no la usa nunca: se le
+     * pone una aleatoria (el cast 'hashed' del modelo la hashea) en vez de tocar
+     * la nulabilidad de la columna, que arrastraria todo el flujo de login,
+     * expiracion y cambio obligatorio de contrasena.
+     */
+    public function crearClienteDeGoogle(
+        string $email,
+        string $nombre,
+        string $googleId,
+        int $rolClienteId,
+    ): User {
+        return User::create([
+            'role_id'      => $rolClienteId,
+            'instancia_id' => self::INSTANCIA_DEFAULT,
+            'nombre'       => $nombre,
+            'email'        => $email,
+            'password'     => Str::random(48),
+            'google_id'    => $googleId,
+        ]);
     }
 
     public function buscarPorUsuario(string $usuario): ?User

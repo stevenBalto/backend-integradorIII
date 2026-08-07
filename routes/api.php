@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ResenaController as AdminResenaController;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\SuperAdmin\InstanciaController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\ExtraController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\CategoriaController;
@@ -35,6 +36,13 @@ Route::middleware([LogRequestTiming::class])->group(function () {
 // ── Autenticacion ─────────────────────────────────────────────────────────────
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// ── Inicio de sesion con Google (OAuth 2.0, publico) ─────────────────────────
+// redirect/callback los visita el NAVEGADOR (no son XHR): devuelven redirecciones.
+// exchange sí es XHR y entrega el token; por eso lleva limite de intentos.
+Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect']);
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
+Route::post('/auth/google/exchange', [GoogleAuthController::class, 'exchange'])->middleware('throttle:10,1');
 
 // ── Reset de contraseña por correo (publico, con limite de intentos) ─────────
 Route::post('/forgot-password', [PasswordResetController::class, 'forgot'])->middleware('throttle:6,1');

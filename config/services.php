@@ -35,6 +35,25 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Google (inicio de sesion con cuenta de Google)
+    |--------------------------------------------------------------------------
+    | Credenciales del cliente OAuth 2.0 tipo "Aplicacion web" de Google Cloud
+    | Console. El secreto vive SOLO aca (el intercambio del code por el token se
+    | hace server-side); el frontend nunca lo ve.
+    |
+    | redirect debe coincidir EXACTAMENTE con un "URI de redireccionamiento
+    | autorizado" del cliente en Google Cloud Console.
+    */
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        // A donde vuelve el navegador del usuario despues del login (el front).
+        'frontend_url' => env('GOOGLE_FRONTEND_URL', env('FRONTEND_URL', 'http://localhost:8100')),
+    ],
+
     'cloudinary' => [
         'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
         'api_key' => env('CLOUDINARY_API_KEY'),

@@ -12,6 +12,15 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-07 — Inicio de sesión con Google (lado del front)
+- **Qué se agregó**: botón "Continuar con Google" en la pantalla de login (logo SVG inline, sin librería de íconos, respetando la regla de no agregar paquetes) y el manejo de la vuelta desde Google.
+- **`AuthService`** suma tres métodos: `irAGoogle(destino)` (navegación REAL con `window.location.href`, no XHR — Google bloquea su pantalla dentro de iframes y WebViews), `canjearCodigoGoogle(codigo)` (POST que devuelve el mismo `{data, token}` que un login normal y lo persiste con el `persistir()` de siempre) y `leerRespuestaDeGoogle()` (lee el fragmento `#` de la URL y lo limpia con `history.replaceState` para que no quede en el historial ni se reprocese al recargar).
+- **El token nunca viaja en la URL**: el backend devuelve un código de un solo uso (5 min) que el front canjea por POST. Ver `HiloActualBack.md` de la misma fecha para el detalle de seguridad.
+- **`LoginPage`** ahora implementa `OnInit`: al entrar revisa si venimos de Google y, si hay código, lo canjea y entra a `/tabs/home` (Google es puerta de clientes; el backend rechaza cuentas admin).
+- **Alcance real hoy = navegador (incluido el del teléfono)**. Se confirmó que el proyecto **no tiene plataforma Android**: no existe `android/`, `@capacitor/android` no está instalado y `capacitor.config.ts` sigue con los valores de ejemplo (`io.ionic.starter` / `rooster-tmp`). Para un APK habría que agregar esa plataforma (paquete npm nuevo) y resolver el bloqueo de Google a los WebViews. El flujo elegido (redirect) es justamente el que después sirve para el APK vía deep link sin rehacer nada.
+- **Falta para probarlo**: las credenciales de Google Cloud Console en el `.env` del backend. Sin eso el endpoint responde con un error explicando qué falta.
+- Verificado: `ng build --configuration development` limpio. **Sin probar en navegador** (hace falta el cliente OAuth real).
+
 ## Sesión 2026-08-06 (3) — KPIs al header en TODO el panel admin (carril con flechas) + reconciliación con la versión paralela
 - **Rediseño de los KPI chips del header** (`.ped-hkpi` → `.admin-hkpi`, ahora en `global.scss`): pasaron del formato "label arriba / valor abajo centrado, 108×44 fijo" al **mismo lenguaje visual que `<admin-kpi-card>`**: tarjeta blanca + ícono en cuadro de color (26px, radio 7) a la izquierda + label/valor a la derecha, 48px de alto, radio 12, hover con la misma sombra. Se estiran para llenar el header (`flex: 1 1 136px`) en vez de quedar con ancho fijo. **Esto reemplaza el estándar anterior de `EstandaresUI.md`** (tabla actualizada).
   - Los estilos viven en **`global.scss`**, NO en el `.scss` de cada página: el `<ng-template>` se proyecta al shell y lo comparten 9 módulos. (Ojo: la encapsulación del componente igual aplica —el template se declara en la página—, pero duplicar 60 líneas por módulo no tenía sentido.)

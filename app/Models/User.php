@@ -53,6 +53,7 @@ class User extends Authenticatable
         'password_expira_en',
         'dias_expiracion_password',
         'ultimo_acceso_en',
+        'google_id',
     ];
 
     /**
