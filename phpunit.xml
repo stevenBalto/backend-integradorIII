@@ -22,6 +22,12 @@
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>
+        <!-- Telescope apagado en tests: intenta escribir en telescope_entries, que no
+             existe en la BD del proyecto (se mantiene por SQL manual, no por migrate).
+             Ese INSERT falla y ABORTA la transaccion de Postgres, con lo que todas las
+             consultas siguientes del mismo test mueren con "current transaction is
+             aborted". Solo se notaba en tests que hacen varias peticiones seguidas. -->
+        <env name="TELESCOPE_ENABLED" value="false"/>
         <!-- <env name="DB_CONNECTION" value="sqlite"/> -->
         <!-- <env name="DB_DATABASE" value=":memory:"/> -->
         <env name="MAIL_MAILER" value="array"/>

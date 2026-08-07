@@ -49,11 +49,11 @@ final class GoogleAuthService
      * @param  string|null  $origen   Origen del front (http://localhost:4200, :8100, tunel...).
      *                                Debe estar en la lista blanca; si no, se usa el del .env.
      */
-    public function urlDeAutorizacion(?string $destino, ?string $origen = null): string
+    public function urlDeAutorizacion(?string $destino, ?string $origen = null, ?string $referer = null): string
     {
         $this->exigirConfiguracion();
 
-        $origen = $this->origenValido($origen);
+        $origen = $this->resolverOrigen($origen, $referer);
 
         // El `state` ata esta respuesta a esta peticion: si vuelve uno que no
         // emitimos nosotros (o ya vencido), el callback lo rechaza. Guardamos ahi
@@ -97,7 +97,9 @@ final class GoogleAuthService
         // Un `state` sirve una sola vez.
         Cache::forget($claveState);
 
-        $origen = $this->origenValido($guardado['origen'] ?? null);
+        $origen = is_string($guardado['origen'] ?? null) && $guardado['origen'] !== ''
+            ? $guardado['origen']
+            : rtrim((string) config('services.google.frontend_url'), '/');
 
         $datos = $this->datosDeGoogle($code, $origen);
         $user = $this->resolverUsuario($datos);
@@ -284,21 +286,59 @@ final class GoogleAuthService
     }
 
     /**
-     * Devuelve el origen si esta en la lista blanca; si no, el del .env.
+     * Decide desde que origen se hizo el pedido y valida que este permitido.
      *
-     * La lista blanca es lo que impide que alguien arme un enlace con
-     * `origen=https://sitio-malo` y termine recibiendo el codigo de acceso.
+     * Orden: (1) el que manda el front, (2) el del cabezal Referer —respaldo para
+     * quien tenga el frontend desactualizado y todavia no mande `origen`—,
+     * (3) el del .env.
+     *
+     * Si el front manda un origen que NO esta permitido, se corta con un error
+     * explicito en vez de caer al del .env. Caer en silencio es peor: el usuario
+     * elige su cuenta de Google, vuelve a un puerto donde no hay nada escuchando
+     * y ve un "ERR_CONNECTION_REFUSED" que no explica nada. Mejor decirle que
+     * falta agregar su origen.
      */
-    private function origenValido(?string $origen): string
+    private function resolverOrigen(?string $origen, ?string $referer = null): string
     {
         $permitidos = (array) config('services.google.origins', []);
-        $origen = is_string($origen) ? rtrim($origen, '/') : '';
+        $origen = is_string($origen) ? rtrim(trim($origen), '/') : '';
 
-        if ($origen !== '' && in_array($origen, $permitidos, true)) {
-            return $origen;
+        if ($origen !== '') {
+            if (in_array($origen, $permitidos, true)) {
+                return $origen;
+            }
+
+            throw new RuntimeException(
+                "El origen \"$origen\" no esta permitido. Agregalo a GOOGLE_ALLOWED_ORIGINS en tu .env "
+                .'Y a Google Cloud Console → Clientes → URI de redireccionamiento autorizados '
+                ."(con /api/auth/google/callback al final). Permitidos ahora: ".implode(', ', $permitidos).'.'
+            );
+        }
+
+        // Frontend viejo (no manda `origen`): se deduce del Referer.
+        $delReferer = $this->origenDe($referer);
+        if ($delReferer !== '' && in_array($delReferer, $permitidos, true)) {
+            return $delReferer;
         }
 
         return rtrim((string) config('services.google.frontend_url'), '/');
+    }
+
+    /** Extrae el origen (esquema://host:puerto) de una URL completa. */
+    private function origenDe(?string $url): string
+    {
+        if (! is_string($url) || $url === '') {
+            return '';
+        }
+
+        $partes = parse_url($url);
+        if (! isset($partes['scheme'], $partes['host'])) {
+            return '';
+        }
+
+        $puerto = isset($partes['port']) ? ':'.$partes['port'] : '';
+
+        return $partes['scheme'].'://'.$partes['host'].$puerto;
     }
 
     /** URI de callback para un origen dado (tiene que existir en Google Cloud Console). */

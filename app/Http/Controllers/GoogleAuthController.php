@@ -9,6 +9,7 @@ use App\Services\GoogleAuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -30,8 +31,13 @@ final class GoogleAuthController extends Controller
     {
     }
 
-    /** GET /api/auth/google/redirect — manda al usuario a elegir su cuenta. */
-    public function redirect(Request $request): RedirectResponse
+    /**
+     * GET /api/auth/google/redirect — manda al usuario a elegir su cuenta.
+     *
+     * Devuelve una redireccion, salvo que el origen no este permitido: en ese caso
+     * responde 400 en texto plano, porque no hay front conocido al que volver.
+     */
+    public function redirect(Request $request): RedirectResponse|Response
     {
         // Ruta del front a la que volver (ej. /tabs/home). Se valida como ruta
         // relativa para que nadie use este endpoint como redirector abierto
@@ -47,8 +53,19 @@ final class GoogleAuthController extends Controller
         $origen = (string) $request->query('origen', '');
 
         try {
-            return redirect()->away($this->google->urlDeAutorizacion($destino, $origen));
+            return redirect()->away(
+                $this->google->urlDeAutorizacion($destino, $origen, $request->headers->get('referer'))
+            );
         } catch (Throwable $e) {
+            // Si el problema es el origen, NO se redirige al front: justamente no
+            // sabemos a que front volver (el que pidio no esta permitido y el del
+            // .env puede no estar levantado). Se responde en la misma pantalla,
+            // que es donde el dev lo va a ver.
+            if (str_contains($e->getMessage(), 'no esta permitido')) {
+                return response($e->getMessage(), 400)
+                    ->header('Content-Type', 'text/plain; charset=utf-8');
+            }
+
             return $this->volverAlFrontConError($e->getMessage());
         }
     }

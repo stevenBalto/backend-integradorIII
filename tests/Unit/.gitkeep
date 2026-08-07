@@ -1,0 +1,3 @@
+Este directorio existe porque phpunit.xml declara la suite "Unit". Si falta, PHPUnit
+aborta con: Test directory "...tests/Unit" not found — y NINGUN test corre, ni los de
+Feature. Git no versiona carpetas vacias, de ahi este archivo.

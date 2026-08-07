@@ -34,8 +34,11 @@ use App\Http\Middleware\LogRequestTiming;
 Route::middleware([LogRequestTiming::class])->group(function () {
 
 // ── Autenticacion ─────────────────────────────────────────────────────────────
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// Las dos puertas publicas van con limite de peticiones: sin el, se pueden
+// probar contrasenas a la velocidad que aguante el servidor. Ver los limitadores
+// 'login' y 'registro' en AppServiceProvider.
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:registro');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
 // ── Inicio de sesion con Google (OAuth 2.0, publico) ─────────────────────────
 // redirect/callback los visita el NAVEGADOR (no son XHR): devuelven redirecciones.
@@ -203,7 +206,7 @@ Route::middleware(['auth:sanctum', 'password.valida', 'role:super_admin,admin_se
 
 // ── Superadministracion (panel AISLADO: login/guard/middleware propios) ──────
 Route::prefix('superadmin')->group(function () {
-    Route::post('/login', [SuperAdminAuthController::class, 'login']);
+    Route::post('/login', [SuperAdminAuthController::class, 'login'])->middleware('throttle:login');
 
     Route::middleware(['auth:sanctum', 'superadmin'])->group(function () {
         Route::post('/logout', [SuperAdminAuthController::class, 'logout']);

@@ -113,9 +113,14 @@ OAuth para todos, no hace falta que cada quien cree el suyo.
    ```
 3. `php artisan config:clear` y reiniciá `php artisan serve`.
 
-Funciona levantando el front en 4200 (`npm start`) o en 8100 (`ionic serve`): el
-front le manda su origen al backend y este arma el `redirect_uri` con ese mismo
-puerto. Si usás **otro** puerto o un túnel, hay que agregarlo en DOS lugares: en
+**Levantá el front en 4200 (`npm start`) o en 8100 (`ionic serve`)** — esos dos
+son los únicos puertos registrados en Google Cloud Console. El front le manda su
+origen al backend y este arma el `redirect_uri` con ese mismo puerto.
+
+> Si `ionic serve` te dice que el 8100 está ocupado y se pasa al 8101, **no
+> sigas**: pará el proceso que ocupa el 8100 o levantá en 4200. Con un puerto no
+> registrado el login no va a funcionar (el backend te lo va a decir con un
+> mensaje claro, no te va a dejar a mitad de camino). Si usás **otro** puerto o un túnel, hay que agregarlo en DOS lugares: en
 tu `GOOGLE_ALLOWED_ORIGINS` y en Google Cloud Console → Clientes → `Rooster web`
 → URI de redireccionamiento autorizados (con `/api/auth/google/callback`).
 
@@ -123,9 +128,29 @@ tu `GOOGLE_ALLOWED_ORIGINS` y en Google Cloud Console → Clientes → `Rooster 
 
 | Error | Qué significa |
 |---|---|
+| **Elegís la cuenta y al volver sale `ERR_CONNECTION_REFUSED`** | El front está en un puerto distinto al que el backend usó para armar la vuelta. Es el error más común del equipo. Fijate en qué puerto levantaste el front (la barra del navegador) y verificá que ese origen esté en tu `GOOGLE_ALLOWED_ORIGINS` **y** en Google Cloud Console. Con el código al día, este caso ya no llega a Google: el backend corta antes con un mensaje que te dice exactamente qué agregar. |
+| `El origen "http://localhost:XXXX" no esta permitido` | Justo lo anterior, ya explicado por el backend. Agregá ese origen en los DOS lugares que dice el mensaje. |
 | `redirect_uri_mismatch` | El origen desde el que entrás no está cargado en Google Cloud Console. |
 | `Acceso bloqueado` | Tu cuenta de Google no está en la lista de usuarios de prueba (o la app no está publicada). |
 | `cURL error 60: SSL certificate ...` | Tu PHP no tiene los certificados raíz. Bajá https://curl.se/ca/cacert.pem y en tu `php.ini` poné `curl.cainfo` y `openssl.cafile` apuntando a ese archivo. Reiniciá el server. **No** desactives la verificación TLS: por ese canal viaja el `client_secret`. |
+
+## 3.3 Correr los tests del backend
+
+```
+C:	ools\php857\php.exe artisan test
+```
+
+**Importante: NO uses `php artisan test` a secas.** El `php` del PATH suele ser 8.1
+y el proyecto exige 8.4+ (ver `AntierroresBack.md` EB-12), así que ni arranca. Usá
+el binario del PHP que sirve el 8000; para encontrarlo:
+
+```powershell
+Get-Process -Id (Get-NetTCPConnection -LocalPort 8000 -State Listen).OwningProcess | Select Path
+```
+
+Estado esperado hoy: **18 pasan, 2 fallan** (`InventarioTest`: toma física y PUT
+normal). Esos dos son **deuda previa**, no algo que hayas roto — fallan igual en
+un checkout limpio. Ver EB-17.
 
 ## 4. Probar el Módulo 1 — Autenticación (funcional)
 Con backend + frontend arriba:
