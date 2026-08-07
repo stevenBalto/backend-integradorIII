@@ -12,6 +12,18 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-07 (2) — Dashboard "Últimos pedidos": layout móvil + buscador + alturas (reconciliado con `<admin-select>`)
+- Contexto: pulido fino del bloque "Últimos pedidos" del dashboard, iterado mucho con el usuario. Se reconcilió a mano contra el pull que migró los `<select>` nativos a `<admin-select>` y los KPIs a `<admin-hkpi-strip>` (mis cambios locales estaban en términos del `<select>` nativo).
+- Hecho:
+  - **Buscador colapsable** (`admin-search-input`, el mismo de Pedidos) en los controles de "Últimos pedidos": filtra por **código o cliente** sobre la lista cargada (`busquedaUltimos` + getter `ultimosPedidosFiltrados`). Hijo directo de `.dash-ultimos-controls` → al abrir marca `.admin-search-open`.
+  - **Layout móvil/tablet-retrato (`≤767px`), SOLO `#dash-ultimos`**: fila 1 = título + HOY + select JUNTOS pegados a la derecha (misma fila que el título); fila 2 = buscador a todo el ancho (crece full-width al abrir, no los 240px del estándar). Se **oculta el botón "Fechas" y los calendarios** (rango de fechas no seleccionable en pantalla chica → siempre HOY). Truco de agrupado: `display:contents` en `.section-card__action` y `.dash-ultimos-controls` + `justify-content:flex-start` + `margin-right:auto` en el título (absorbe el espacio y pega el cluster a la derecha; el título cede con ellipsis). El buscador en su propia fila **no oculta** los filtros de la fila 1 (se revierte la regla global `.admin-search-open` solo aquí, porque no los tapa).
+  - **Cards con `[actionInline]="true"`** en "Ventas de la semana" (`#dash-ventas`) y "Últimos pedidos" (`#dash-ultimos`): a `≤767px` el control queda en la fila del título (antes caía a una fila propia). El select de Ventas se alinea a la derecha vía `justify-content:flex-end` en su `.section-card__action`.
+  - **Alturas parejas** en los controles de Últimos pedidos: `.dash-date` y el `<admin-select>` a **32px** (igual que el botón "Fechas"). El `admin-select` se dimensiona con sus CSS vars (`--admin-select-height/-radius/-padding/-font-size`), NO con clases de input.
+  - **Registros de tablas Pedidos y Últimos pedidos en MAYÚSCULA** (`text-transform:uppercase` en `tbody td`, por componente).
+- Bug de TZ (ver EF-25): "Últimos pedidos" manda `hoyLocalISO()` como default (server en UTC iba un día adelante y vaciaba la tabla).
+- Verificado: `ng build --configuration development` exit 0. La verificación visual del layout móvil (375/754) quedó del lado del usuario.
+- NO tocar / nota: el filtro de "Últimos pedidos" es `<admin-select>` (no `<select>`); para ajustarlo usar sus CSS vars. El default de la tabla es HOY con fecha LOCAL. En `≤767px` el rango de fechas está oculto a propósito.
+
 ## Sesión 2026-08-07 — Inicio de sesión con Google (lado del front)
 - **Qué se agregó**: botón "Continuar con Google" en la pantalla de login (logo SVG inline, sin librería de íconos, respetando la regla de no agregar paquetes) y el manejo de la vuelta desde Google.
 - **`AuthService`** suma tres métodos: `irAGoogle(destino)` (navegación REAL con `window.location.href`, no XHR — Google bloquea su pantalla dentro de iframes y WebViews), `canjearCodigoGoogle(codigo)` (POST que devuelve el mismo `{data, token}` que un login normal y lo persiste con el `persistir()` de siempre) y `leerRespuestaDeGoogle()` (lee el fragmento `#` de la URL y lo limpia con `history.replaceState` para que no quede en el historial ni se reprocese al recargar).
