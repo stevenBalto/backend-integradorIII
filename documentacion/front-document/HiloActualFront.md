@@ -12,6 +12,17 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-07 (3) — Inicio (sticky móvil) + Pedidos (tabla igual a Dashboard, orden) + modality-pill con ícono
+- Contexto: pulido de tablas del panel. Verificado en Chrome real con `puppeteer-core` (ya está en node_modules — NO se instaló nada) manejando el Chrome del sistema, login admin@rooster.com, viewport 390/1200.
+- Hecho:
+  - **Inicio — encabezados fijos (sticky) también en móvil** (las 3 tablas: Secciones/Ofertas/Cupones): el hack global `≤767` (`.admin-table{display:block}` + overflow propio) rompe el `position:sticky` del thead. Se revierte SOLO en Inicio a un patrón estándar: **un contenedor 2D** (`.admin-table-wrap{overflow:auto;max-height:60vh}`) + **tabla normal** (`display:table; width:max-content; min-width:100%`). Verificado a 390px: scroll horizontal (scrollW 570/625 vs 314) y vertical con header pegado (`th` a 1px del tope tras scroll). Ver **EF-27**. Registros en MAYÚSCULA (`tbody td`).
+  - **Pedidos — tabla igual a la de "Últimos pedidos" del Dashboard**: mismas columnas `ID Pedido · Fecha · Cliente · Modalidad · Total · Estado · Pago`, badge de pago idéntico (`.pago-badge` con ícono). Se quitó la columna "Items". Único extra: la columna del **expander**. (Se mantiene el coloreo de fila invitado/registrado + su modal de ayuda, feature propia de Pedidos.)
+  - **Pedidos — orden**: los pedidos NO cerrados (pendiente/en_proceso/listo) primero y, dentro de ellos, **los más antiguos arriba** (el que lleva más esperando encabeza); los cerrados (entregado/cancelado) después. Comparador en el getter `pedidosFiltrados` + helper `esCerrado`. Verificado: todos los abiertos anteceden a cualquier cerrado.
+  - **`modality-pill` con ícono de referencia** (mismo que el cliente): `restaurant-outline` = comer en el restaurante, `bag-handle-outline` = para llevar (reemplaza el puntito). Aplica en Pedidos (tabla y pantalla completa) y en Últimos pedidos del Dashboard.
+  - **Badge de pago "No pagado" con color**: pasó de gris a **ámbar** (`rgba(245,158,11,.16)` / `#B45309`) para señalar pendiente, contra el verde de "Pagado". En Dashboard y Pedidos.
+- Verificado: `ng build --configuration development` exit 0 en cada paso; pruebas en Chrome real (puppeteer-core + Chrome del sistema) para Inicio (scroll/sticky) y Pedidos (columnas/orden/badge).
+- NO tocar / nota: el fix de sticky móvil está SOLO en Inicio (Dashboard/Pedidos siguen con el hack global). Si se quiere en todas, subir el patrón 2D a `global.scss` (evaluando el scroll diagonal).
+
 ## Sesión 2026-08-07 (2) — Dashboard "Últimos pedidos": layout móvil + buscador + alturas (reconciliado con `<admin-select>`)
 - Contexto: pulido fino del bloque "Últimos pedidos" del dashboard, iterado mucho con el usuario. Se reconcilió a mano contra el pull que migró los `<select>` nativos a `<admin-select>` y los KPIs a `<admin-hkpi-strip>` (mis cambios locales estaban en términos del `<select>` nativo).
 - Hecho:
