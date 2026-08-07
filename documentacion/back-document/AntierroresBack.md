@@ -118,3 +118,16 @@ Formato sugerido por entrada:
 - Solución: NO tocar el valor en BD. Se agregó un **label de presentación** (`tipo_label`) en los Resources (`'general' -> 'Pedido'`, `'producto' -> 'Producto'`) y el frontend muestra `tipo_label`; el valor `tipo` sigue siendo `general`/`producto` para filtros y CHECK. Además `tipo_sugerido` (en `/resenas/pendientes`) clasifica por cantidad de ítems del pedido (1 = producto, varios = general/"Pedido").
 - Regla: para "renombrar" un valor de enum que vive bajo un CHECK constraint (o que otros lados comparan por igualdad), cambiar SOLO la etiqueta humana en la capa de presentación (Resource/label map), no el valor almacenado — salvo que se apruebe explícitamente migrar el constraint + los datos.
 - Fecha: 2026-08-03
+
+### EB-15 — `cURL error 60: unable to get local issuer certificate` al llamar a una API externa desde PHP en Windows
+- Qué pasó: el intercambio del `code` por el token en el login con Google fallaba con `cURL error 60: SSL certificate ... unable to get local issuer certificate (20)` para `https://oauth2.googleapis.com/token`. Todo lo anterior del flujo funcionaba (Google redirigía bien y el `state` validaba); el corte era al hablar PHP↔Google.
+- Causa: PHP en Windows **no trae un almacén de certificados raíz**. A diferencia de Linux, no hereda el del sistema operativo: hay que darle un archivo CA explícito. En el `php.ini` de la máquina, `curl.cainfo` y `openssl.cafile` estaban **comentados y vacíos**, así que cURL no tenía contra qué validar el certificado de Google y abortaba el handshake. Afecta a CUALQUIER llamada HTTPS saliente (Cloudinary, APIs de terceros), no solo a Google.
+- Solución:
+  1. Descargar el bundle oficial de curl: `https://curl.se/ca/cacert.pem` (≈180 KB, ~119 certificados).
+  2. Guardarlo junto al PHP que se usa (en la máquina de Steven: `C:\tools\php857\cacert.pem` — el PHP que sirve el 8000, ojo que puede NO ser el mismo `php` del PATH; se identifica con `Get-Process -Id <pid del 8000> | Select Path`).
+  3. En ese `php.ini`, descomentar y apuntar **las dos**: `curl.cainfo = "C:\tools\php857\cacert.pem"` y `openssl.cafile = "C:\tools\php857\cacert.pem"`.
+  4. **Reiniciar** `php artisan serve` (el `php.ini` se lee solo al arrancar).
+  5. Verificar: un `curl_exec` contra el endpoint debe devolver un código HTTP (aunque sea 400 por datos falsos). Que responda 400 es éxito: significa que el canal TLS se estableció.
+- **NO hacer**: pasar `'verify' => false` en el cliente Http o `CURLOPT_SSL_VERIFYPEER => false`. Es la solución que aparece primero al buscar el error y desactiva la verificación del certificado — por ese mismo canal viaja el `client_secret` de Google. Se estaría cambiando un problema de configuración local por un agujero real.
+- Regla: si una llamada HTTPS saliente falla con cURL 60 en Windows, es configuración de la máquina (falta el CA bundle), no del código. Arreglar el `php.ini` del PHP que realmente está sirviendo, nunca desactivar la verificación. Cada dev nuevo del equipo va a chocar con esto: está en la tabla de errores de `COMO-CORRER.md` sección 3.2.
+- Fecha: 2026-08-07
