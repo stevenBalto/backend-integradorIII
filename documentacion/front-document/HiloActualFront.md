@@ -28,6 +28,12 @@ Formato sugerido:
   - Teclado y a11y: flechas, Enter, Escape, Home/End, `role="combobox"`/`listbox"`/`option`, `aria-expanded`. Cierra al hacer clic fuera y abre hacia arriba si el disparador está en la mitad inferior de la pantalla.
   - **El panel NO se desmonta al cerrar** (se oculta por CSS): su contenido proyectado es lo que se lee para mostrar la etiqueta de la opción elegida en el disparador.
   - Las páginas ya no le pasan su clase de input al componente (el borde de esa clase y el del disparador se dibujaban los dos): ahora ajustan alto/tipografía/fondo con variables CSS (`--admin-select-height`, `--admin-select-font-size`, `--admin-select-bg`, `--admin-select-padding`) sobre clases nuevas (`.of-form__select`, `.menu-form__select`, `.mostrador-producto__select`).
+  - **Doble flecha (visto en pantalla por el usuario)**: mientras el `<admin-select>` conservó la clase
+    `.dash-select`, se veían DOS chevrons — el `background-image` SVG de esa clase (que el compañero le
+    había puesto al `<select>` nativo para reemplazar la flecha del sistema) más el `ion-icon` del propio
+    componente. Al pasar el tamaño a variables CSS y quitarle la clase se resolvió; después se borró la
+    regla `.dash-select`, que quedó sin uso. **Regla**: al migrar un control nativo a un componente propio,
+    revisar que la clase vieja no siga aportando decoración (fondo, flecha, borde) sobre el host.
   - Cubierto por **`admin-select.spec.ts` (8 tests)**: placeholder, etiqueta según el valor, abrir/cerrar, elegir actualiza el `ngModel`, opciones deshabilitadas ignoradas, Escape y clic fuera, teclado, y opciones que llegan después (datos de la API).
 - Decisiones del usuario en el camino (para no re-litigarlas): contenido del chip **alineado a la izquierda** (se probó centrado y se descartó); Ofertas primero se dejó fuera por falta de espacio y **entró después** gracias a las flechas; se probó igualar los botones del header al alto de los KPIs (48px) y se **revirtió** (quedan con su tamaño original).
 - Verificado: `ng build --configuration development` limpio en cada paso; `ng test --include=**/admin-header-portal.spec.ts` 4/4. **No se probó en navegador** (no se levantó `ionic serve` esta sesión) — pendiente confirmar visualmente el carril con flechas en Menú/Ofertas y el chip de estado de Configuración.
