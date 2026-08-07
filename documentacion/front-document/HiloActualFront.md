@@ -12,6 +12,11 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-07 (6) — Analíticas: filtro de periodo dentro de card blanca + espaciado
+- **Filtro de periodo (Mes/Semana/Día/Rango + navegador de fecha) dentro de una card blanca**: `.an-filtro` ahora lleva `background: var(--admin-card)` + `border` + `border-radius:12px` + `padding:14px 16px` (mismo look que las secciones).
+- **Centrado en móvil/tablet-retrato**: el layout en fila pasó a `@media (min-width:766px)`; a ≤765 se apila y se **centra** (`align-items:center`). A ≥766 queda en fila (tabs izquierda, navegador derecha).
+- **Espaciado estándar**: se quitó el `margin-bottom:16px` de `.an-filtro` que se sumaba al `gap:20px` de `.admin-page` (daba 36px de más antes de "Tendencia de ventas"). Ahora el separador entre divs es el gap estándar de 20px.
+
 ## Sesión 2026-08-07 (5) — Sidebar admin: estructura agrupada por secciones + íconos
 - **Sidebar reestructurado en grupos** con encabezado de sección (mockup del usuario). `admin-shell.page.ts`: se mantiene `navItems` plano (fuente; el badge de notificaciones muta el item) y se agrega `navGroups` que referencia los MISMOS objetos vía `itemsPorId(...ids)`. Orden final:
   - **Análisis**: Dashboard, Analíticas · **Operación**: Pedidos, Inventario · **Catálogo**: Menú, Ofertas y cupones · **Clientes**: Clientes, Reseñas · **App del cliente**: Inicio (Home), Notificaciones · **Administración**: Usuarios y roles, Configuración.
