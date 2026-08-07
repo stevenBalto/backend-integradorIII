@@ -12,6 +12,13 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-07 (5) — Sidebar admin: estructura agrupada por secciones + íconos
+- **Sidebar reestructurado en grupos** con encabezado de sección (mockup del usuario). `admin-shell.page.ts`: se mantiene `navItems` plano (fuente; el badge de notificaciones muta el item) y se agrega `navGroups` que referencia los MISMOS objetos vía `itemsPorId(...ids)`. Orden final:
+  - **Análisis**: Dashboard, Analíticas · **Operación**: Pedidos, Inventario · **Catálogo**: Menú, Ofertas y cupones · **Clientes**: Clientes, Reseñas · **App del cliente**: Inicio (Home), Notificaciones · **Administración**: Usuarios y roles, Configuración.
+  - HTML: `*ngFor` sobre `navGroups` → `.admin-sidebar__group` + `.admin-sidebar__group-title`. SCSS: título de sección 10px uppercase gris.
+- **Íconos**: Ofertas `pricetags-outline`, Usuarios `shield-checkmark-outline`, Inventario `cube-outline`, resto sin cambio. Dashboard y Pedidos usan **SVG propios** (ningún ionicon calzaba): `assets/icon/dashboard-grid.svg` (bento diagonal RELLENO, llena ~84% del viewBox como los ionicons) y `assets/icon/pedidos-clipboard.svg` (clipboard con lista, outline). Se agregó `NavItem.iconSrc?`; el template usa `[name]="item.iconSrc ? null : item.icon" [src]="item.iconSrc || null"`. Los SVG usan `currentColor` (heredan gris/blanco activo). Verificado en Chrome: los 12 `ion-icon` miden 15×15px; los SVG propios se calibraron al mismo relleno/stroke que ionicons para igualar el tamaño visual.
+- Verificado con `puppeteer-core` + Chrome del sistema (login admin, screenshots del sidebar). `ng build` exit 0.
+
 ## Sesión 2026-08-07 (4) — Menú: toolbar en una fila (≤767) + encabezados sticky en móvil
 - **Toolbar de Menú en una sola fila** a `≤767px`: antes el `@media` apilaba en columna (modos / categorías / buscador = 3 filas). Ahora es fila única — modos (Productos/Extras) + categorías (con **scroll horizontal** si no caben, no bajan de fila) y el **buscador pegado a la derecha** (`margin-left:auto`). Verificado en Chrome a 762px: los 3 grupos en el mismo `cy` (varianza 0) y el borde derecho del buscador = borde de la toolbar.
 - **Encabezados sticky también en móvil** en las 2 tablas de Menú (productos y extras): mismo patrón que Inicio (ver **EF-27**) — wrap 2D + tabla `display:table`. Verificado a 390px: scroll H (416px), scroll V y `th` a 1px del tope.
