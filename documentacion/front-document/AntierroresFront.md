@@ -13,6 +13,12 @@ Formato sugerido por entrada:
 - Fecha: YYYY-MM-DD
 ```
 
+### EF-25 — Filtro "hoy" vacío deja la tabla vacía por diferencia de zona horaria server (UTC) vs local (CR, UTC-6)
+- Qué pasó: la tabla "Últimos pedidos" del dashboard salía vacía aunque había 15 pedidos creados hoy. Al mandar el rango de fechas **vacío** (para que el backend usara "hoy" por defecto), no devolvía nada.
+- Causa: el server corre en **UTC** (`config('app.timezone')='UTC'`), así que `Carbon::today()` del backend era **08-07** mientras en Costa Rica (UTC-6) todavía era **08-06**. Los pedidos guardados el 08-06 quedaban fuera del "hoy" del server. Confirmado en tinker: `now()=2026-08-07 01:17 UTC`, `whereDate(created_at,'2026-08-06')=15`.
+- Regla: para "hoy" en filtros de fecha, mandar SIEMPRE la **fecha local del navegador** (`hoyLocalISO()` con `getFullYear/Month/Date`, no `toISOString()` que es UTC) — nunca delegar el "hoy" al backend cuando el server puede estar en otra TZ. Los `<input type=date>` pueden mostrarse vacíos por UX, pero el valor que se ENVÍA usa la fecha local como fallback (`this.desde || hoyLocalISO()`).
+- Fecha: 2026-08-06
+
 ### EF-24 — `ion-toggle` (u otros controles animados con `transform`) traspasan el header sticky de la tabla al hacer scroll
 - Qué pasó: en tablas admin (`.admin-table`) con `ion-toggle` en celdas (Inicio/home, ofertas, cupones, menú), al hacer scroll los toggles de las filas se pintaban ENCIMA del encabezado `sticky` — pese a que el `thead th` ya tenía `z-index: 2` y fondo opaco (`--admin-panel: #f7f5f2`).
 - Causa: `ion-toggle` se anima con `transform` → vive en su propia **capa de composición GPU**. Una capa compositada puede pintarse por encima de un `position: sticky` que NO está promovido a capa, ignorando el `z-index` (el orden de pintado lo decide el compositor, no el z-index del DOM).

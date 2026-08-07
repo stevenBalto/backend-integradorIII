@@ -22,14 +22,20 @@ final class DashboardService
     ) {
     }
 
-    /** @param int $dias Ventana del gráfico de ventas (7, 14 o 30). */
-    public function resumen(int $dias = 7): array
+    /**
+     * @param int $dias Ventana del gráfico de ventas (7, 14 o 30).
+     * @param string|null $desde Inicio del rango de "Últimos pedidos" (YYYY-MM-DD). Null = hoy.
+     * @param string|null $hasta Fin del rango de "Últimos pedidos" (YYYY-MM-DD). Null = hoy.
+     */
+    public function resumen(int $dias = 7, ?string $desde = null, ?string $hasta = null): array
     {
         $dias = in_array($dias, [7, 14, 30], true) ? $dias : 7;
 
-        $cacheKey = "dashboard:resumen:{$dias}";
+        [$ultDesde, $ultHasta] = $this->rangoUltimos($desde, $hasta);
 
-        return Cache::remember($cacheKey, 15, function () use ($dias) {
+        $cacheKey = "dashboard:resumen:{$dias}:{$ultDesde->toDateString()}:{$ultHasta->toDateString()}";
+
+        return Cache::remember($cacheKey, 15, function () use ($dias, $ultDesde, $ultHasta) {
             $hoy = $this->rango(Carbon::today());
             $ayer = $this->rango(Carbon::yesterday());
 
@@ -60,7 +66,7 @@ final class DashboardService
                     'total' => (float) $p->total,
                     'created_at' => $p->created_at?->toIso8601String(),
                 ])->values(),
-                'ultimos_pedidos' => $this->repositorio->ultimos(8)->map(fn (Pedido $p) => [
+                'ultimos_pedidos' => $this->repositorio->ultimosEnRango($ultDesde, $ultHasta, 50)->map(fn (Pedido $p) => [
                     'id' => $p->id,
                     'codigo' => $p->codigo,
                     'cliente' => $p->nombre_cliente ?? $p->cliente?->nombre,
@@ -68,10 +74,40 @@ final class DashboardService
                     'cantidad' => (int) ($p->detalles_sum_cantidad ?? 0),
                     'total' => (float) $p->total,
                     'estado' => $p->estado,
+                    'pagado' => (bool) $p->pagado,
                     'created_at' => $p->created_at?->toIso8601String(),
                 ])->values(),
             ];
         });
+    }
+
+    /**
+     * Rango de fechas para "Últimos pedidos". Sin parámetros = hoy (inicio a fin del día).
+     * Fechas inválidas caen a hoy; si hasta < desde, se intercambian.
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function rangoUltimos(?string $desde, ?string $hasta): array
+    {
+        $parse = static function (?string $f): ?Carbon {
+            if ($f === null || $f === '') {
+                return null;
+            }
+            try {
+                return Carbon::parse($f);
+            } catch (\Throwable) {
+                return null;
+            }
+        };
+
+        $ini = ($parse($desde) ?? Carbon::today())->startOfDay();
+        $fin = ($parse($hasta) ?? Carbon::today())->endOfDay();
+
+        if ($fin->lt($ini)) {
+            [$ini, $fin] = [$fin->copy()->startOfDay(), $ini->copy()->endOfDay()];
+        }
+
+        return [$ini, $fin];
     }
 
     /** @return array{0: Carbon, 1: Carbon} Inicio y fin del dia (00:00:00 - 23:59:59). */

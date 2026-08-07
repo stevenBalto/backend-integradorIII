@@ -12,6 +12,18 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-06 (2) — Dashboard: pedidos nuevos en tiempo real, columna Pago, rango de fechas en Últimos pedidos + tablas en mayúscula
+- Contexto: batch de mejoras del Dashboard admin y de la tabla de Pedidos pedidas por el usuario. Incluye un bug real de zona horaria encontrado al final.
+- Hecho (frontend):
+  - **Card "Pedidos nuevos"**: badge con el **número** de pedidos nuevos (centrado con flex, sin texto "X nuevos"); botón-ícono arriba-derecha que va a Pedidos con animación liviana (transform/GPU, respeta `prefers-reduced-motion`); clic en un pedido navega a Pedidos y **resalta ESE pedido** (`queryParams.codigo` → `pedidos.page.ts` hace scroll + animación `ped-destacado` 3s a la fila `#ped-<codigo>`).
+  - **Tabla "Últimos pedidos"**: nueva columna **Pago** (`pago-badge` sí/no). **Rango de fechas independiente** del gráfico de ventas: botón "Fechas" (ícono+texto en tablet+, solo ícono 32×32 en móvil) que abre/oculta dos `<input type=date>`; **por defecto = HOY** con indicador pill "HOY". Al abrir "Fechas" los campos arrancan **vacíos** y la pill HOY se oculta; al elegir rango filtra; al cerrar vuelve a HOY. Select de estado con flecha SVG propia (`appearance:none`, offset 12px — la nativa quedaba pegada al borde).
+  - **Registros de las tablas Pedidos y Últimos pedidos en MAYÚSCULA** (`text-transform:uppercase` solo en `tbody td`, scoped por componente). En tablet los filtros de Últimos pedidos van en una sola fila (`nowrap` en ≥768px).
+  - Polling en tiempo real del dashboard cada 20 s (`ionViewWillEnter`/`ionViewWillLeave`; `cargar(silencioso)` no muestra "Cargando…").
+- Hecho (backend): `DashboardController`/`DashboardService`/`DashboardRepository` aceptan `desde`/`hasta` (rango de Últimos pedidos, default hoy, con `ultimosEnRango()`), exponen `pagado` en cada pedido; cache key incluye el rango. Seeders nuevos **`PedidosHoySeeder`** (15 pedidos de HOY variados, idempotente por `codigo LIKE 'HOY-%'`) y **`NotificacionesDemoSeeder`** (5 notifs demo instancia 1). Correr: `php artisan db:seed --class=PedidosHoySeeder`.
+- Bug real (EF-25): **la tabla salía vacía** aunque había 15 pedidos de hoy. Causa: server en **UTC** (`now()` un día adelante de CR, UTC-6); mandar rango vacío dejaba que el backend usara su "hoy" (08-07) y no matcheaba. Fix: el front manda **`hoyLocalISO()`** (fecha local del navegador) como default cuando los campos están vacíos. Ver **EF-25**.
+- Verificado: `ng build --configuration development` exit 0 en cada iteración; conteo en BD (`whereDate created_at '2026-08-06'` = 15) confirma que el rango con fecha local trae los pedidos.
+- NO tocar / nota: `.dash-select` usa flecha SVG propia con `appearance:none` (no volver a la nativa). El default de Últimos pedidos es HOY con fecha LOCAL, nunca el "hoy" del server.
+
 ## Sesión 2026-08-06 — Reforma de UX del header admin: KPIs al header, botones solo-ícono, logos Excel/PDF, títulos en móvil + 3 bugs
 - Contexto: batch de mejoras de UX del panel admin pedidas por el usuario, más 3 bugs reales (uno encontrado reproduciendo el flujo en Chrome con Playwright).
 - Hecho:
