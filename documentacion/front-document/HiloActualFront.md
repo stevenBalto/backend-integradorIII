@@ -12,6 +12,10 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-07 (8) — Inventario: registros en mayúscula + buscador inline en móvil
+- **Registros de la tabla en MAYÚSCULA** (`.admin-table tbody td`, scoped a Inventario).
+- **Buscador (card-action) inline con el título también en móvil**: la card "Insumos e ingredientes" pasó a `[actionInline]="true"` (+ `id="inv-insumos"`) para que la lupa NO baje a una 2ª fila a la izquierda a ≤767. Como el head base es `space-between`, se agregó `#inv-insumos ::ng-deep .section-card__head--inline .section-card__action { flex:0 0 auto }` (≤767) para que la acción no crezca y la lupa quede pegada a la derecha. Verificado en Chrome: a 900/848/800 ya estaba inline-derecha (el "848" reportado era por zoom/devtools); el break real es 767, y ahora a 760/700/600/480 queda inline y a la derecha.
+
 ## Sesión 2026-08-07 (7) — Pedidos: productos en mayúscula (pantalla completa) + fix scroll de la tira de KPIs
 - **Pedidos, vista pantalla completa**: la línea de producto (cantidad + nombre + tamaño) en MAYÚSCULA (`.ped-fs-card__prod-name { text-transform: uppercase }`).
 - **Bug real (EF-28) — la flecha de la tira de KPIs no llegaba al final**: al scrollear con la flecha derecha quedaba un pedazo del último KPI cortado y hacía falta un segundo click. Causa: en `admin-hkpi-strip`, las flechas eran items **flex en el flujo**; al aparecer la flecha izquierda durante el scroll, robaba ~32px de ancho al viewport, y el `scrollTo(scrollWidth)` (que se cambió de `scrollBy` 80%) aterrizaba corto porque el `clientWidth` cambiaba a mitad de scroll. Fix: flechas en **overlay absoluto** (`position:absolute` sobre el `.hkpi-strip`, `position:relative`) → el `clientWidth` del viewport queda **constante** aparezcan o no las flechas → `scrollTo(scrollWidth)` llega EXACTO al final de un solo click. `box-shadow` de fade en la flecha para no cortar visualmente el chip de abajo. Verificado en Chrome (Pedidos, 5 KPIs, 820px): `scrollLeft = scrollWidth − clientWidth`, `atEnd`, último KPI sin recorte. Ver **EF-28**.
