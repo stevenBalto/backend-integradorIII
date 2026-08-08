@@ -58,7 +58,7 @@ intención es simple aunque toque un dominio pesado, bajá de tier automáticame
 | Pregunta general, arquitectura, planificación | Respuesta directa (sin agente) | liviano | bajo | no |
 
 ## Reglas del esquema
-- 30 tablas (21/28 originales del ERD + `insumos`/`insumo_movimientos` del
+- 33 tablas (21/28 originales del ERD + `insumos`/`insumo_movimientos` del
   módulo Inventario 2026-07-13 + 6 tablas del multi-tenant/superadmin del
   compañero 2026-07-12/13 [`instancias`, `superadministradores`, `modulos`,
   `usuario_modulo`, `password_reset_tokens`, más columnas `instancia_id` en
@@ -70,8 +70,19 @@ intención es simple aunque toque un dominio pesado, bajá de tier automáticame
   CHECK garantiza que no coexistan). Columnas aprobadas 2026-08-03:
   `usuario_modulo.permiso` (varchar(20), NOT NULL, DEFAULT 'lectura', CHECK
   ('lectura','editor')), `ofertas.imagen_url` (varchar(255) NULL),
-  `cupones.imagen_url` (varchar(255) NULL). Ningún agente agrega tablas nuevas sin
-  aprobación explícita del usuario.
+  `cupones.imagen_url` (varchar(255) NULL). Agregadas 2026-08-07 por el
+  compañero (ya en uso, feature "alcance por cliente específico"):
+  `ofertas.alcance`/`cupones.alcance` (varchar(20), NOT NULL, DEFAULT 'todos',
+  CHECK ('todos','especifico')) + las puente `oferta_cliente`/`cupon_cliente`
+  (UNIQUE del par, FK a `ofertas`/`cupones`/`users` con ON DELETE CASCADE).
+  Ningún agente agrega tablas nuevas sin aprobación explícita del usuario.
+- **El conteo de 33 excluye `migrations`** (tabla de control de Laravel; el
+  esquema se mantiene por SQL, no por migraciones — ver `COMO-CORRER.md`).
+- **Las dos fuentes del esquema tienen que actualizarse SIEMPRE juntas**: el
+  `.sql` incremental en `bd-doc/` y el dump `bd-doc/rooster_pizza_bd.sql`.
+  Actualizar solo una rompe en silencio a media parte del equipo, según cada
+  quien recargue desde el dump o mantenga su BD incremental (ver **EB-18**).
+  A 2026-08-08 el dump está atrasado: le faltan `notificaciones` y 19 columnas.
 - No existe tabla `direcciones` (no hay delivery en esta versión).
 - Horarios viven en `configuraciones` (clave-valor), no en tabla separada.
 - Nullability, DEFAULT y ON DELETE deben verificarse contra las migraciones
