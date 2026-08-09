@@ -246,3 +246,11 @@ Formato sugerido por entrada:
 - Solución: subir la especificidad del override anidándolo bajo un ancestro (ej. `.ped-datefilter .ped-datechip`) para ganarle a la base sin depender del orden. (Alternativa: mover el bloque `@media` al final del archivo.)
 - Regla: un override dentro de `@media` solo gana si tiene MAYOR especificidad que la base o si va DESPUÉS en el código. Si el `@media` está antes de la base con la misma especificidad, el override se ignora en silencio — subir especificidad o reubicar el bloque. Verificar el efecto real (no asumir que por estar en `@media` ya pisa).
 - Fecha: 2026-08-04
+
+### EF-20 — `window.confirm()` saca a Chrome del fullscreen (rompía el modo extendido de Pedidos)
+- Qué pasó: en el modo extendido de Pedidos ("expandir todos", que entra en fullscreen del navegador), confirmar el pago de un pedido sacaba al usuario del modo extendido y le hacía perder el foco.
+- Causa: **Chrome sale del fullscreen apenas se abre un diálogo nativo de JS** (`confirm`/`alert`/`prompt`). Como `abrirPantallaCompleta()` escucha `fullscreenchange` para sincronizarse (`onFullscreenChange` → `cerrarPantallaCompleta()` si el usuario salió con Esc/F11), el `window.confirm()` disparaba ese mismo evento y cerraba el modo. No había nada mal en la lógica de Pedidos: el culpable era el diálogo nativo.
+- Solución: `ConfirmService` + `ConfirmDialogComponent` (diálogo propio dentro del documento). Al no ser nativo, no toca el fullscreen. Se reemplazaron las 8 llamadas nativas del proyecto.
+- Trampa relacionada — **el Esc del diálogo también cerraba el modo extendido**: Pedidos tiene `@HostListener('document:keydown.escape')`. La solución es escuchar el `keydown` **en el nodo del diálogo, no en `document`**: como el foco vive adentro del diálogo, el evento pasa por ese nodo y un `stopPropagation()` lo frena antes de que burbujee hasta `document`. Poner otro listener en `document` NO sirve: el orden depende de cuál se registró primero.
+- Regla: nunca uses `window.confirm`/`alert`/`prompt` en esta app — usá `ConfirmService` (`preguntar()` / `avisar()`). Además de verse como cartel del navegador, rompen el fullscreen y bloquean el hilo. Y si un overlay propio necesita Esc, escuchalo en su propio nodo con `stopPropagation()`, no en `document`.
+- Fecha: 2026-08-08
