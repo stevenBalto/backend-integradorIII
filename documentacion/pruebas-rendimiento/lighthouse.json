@@ -1,0 +1,35 @@
+[
+  {
+    "perspectiva": "Usuario (cliente)",
+    "url": "/tabs/home",
+    "performance": 98,
+    "accesibilidad": 95,
+    "LCP_ms": 557,
+    "FCP_ms": 507,
+    "TBT_ms": 0,
+    "CLS": "0.000",
+    "SpeedIndex_ms": 1587
+  },
+  {
+    "perspectiva": "Admin",
+    "url": "/admin/dashboard",
+    "performance": 98,
+    "accesibilidad": 90,
+    "LCP_ms": 610,
+    "FCP_ms": 393,
+    "TBT_ms": 0,
+    "CLS": "0.000",
+    "SpeedIndex_ms": 1569
+  },
+  {
+    "perspectiva": "Superadmin",
+    "url": "/superadmin/panel",
+    "performance": 97,
+    "accesibilidad": 83,
+    "LCP_ms": 470,
+    "FCP_ms": 470,
+    "TBT_ms": 0,
+    "CLS": "0.000",
+    "SpeedIndex_ms": 1744
+  }
+]

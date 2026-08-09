@@ -1,0 +1,32 @@
+﻿Perspectiva,Interacción,Método,Endpoint (API),Muestras,Media ANTES (ms),Media AHORA (ms),p50 (ms),p95 (ms),Mejora
+Cliente (usuario),cupones,GET,cli: cupones,30,205.9,78.3,46.8,172.2,62%
+Cliente (usuario),catalogo productos,GET,cli: catalogo productos,30,218.7,77.3,63,174.8,65%
+Cliente (usuario),roosters,GET,cli: roosters,30,209.8,72.2,48.3,168.8,66%
+Cliente (usuario),ofertas,GET,cli: ofertas,30,192.9,71.4,48.9,173.7,63%
+Cliente (usuario),categorias,GET,cli: categorias,30,194.9,65.6,44.2,167.4,66%
+Cliente (usuario),mis pedidos,GET,cli: mis pedidos,30,206.1,63.4,53.7,172.4,69%
+Cliente (usuario),restaurantes,GET,cli: restaurantes,30,180.3,62.7,48.2,163.4,65%
+Cliente (usuario),perfil (me),GET,cli: perfil (me),30,208.8,61.6,51.6,167.3,70%
+Cliente (usuario),resenas pendientes,GET,cli: resenas pendientes,30,196.1,60.1,49.8,159.4,69%
+Cliente (usuario),sucursales,GET,cli: sucursales,30,183,59.4,46.3,171.6,68%
+Cliente (usuario),home-config,GET,cli: home-config,30,184.4,57.5,44.2,159.7,69%
+Admin,dashboard,GET,adm: dashboard,30,258.2,83.5,50.2,189.1,68%
+Admin,menu productos,GET,adm: menu productos,30,283.5,83,59.6,182.3,71%
+Admin,pedidos,GET,adm: pedidos,30,273.6,76.5,59,198.1,72%
+Admin,inventario,GET,adm: inventario,30,238.1,76.4,51.1,182,68%
+Admin,resenas,GET,adm: resenas,30,244.3,73.7,53.9,196.2,70%
+Admin,clientes,GET,adm: clientes,30,232.8,71.5,49.1,170.6,69%
+Admin,notificaciones,GET,adm: notificaciones,30,258.2,71.1,50.5,181.4,72%
+Admin,usuarios,GET,adm: usuarios,30,238,70.7,50.2,189.4,70%
+Admin,ofertas,GET,adm: ofertas,30,281.3,64.4,54.9,160.9,77%
+Admin,cupones,GET,adm: cupones,30,273.6,63.9,51.6,173.3,77%
+Admin,extras,GET,adm: extras,30,235.9,63.4,47.2,171.8,73%
+Admin,resenas stats,GET,adm: resenas stats,30,240.4,61.9,49.3,154.9,74%
+Admin,modulos,GET,adm: modulos,30,226.7,61.4,46,165,73%
+Admin,categorias,GET,adm: categorias,30,241.6,59.8,46.9,168.2,75%
+Admin,sucursales,GET,adm: sucursales,30,236.5,59.2,46.2,161.4,75%
+Admin,configuracion,GET,adm: configuracion,30,220.4,56.5,47.5,166.8,74%
+Admin,analiticas,GET,adm: analiticas,30,239.4,54,46.1,135.3,77%
+Superadmin,superadmins,GET,sup: superadmins,30,216.2,62.5,46.8,162.4,71%
+Superadmin,instancias,GET,sup: instancias,30,222.4,59.2,47.6,157.2,73%
+Superadmin,perfil (me),GET,sup: perfil (me),30,225.2,47,43.9,62.9,79%
