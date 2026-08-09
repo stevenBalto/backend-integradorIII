@@ -27,6 +27,9 @@ La BD se mantiene **por SQL**, no por migraciones de Laravel.
 3. (Solo si cargaste una versión vieja del SQL) aplicar
    `bd-doc/migracion_2026-06-28_sanctum_personal_access_tokens.sql` (sección forward).
 4. **NO** correr `php artisan migrate` — chocaría con las 21 tablas ya creadas.
+5. Cargar los productos reales del menú (reemplaza los placeholders de prueba):
+   ejecutar `bd-doc/seed_2026-08-09_productos_reales_rooster.sql`. Re-ejecutable
+   sin duplicar. Detalle en `HiloActualBack.md`, sesión 2026-08-09.
 
 Verificación: en pgAdmin las tablas están en **Schemas → public → Tables** (deben ser 21).
 Por psql: `\dt`.
