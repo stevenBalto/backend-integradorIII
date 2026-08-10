@@ -12,6 +12,19 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-10 — Rendimiento del frontend (Lighthouse producción) + fix imágenes menú
+- **Fix imágenes de productos (404)**: la BD local tenía los productos DEMO con `imagen_url NULL` → el front caía al placeholder `assets/productos-demo/producto-N.jpg` (inexistente) → 404. NO era Cloudinary (el `.env` ya estaba correcto; las URLs del menú real son públicas `res.cloudinary.com/jcrp1wfy/...`). Se corrió el seed del menú real (`bd-doc/seed_2026-08-09_productos_reales_rooster.sql`) en la BD local. De paso se **corrigió un bug del seed** (no protegía la FK `resenas`; ahora archiva —no borra— productos con pedidos O reseñas). Ver HiloActualBack.
+- **Optimización de rendimiento (meta: Performance >90)**. Medido con Lighthouse 13 headless sobre **build de producción** (`ng build --configuration production`) servido con brotli + proxy al backend. `ng serve` (dev) daba 52 porque manda ~9.5 MB sin minificar — número irreal.
+  - **Quitado `PreloadAllModules`** de [app-routing.module.ts](../../..) (`RouterModule.forRoot(routes)` a secas): preloadeaba TODAS las rutas lazy (admin/superadmin/kiosko) al abrir el cliente. Mayor palanca.
+  - **Logo del splash + watermark de home** (`index.html`, `home.page.scss`) → `rooster-favicon-180.png` (10 KB) en vez de `rooster-logo.png` 903×922 (81 KB). Sin herramienta de imagen disponible; se reusó el favicon existente (a 52px de tile/96px de splash no se nota).
+  - **Splash con fuentes de sistema** (`index.html`): usaba Playfair+Nunito (fuentes del admin) → forzaba ~76 KB de descarga de fuentes en la home del cliente. Georgia/system-ui: se ve igual y no descarga nada.
+  - **`minVisible` del splash** 1100 → 300 ms.
+  - **Resultados prod**: Desktop **99** en las 3 perspectivas (cliente/admin/superadmin) = meta >90 cumplida. Móvil (Slow 4G+CPU 4×, perfil pesimista): cliente 77, admin 62 (dashboard pesado, TBT alto), superadmin 88 (pico 93). Best Practices 100, CLS ≈ 0.
+  - **Móvil 90+ NO alcanzable sin SSR** (`@angular/ssr` = paquete nuevo + migración de builder) → descartado por la regla de no-dependencias. Decisión del usuario: parar en desktop 99 / móvil 77-88.
+  - Entregable actualizado: `documentacion/pruebas-rendimiento/` (lighthouse.json, resultados.xls/csv, README-RENDIMIENTO.md).
+- **NO tocar / temporal**: durante la medición se usó un server estático propio (`__prodserve.mjs`, brotli+proxy) y `www/` (build de prod, gitignored). Ambos son temporales, no van a git.
+- Verificado en Chrome headless (puppeteer-core + Chrome del sistema), login por rol e inyección de token en sessionStorage. Sin paquetes npm nuevos.
+
 ## Sesión 2026-08-08 — Admin UI: Ofertas (tabla+detalle), Clientes (responsive), Reseñas (layout+filtros)
 - **Arranque (protocolo)**: `git fetch`/`pull` en ambos repos varias veces durante la sesión. Un pull trajo la feature de compañero **"alcance por cliente específico" en ofertas/cupones** — el código BE nuevo requería columnas `alcance` + tablas puente `oferta_cliente`/`cupon_cliente` que NO estaban en la BD local → la API de ofertas/cupones reventaba (`42P01`). Con aprobación del usuario se aplicó el `.sql` incremental del equipo (`bd-doc/migracion_2026-08-07_ofertas_cupones_alcance.sql`, aditivo, `IF NOT EXISTS`); esquema ya documentado en `documentacion/CLAUDE.md`. Otro pull trajo el `ConfirmService` (EF-20) — merge limpio con lo de esta sesión (regiones distintas).
 - **Ofertas y Cupones (`admin/ofertas`)**:

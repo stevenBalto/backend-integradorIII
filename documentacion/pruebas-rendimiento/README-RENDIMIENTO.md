@@ -31,14 +31,31 @@ cada request porque la tabla `request_timings` no existía (excepción por reque
 - p50 ~50 ms · p95 ~165–177 ms · 0 % de errores.
 - Server-side puro (middleware): p. ej. `GET /admin/dashboard` = ~14 ms.
 
-### Frontend — Core Web Vitals (Lighthouse, desktop)
-| Perspectiva | Performance | LCP | CLS | TBT | Accesibilidad |
-|---|---|---|---|---|---|
-| Usuario (cliente) | 98 | 557 ms | 0.000 | 0 ms | 95 |
-| Admin | 98 | 610 ms | 0.000 | 0 ms | 90 |
-| Superadmin | 97 | 470 ms | 0.000 | 0 ms | 83 |
+### Frontend — Core Web Vitals (Lighthouse 13, build de PRODUCCIÓN)
 
-Todos los CWV en verde (LCP < 2.5 s, CLS < 0.1). El front ya estaba fino.
+Medido sobre `ng build --configuration production` servido con brotli + proxy al
+backend (NO sobre `ng serve`, que manda ~9.5 MB sin minificar y da números
+irreales). Perfil móvil = Slow 4G + CPU 4× (pesimista de DevTools).
+
+| Perspectiva | Desktop | Móvil (Slow 4G+CPU 4×) | LCP desktop | LCP móvil |
+|---|---|---|---|---|
+| Usuario (cliente) | **99** | 77 | 0.78 s | 4.2 s |
+| Admin | **99** | 62 (dashboard pesado) | 1.10 s | 5.2 s |
+| Superadmin | **99** | 88 (pico 93) | 0.86 s | 3.5 s |
+
+Best Practices 100 en las 3 · CLS ≈ 0 · Accesibilidad 83-95. **Desktop 99** en las
+tres perspectivas (meta >90 cumplida). El móvil es el techo de un SPA en el perfil
+throttled; en un móvil real con buena red carga mucho más rápido.
+
+**Optimizaciones de front aplicadas (sin paquetes nuevos):**
+1. Quitado `PreloadAllModules` — dejó de bajar admin/superadmin/kiosko al abrir el cliente.
+2. Logo del splash y watermark de home → `favicon-180` (10 KB) en vez del logo 903×922 (81 KB).
+3. Splash con fuentes de sistema — saca ~76 KB de Playfair/Nunito del camino crítico del cliente.
+4. `minVisible` del splash 1100 → 300 ms.
+5. Brotli en el server estático (representa un host real tipo CDN).
+
+Móvil 90+ confiable exigiría **SSR/prerender** (`@angular/ssr` = paquete nuevo +
+migración de builder), descartado por la regla de "no dependencias nuevas".
 
 ## Setup OPcache (cada dev debe hacerlo en su máquina — NO va en git)
 En `C:\xampp\php\php.ini`:

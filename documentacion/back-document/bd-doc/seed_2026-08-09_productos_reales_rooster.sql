@@ -9,12 +9,13 @@
 -- equipo, asi que las URLs de abajo funcionan igual para todos.
 --
 -- Seguro de correr en cualquier BD del equipo (dev local, cada quien la suya):
---   - NO borra productos de prueba que ya tengan pedidos asociados
---     (detalle_pedido.producto_id) porque el precio queda congelado ahi
---     (regla de esquema) y borrarlos rompe la FK. Esos se ARCHIVAN
+--   - NO borra productos de prueba que tengan pedidos asociados
+--     (detalle_pedido.producto_id) NI reseñas (resenas.producto_id): el precio
+--     queda congelado en el detalle (regla de esquema) y las reseñas son datos
+--     de usuario, asi que borrarlos rompe la FK. Esos se ARCHIVAN
 --     (disponible=false, nombre con sufijo "(archivado - prueba)") en vez
 --     de borrarse.
---   - Los productos de prueba SIN pedidos asociados si se borran.
+--   - Los productos de prueba SIN pedidos NI reseñas si se borran.
 --   - Idempotente-friendly: si ya corriste este script antes, no vuelve a
 --     insertar duplicados (verifica por nombre + instancia_id).
 -- ============================================================================
@@ -52,11 +53,13 @@ BEGIN
         RETURN;
     END IF;
 
-    -- 1) Limpiar productos de prueba, salvo los que tengan pedidos asociados.
+    -- 1) Limpiar productos de prueba, salvo los que tengan pedidos O reseñas
+    --    asociadas (ambas FK romperian el DELETE; esos se archivan mas abajo).
     SELECT array_agg(p.id) INTO v_ids_borrables
     FROM productos p
     WHERE p.instancia_id = v_instancia
-      AND NOT EXISTS (SELECT 1 FROM detalle_pedido dp WHERE dp.producto_id = p.id);
+      AND NOT EXISTS (SELECT 1 FROM detalle_pedido dp WHERE dp.producto_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM resenas r WHERE r.producto_id = p.id);
 
     IF v_ids_borrables IS NOT NULL THEN
         DELETE FROM producto_extras  WHERE producto_id = ANY(v_ids_borrables);
@@ -70,7 +73,8 @@ BEGIN
         nombre = p.nombre || ' (archivado - prueba)',
         updated_at = now()
     WHERE p.instancia_id = v_instancia
-      AND EXISTS (SELECT 1 FROM detalle_pedido dp WHERE dp.producto_id = p.id)
+      AND (EXISTS (SELECT 1 FROM detalle_pedido dp WHERE dp.producto_id = p.id)
+           OR EXISTS (SELECT 1 FROM resenas r WHERE r.producto_id = p.id))
       AND p.nombre NOT LIKE '%(archivado - prueba)';
 
     -- 2) Carnes
