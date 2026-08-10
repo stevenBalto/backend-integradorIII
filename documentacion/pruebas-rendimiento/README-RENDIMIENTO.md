@@ -43,9 +43,14 @@ irreales). Perfil móvil = Slow 4G + CPU 4× (pesimista de DevTools).
 | Admin | **99** | 62 (dashboard pesado) | 1.10 s | 5.2 s |
 | Superadmin | **99** | 88 (pico 93) | 0.86 s | 3.5 s |
 
-Best Practices 100 en las 3 · CLS ≈ 0 · Accesibilidad 83-95. **Desktop 99** en las
-tres perspectivas (meta >90 cumplida). El móvil es el techo de un SPA en el perfil
-throttled; en un móvil real con buena red carga mucho más rápido.
+Best Practices 100 · **SEO 100** · CLS ≈ 0 · Accesibilidad 83-95 en las 3
+perspectivas. **Desktop 99** (meta >90 cumplida). El móvil es el techo de un SPA en
+el perfil throttled; en un móvil real con buena red carga mucho más rápido.
+
+**SEO** subió de 82-83 a **100** con dos arreglos globales: (a) `<meta name="description">`
+en `index.html`; (b) `robots.txt` real en la raíz (`src/robots.txt` + entry en
+`angular.json`). Antes `/robots.txt` caía al fallback SPA y devolvía el `index.html`,
+que el validador de robots leía como 184 errores.
 
 **Optimizaciones de front aplicadas (sin paquetes nuevos):**
 1. Quitado `PreloadAllModules` — dejó de bajar admin/superadmin/kiosko al abrir el cliente.

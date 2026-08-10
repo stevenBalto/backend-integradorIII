@@ -21,6 +21,7 @@ Formato sugerido:
   - **`minVisible` del splash** 1100 → 300 ms.
   - **Resultados prod**: Desktop **99** en las 3 perspectivas (cliente/admin/superadmin) = meta >90 cumplida. Móvil (Slow 4G+CPU 4×, perfil pesimista): cliente 77, admin 62 (dashboard pesado, TBT alto), superadmin 88 (pico 93). Best Practices 100, CLS ≈ 0.
   - **Móvil 90+ NO alcanzable sin SSR** (`@angular/ssr` = paquete nuevo + migración de builder) → descartado por la regla de no-dependencias. Decisión del usuario: parar en desktop 99 / móvil 77-88.
+  - **SEO 82-83 → 100** (las 3 vistas): (a) se agregó `<meta name="description">` en `index.html`; (b) se creó `src/robots.txt` (`User-agent: * / Allow: /`) + entry en `angular.json` (`glob robots.txt, input src, output .`) para que caiga en la raíz del build. Antes `/robots.txt` no existía → caía al fallback SPA y devolvía el `index.html`, y el validador de robots lo leía como "184 errores". Verificado: meta-description y robots-txt en verde, cliente/admin/superadmin SEO 100.
   - Entregable actualizado: `documentacion/pruebas-rendimiento/` (lighthouse.json, resultados.xls/csv, README-RENDIMIENTO.md).
 - **NO tocar / temporal**: durante la medición se usó un server estático propio (`__prodserve.mjs`, brotli+proxy) y `www/` (build de prod, gitignored). Ambos son temporales, no van a git.
 - Verificado en Chrome headless (puppeteer-core + Chrome del sistema), login por rol e inyección de token en sessionStorage. Sin paquetes npm nuevos.
