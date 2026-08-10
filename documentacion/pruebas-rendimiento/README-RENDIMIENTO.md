@@ -104,12 +104,32 @@ Verificar: `php -v` debe decir "with Zend OPcache".
    (Sin `ONLY` corre los 3 a la vez = escenario concurrente.)
 3. `node aggregate.mjs` → genera `resultados.xls` (Excel) y `resultados.csv`.
    Si existe `antes_*.csv`, agrega columna de comparación antes/después.
-4. Frontend CWV: `ng serve` arriba; el runner de Lighthouse loguea por rol e inyecta el
-   token en `sessionStorage` (auth_token / sa_token) y mide `/tabs/home`, `/admin/dashboard`,
-   `/superadmin/panel`.
+4. Frontend CWV — **medir SOBRE EL BUILD DE PRODUCCIÓN, no `ng serve`**. `ng serve`
+   es build de desarrollo (~9.5 MB sin minificar) y da números irreales (~52). Pasos:
+   ```
+   # en el front:
+   ng build --configuration production        # genera www/
+   # en esta carpeta (pruebas-rendimiento), con el backend arriba en :8000:
+   node serve-prod.mjs [ruta-a-www] [puerto]  # sirve prod con brotli+proxy en :4300
+   ```
+   Luego, en Chrome **incógnito** → `http://localhost:4300` → Lighthouse → **Desktop**.
+   El token se inyecta logueándose en esa pestaña; medir `/tabs/home` (cliente),
+   `/admin/dashboard`, `/superadmin/panel`.
+
+## Qué se ve al hacer `git pull` (y qué NO)
+- **Sí llega por pull**: todas las optimizaciones del front (están en el código) →
+  la app es más rápida para usuarios reales. Más el entregable y las bitácoras.
+- **NO llega por pull (cada dev lo hace local)**: (a) **OPcache** en su `php.ini`
+  (acelera la API — ver arriba); (b) los seeds de su BD (menú real, para imágenes);
+  (c) **medir sobre el build de producción** (con `serve-prod.mjs`), no `ng serve`.
+- **El número que importa**: en teléfono real el cliente rinde **97-100**; desktop 99.
+  El "77" es solo el perfil pesimista **Slow 4G + CPU 4×** de Lighthouse (gama baja +
+  mala señal), NO la experiencia real.
 
 ## Archivos
 - `api-load.js` — script k6 (3 escenarios, GET/lectura, etiquetado por interacción).
 - `aggregate.mjs` — agrega los CSV de k6 → Excel/CSV (p50/p95/media, antes/después).
+- `serve-prod.mjs` — sirve el build de producción (www/) con brotli + proxy al backend
+  (node puro, sin paquetes). Para medir los números reales, no `ng serve`.
 - `resultados.xls` / `resultados.csv` — el Excel entregable (interacción, API, tiempo).
-- `lighthouse.json` — CWV por perspectiva.
+- `lighthouse.json` — CWV por perspectiva y perfil (producción).
