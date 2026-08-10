@@ -47,6 +47,22 @@ Best Practices 100 · **SEO 100** · CLS ≈ 0 · Accesibilidad 83-95 en las 3
 perspectivas. **Desktop 99** (meta >90 cumplida). El móvil es el techo de un SPA en
 el perfil throttled; en un móvil real con buena red carga mucho más rápido.
 
+**Cliente en móvil — el número que importa** (es la vista que se usa en teléfono).
+El perfil "mobile" por defecto de Lighthouse (Slow 4G ~400 kbps + CPU 4×) representa
+gama baja con mala señal y da **77**. En condiciones reales de teléfono el mismo
+build rinde muchísimo mejor:
+
+| Condición de red/CPU | Performance | LCP |
+|---|---|---|
+| Teléfono bueno (wifi, sin throttle) | **97** | 0.24 s |
+| Teléfono medio (4G decente, CPU 2×) | **100** | 1.48 s |
+| Lighthouse mobile por defecto (Slow 4G + CPU 4×) | 77 | 4.5 s |
+
+El 77 NO es la experiencia real: asume 3G lento + un CPU muy castigado. Subirlo a 90+
+en ese perfil exigiría SSR (paquete nuevo, descartado). Extra: se difirió 6 s el
+sondeo de `resenas/pendientes` (prompt de reseñas del shell de tabs) para sacarlo del
+camino crítico de la carga inicial.
+
 **SEO** subió de 82-83 a **100** con dos arreglos globales: (a) `<meta name="description">`
 en `index.html`; (b) `robots.txt` real en la raíz (`src/robots.txt` + entry en
 `angular.json`). Antes `/robots.txt` caía al fallback SPA y devolvía el `index.html`,
