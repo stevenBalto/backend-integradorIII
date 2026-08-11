@@ -1,0 +1,10 @@
+﻿SECCION,Perspectiva,Perfil/Metrica,Antes,Ahora,LCP_ms,FCP_ms,TBT_ms,CLS,Mejora
+API (k6),Usuario (cliente),Media respuesta (ms),198,66,,,,,-67%
+API (k6),Admin,Media respuesta (ms),248,68,,,,,-73%
+API (k6),Superadmin,Media respuesta (ms),221,56,,,,,-75%
+Frontend (Lighthouse),Usuario (cliente),Desktop,,99,783,529,0,0.022,
+Frontend (Lighthouse),Usuario (cliente),Móvil (Slow 4G+CPU 4x),,77,4203,2886,239,0.022,
+Frontend (Lighthouse),Admin,Desktop,,99,1102,683,0,0,
+Frontend (Lighthouse),Admin,Móvil (Slow 4G+CPU 4x),,62,5239,2552,1800,0.018,
+Frontend (Lighthouse),Superadmin,Desktop,,99,864,735,0,0,
+Frontend (Lighthouse),Superadmin,Móvil (Slow 4G+CPU 4x),,88,3498,2135,94,0.004,
