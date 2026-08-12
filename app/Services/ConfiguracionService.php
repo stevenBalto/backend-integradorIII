@@ -265,7 +265,7 @@ final class ConfiguracionService
      */
     private function dentroDeHorario(string $apertura, string $cierre, ?\DateTimeInterface $ahora = null): bool
     {
-        $hora = ($ahora ?? now())->format('H:i');
+        $hora = ($ahora ?? now('America/Costa_Rica'))->format('H:i');
 
         // Horario normal (11:00 - 22:00): debe estar entre ambos.
         if ($apertura <= $cierre) {

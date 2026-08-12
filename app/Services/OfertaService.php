@@ -95,7 +95,7 @@ final class OfertaService
             return null;
         }
 
-        $hoy = now()->toDateString();
+        $hoy = now('America/Costa_Rica')->toDateString();
 
         if ($oferta->fecha_inicio !== null && $oferta->fecha_inicio->toDateString() > $hoy) {
             return null;
