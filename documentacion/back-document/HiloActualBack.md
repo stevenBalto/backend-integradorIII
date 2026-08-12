@@ -528,5 +528,11 @@ Formato sugerido:
   - `ConfiguracionService::dentroDeHorario` (horario de atención 11:00-22:00 — este era el más grave: con la hora real al momento de arreglarlo, `PedidoTest` fallaba en 422 "Estamos cerrados" pese a ser las 4pm en Costa Rica, porque en UTC ya eran las 10pm).
   - `AnaliticasService::resolverPeriodo` (día/mes por defecto de los reportes).
   - Verificado: 22/22 tests siguen pasando tras el fix.
+- **Laravel Boost instalado** (`composer require laravel/boost --dev`, v2.5.3): da a Claude Code contexto real del proyecto vía MCP (esquema de BD, rutas, docs versionadas de Laravel 13). Detectó Claude Code automáticamente y generó:
+  - `.mcp.json` — servidor MCP del proyecto. **Ojo**: el comando apunta a `C:\php83\php.exe` explícito (no `php` a secas), porque el `php` del PATH suele ser el 8.2 del XAMPP y Laravel 13 no arranca con eso. Si tu PHP 8.3 standalone vive en otra ruta, hay que ajustar `.mcp.json` a mano.
+  - `boost.json` — config del paquete (guidelines + 4 skills: `infer-conventions`, `laravel-best-practices`, `pulse-development`, `tailwindcss-development`).
+  - `.claude/skills/` — las skills instaladas.
+  - Bloque `<laravel-boost-guidelines>` agregado al final de `CLAUDE.md` (autogenerado, se actualiza con `php artisan boost:update`, no editar a mano).
+  - No afecta producción (`--dev`), no afecta a los 22 tests (verificado).
 - **Estado**: cambios en rama `upgrade/laravel-13`, **sin mergear a `main` todavía** — falta coordinar con Steven, Bryan y Christian para que actualicen su PHP local antes del merge (si no, se les rompe el entorno al hacer `git pull` + `composer install`). Ver instrucciones para el equipo más abajo / mensaje aparte del que hizo la migración.
 - **Pendiente para cuando se mergee**: los 4 compañeros necesitan PHP 8.3+ local (mismo método: standalone en `C:\php83`, sin tocar su XAMPP) y correr `composer install` + la migración de `notificaciones` si no la tienen. Detalle paso a paso pensado para pasarles tal cual.
