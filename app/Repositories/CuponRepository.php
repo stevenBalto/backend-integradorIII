@@ -28,7 +28,7 @@ final class CuponRepository
      */
     public function listarActivos(?int $clienteId = null): Collection
     {
-        $hoy = now()->toDateString();
+        $hoy = now('America/Costa_Rica')->toDateString();
 
         return Cupon::query()
             ->where('activo', true)
@@ -71,7 +71,7 @@ final class CuponRepository
      */
     public function buscarActivoPorCodigo(string $codigo, ?int $clienteId = null): ?Cupon
     {
-        $hoy = now()->toDateString();
+        $hoy = now('America/Costa_Rica')->toDateString();
 
         return Cupon::query()
             ->with('clientes')

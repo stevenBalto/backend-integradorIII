@@ -28,7 +28,7 @@ final class OfertaRepository
      */
     public function listarActivas(?int $clienteId = null): Collection
     {
-        $hoy = now()->toDateString();
+        $hoy = now('America/Costa_Rica')->toDateString();
 
         return Oferta::query()
             ->with('productos')

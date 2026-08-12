@@ -506,3 +506,33 @@ Formato sugerido:
 - **Seeder nuevo `SuperAdminsDemoSeeder`** (18 filas, idempotente, password común `Demo#Rooster2026`, 1 de cada 4 inactivo) para probar el panel con la tabla llena. Es data de desarrollo, no toca el esquema. Limpieza: `SuperAdministrador::withTrashed()->where('email','like','%@demo.rooster.com')->forceDelete()`.
 - **Estado de la suite**: 6 fallan, 16 pasan. Se verificó con `git stash -u` que **fallan exactamente igual sin los cambios de esta sesión** — ninguna es regresión. Los 3 "nuevos" respecto a la sesión anterior (`AuthTest`, `LoginRateLimitTest`, con 422 donde se esperaba 200) son ruido de entorno: ver **EB-21**, `phpunit.xml` tiene la conexión de test comentada y la suite corre contra la BD de desarrollo.
 - **Pendiente**: los 2 fallos viejos de `InventarioTest` siguen ahí (ya venían de sesiones anteriores). Y descomentar la conexión sqlite de `phpunit.xml` (**EB-21**) — no se hizo por ser configuración compartida que afecta a todo el equipo.
+
+## Sesión 2026-08-12 — Upgrade Laravel 11 → 13 (rama `upgrade/laravel-13`, sin mergear a `main`)
+
+- **Motivo**: pedido del profesor, usar la versión más reciente de Laravel. Laravel 11 ya estaba fuera de soporte de seguridad (venció el 2026-03-12, confirmado en la tabla oficial `laravel.com/docs/13.x/releases`).
+- **Bloqueador real**: Laravel 13 exige PHP 8.3-8.5; el XAMPP del equipo trae PHP 8.2.12. Se instaló **PHP 8.3.33 standalone en `C:\php83`** (descargado de `downloads.php.net/~windows/releases/`), **sin tocar el XAMPP existente** — no afecta otros proyectos ni phpMyAdmin. `C:\php83\php.ini` habilita `curl, fileinfo, gd, mbstring, openssl, pdo_pgsql, pgsql, zip, exif` (bcmath viene compilado). `composer.json` tiene `config.platform.php: 8.3.33` para que Composer resuelva con esa versión aunque el PATH del sistema siga en 8.2.
+- **Cambios en `composer.json`/`composer.lock`** (únicos archivos tocados, sin tocar código de la app):
+  - `php`: `^8.2` → `^8.3`.
+  - `laravel/framework`: `^11.31` → `^13.0` (instalado: **v13.25.0**, pasando por v12.66.0 como paso intermedio de verificación).
+  - `laravel/tinker`: `^2.9` → `^2.10|^3.0` (instalado v3.0.2 — la `^2.9` original topaba `illuminate/contracts` en v11/v12 y bloqueaba la resolución de Laravel 13).
+  - Resto de paquetes (`sanctum`, `pint`, `sail`, `telescope`, `pulse`, `phpunit`, `collision`) se actualizaron a sus últimas versiones compatibles vía `--with-all-dependencies`, sin cambios de constraint manuales.
+  - `composer audit`: **0 vulnerabilidades** en ambos saltos.
+- **Fix aparte, solo en BD local** (no relacionado al upgrade): la tabla `notificaciones` no existía en la BD Postgres local (el dump está atrasado, ya anotado en sesiones previas). Se aplicó `bd-doc/migracion_2026-07-22_notificaciones.sql` (aditiva, `IF NOT EXISTS`, re-ejecutable). **Cada compañero que aún no tenga esa tabla debe correr ese mismo script.**
+- **Verificación exhaustiva antes de dar por bueno el upgrade**:
+  - `php artisan test`: **22/22 pasan** (tras aplicar la migración de `notificaciones`; antes fallaba 1 por la tabla faltante, causa no relacionada al framework).
+  - Barrido manual con servidor real + token Sanctum real (`super_admin`): los **15 módulos admin** (`dashboard, analiticas, categorias, clientes, configuracion, cupones, extras, insumos, modulos, notificaciones, ofertas, productos, pedidos, resenas, usuarios`), las **4 rutas públicas** (`categorias, productos, ofertas, cupones`) y el **panel SuperAdmin** (guard 401 sin token, login 422 con credenciales inválidas, CRUD de instancias) responden **200/401/422 según corresponde, cero errores 500**.
+- **Bug preexistente encontrado y corregido (commit aparte, no parte del upgrade en sí)**: varios cálculos de "hoy"/"ahora del negocio" usaban `now()` sin zona horaria, que resuelve en `UTC` (`APP_TIMEZONE` en `.env`/`config/app.php`), mientras el negocio opera en hora de Costa Rica (UTC-6). Entre las 6pm y medianoche hora CR, `now()` en UTC ya cayó en el día/hora siguiente, dando resultados equivocados solo según la hora local a la que se corriera. **No se cambió `APP_TIMEZONE` global** (rompería la lectura de timestamps ya guardados en la BD, que están en UTC) — se corrigió cada cálculo puntual pasando explícitamente `now('America/Costa_Rica')`/`Carbon::now('America/Costa_Rica')`:
+  - `OfertaService::buscarActivaPorId` (activación de oferta por fecha).
+  - `OfertaRepository::listarActivas` (listado público de ofertas activas).
+  - `CuponRepository::listarActivos` y `::buscarActivoPorCodigo` (activación de cupones).
+  - `ConfiguracionService::dentroDeHorario` (horario de atención 11:00-22:00 — este era el más grave: con la hora real al momento de arreglarlo, `PedidoTest` fallaba en 422 "Estamos cerrados" pese a ser las 4pm en Costa Rica, porque en UTC ya eran las 10pm).
+  - `AnaliticasService::resolverPeriodo` (día/mes por defecto de los reportes).
+  - Verificado: 22/22 tests siguen pasando tras el fix.
+- **Laravel Boost instalado** (`composer require laravel/boost --dev`, v2.5.3): da a Claude Code contexto real del proyecto vía MCP (esquema de BD, rutas, docs versionadas de Laravel 13). Detectó Claude Code automáticamente y generó:
+  - `.mcp.json` — servidor MCP del proyecto. **Ojo**: el comando apunta a `C:\php83\php.exe` explícito (no `php` a secas), porque el `php` del PATH suele ser el 8.2 del XAMPP y Laravel 13 no arranca con eso. Si tu PHP 8.3 standalone vive en otra ruta, hay que ajustar `.mcp.json` a mano.
+  - `boost.json` — config del paquete (guidelines + 4 skills: `infer-conventions`, `laravel-best-practices`, `pulse-development`, `tailwindcss-development`).
+  - `.claude/skills/` — las skills instaladas.
+  - Bloque `<laravel-boost-guidelines>` agregado al final de `CLAUDE.md` (autogenerado, se actualiza con `php artisan boost:update`, no editar a mano).
+  - No afecta producción (`--dev`), no afecta a los 22 tests (verificado).
+- **Estado**: cambios en rama `upgrade/laravel-13`, **sin mergear a `main` todavía** — falta coordinar con Steven, Bryan y Christian para que actualicen su PHP local antes del merge (si no, se les rompe el entorno al hacer `git pull` + `composer install`). Ver instrucciones para el equipo más abajo / mensaje aparte del que hizo la migración.
+- **Pendiente para cuando se mergee**: los 4 compañeros necesitan PHP 8.3+ local (mismo método: standalone en `C:\php83`, sin tocar su XAMPP) y correr `composer install` + la migración de `notificaciones` si no la tienen. Detalle paso a paso pensado para pasarles tal cual.
