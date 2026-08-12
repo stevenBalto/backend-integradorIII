@@ -38,6 +38,11 @@ final class SuperAdminService
         $superadmin = $this->obtenerOFallar($id);
         $superadmin->update($dto->soloDefinidos());
 
+        // Si el cambio lo dejó inactivo, sus sesiones abiertas caen de inmediato.
+        if ($superadmin->activo === false) {
+            $superadmin->tokens()->delete();
+        }
+
         return $superadmin;
     }
 
@@ -58,6 +63,7 @@ final class SuperAdminService
         $this->assertNoEsUnoMismo($id, $actorId, 'desactivar');
         $superadmin = $this->obtenerOFallar($id);
         $superadmin->update(['activo' => false]);
+        $superadmin->tokens()->delete(); // corta sus sesiones abiertas al instante
 
         return $superadmin;
     }
@@ -68,7 +74,9 @@ final class SuperAdminService
     public function eliminar(int $id, int $actorId): void
     {
         $this->assertNoEsUnoMismo($id, $actorId, 'eliminar');
-        $this->obtenerOFallar($id)->delete();
+        $superadmin = $this->obtenerOFallar($id);
+        $superadmin->tokens()->delete(); // corta sus sesiones abiertas al instante
+        $superadmin->delete();
     }
 
     private function obtenerOFallar(int $id): SuperAdministrador

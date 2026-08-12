@@ -26,6 +26,12 @@ class EnsureSuperAdmin
             return response()->json(['message' => 'Acceso restringido a superadministradores.'], 403);
         }
 
+        // Cuenta desactivada mientras tenía la sesión abierta: se corta aqui con 401
+        // para que el frontend la trate como sesion vencida y expulse al login.
+        if (! $actor->activo) {
+            return response()->json(['message' => 'Tu cuenta de superadministrador fue desactivada.'], 401);
+        }
+
         return $next($request);
     }
 }
