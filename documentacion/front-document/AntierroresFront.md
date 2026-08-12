@@ -261,3 +261,17 @@ Formato sugerido por entrada:
 - Solución: subir la especificidad del override anidándolo bajo un ancestro (ej. `.ped-datefilter .ped-datechip`) para ganarle a la base sin depender del orden. (Alternativa: mover el bloque `@media` al final del archivo.)
 - Regla: un override dentro de `@media` solo gana si tiene MAYOR especificidad que la base o si va DESPUÉS en el código. Si el `@media` está antes de la base con la misma especificidad, el override se ignora en silencio — subir especificidad o reubicar el bloque. Verificar el efecto real (no asumir que por estar en `@media` ya pisa).
 - Fecha: 2026-08-04
+
+### EF-30 — Formulario que valida bien pero no dice DÓNDE: `markAllAsTouched()` + un toast genérico no alcanza
+- Qué pasó: en Nuevo superadministrador, con el correo mal escrito, el único aviso era un toast "Revisá los datos del formulario". El formulario tenía los validadores correctos y `markAllAsTouched()`, pero ningún campo se marcaba: el usuario tenía que adivinar cuál de los cinco estaba mal.
+- Causa: `markAllAsTouched()` solo cambia el estado `touched` de los controles; **no pinta nada**. Sin un `[class.field--error]` enganchado a ese estado y sin un `<p>` que traduzca el error a texto, la información existe en el `FormGroup` pero no llega a la pantalla. El toast, además, era un literal fijo que no sabía qué campo había fallado.
+- Solución: dos helpers en la página — `campoInvalido(grupo, campo)` (activa el borde rojo solo si el control ya fue tocado o modificado) y `errorDe(grupo, campo)` (devuelve el mensaje concreto según la clave del error: `required`, `email`, `minlength`, `maxlength`, ...). El toast se arma recorriendo `grupo.controls` y nombrando los inválidos. Los errores del backend se inyectan al control con `setErrors({ backend: mensaje })` para que salgan por el mismo camino (Angular los limpia solo al reescribir el campo).
+- Regla: validar y avisar son dos cosas distintas. Un mensaje de error tiene que estar **anclado al campo** que falló; el toast es un resumen, no el mecanismo. Y todo error de servidor que corresponda a un campo debe volver a ese campo, no morir en un toast.
+- Fecha: 2026-08-11
+
+### EF-31 — `Validators.email` no mide longitudes: pasan correos de relleno de 150 caracteres antes de la @
+- Qué pasó: el campo Correo aceptaba `stevenbaltodano5234030303000000...@gmail.com` — 150 caracteres antes de la arroba. El campo tenía `Validators.email` y `maxLength(150)`.
+- Causa: `Validators.email` solo comprueba la **forma** (algo, una `@`, un dominio); no sabe nada de los límites del estándar. Y el único tope era el total de 150, que esa cadena justo no alcanzaba a pasar. El límite real lo pone el RFC 5321: **64 caracteres** para la parte anterior a la `@` (y 254 en total).
+- Solución: validador propio `formatoEmail` que corta la cadena en la primera `@` y rechaza si la local-part pasa de 64, más bajar el total a 120. Espejado en el backend con `regex:/^[^@]{1,64}@/`, porque la validación que cuenta es la del servidor.
+- Regla: `Validators.email` es una comprobación de forma, no de tamaño — si el campo puede recibir basura, ponerle tope total **y** tope de local-part. Y todo límite del frontend tiene que existir igual en el backend: el del cliente es comodidad, no defensa.
+- Fecha: 2026-08-11

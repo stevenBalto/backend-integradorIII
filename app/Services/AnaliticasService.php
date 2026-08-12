@@ -62,8 +62,8 @@ final class AnaliticasService
 
         $periodo = match ($granularidad) {
             'rango' => "{$desde}_{$hasta}",
-            'semana', 'dia' => $fecha ?? Carbon::now()->format('Y-m-d'),
-            default => $mes ?? Carbon::now()->format('Y-m'),
+            'semana', 'dia' => $fecha ?? Carbon::now('America/Costa_Rica')->format('Y-m-d'),
+            default => $mes ?? Carbon::now('America/Costa_Rica')->format('Y-m'),
         };
 
         return [$granularidad, $periodo];

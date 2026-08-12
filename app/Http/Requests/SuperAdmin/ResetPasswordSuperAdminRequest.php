@@ -23,7 +23,9 @@ class ResetPasswordSuperAdminRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'password' => ['required', 'confirmed', Password::min(12)->mixedCase()->numbers()->symbols()],
+            // max:72 = tope real de bcrypt; mas alla los caracteres se ignoran en
+            // silencio y el usuario creeria tener una contraseña mas larga.
+            'password' => ['required', 'confirmed', 'max:72', Password::min(12)->mixedCase()->numbers()->symbols()],
         ];
     }
 
