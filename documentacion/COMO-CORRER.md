@@ -10,7 +10,9 @@ módulos funcionales: **Módulo 1: Autenticación** (registro + login) y
 ---
 
 ## 0. Requisitos
-- **PHP 8.2+** y **Composer** (XAMPP sirve).
+- **PHP 8.3+** (el proyecto está en **Laravel 13** desde 2026-08-12) y **Composer**.
+  El XAMPP del equipo trae PHP 8.2, que **no alcanza** — hay que instalar PHP 8.3+
+  aparte, sin tocar el XAMPP. Ver **sección 2.1** para el paso a paso.
 - **PostgreSQL 18** + **pgAdmin 4**.
 - **Node.js + npm**. Ionic CLI: `npm i -g @ionic/cli` (o usar `npx ionic`).
 - Dos repos independientes (se comunican solo por API REST):
@@ -30,23 +32,68 @@ La BD se mantiene **por SQL**, no por migraciones de Laravel.
 5. Cargar los productos reales del menú (reemplaza los placeholders de prueba):
    ejecutar `bd-doc/seed_2026-08-09_productos_reales_rooster.sql`. Re-ejecutable
    sin duplicar. Detalle en `HiloActualBack.md`, sesión 2026-08-09.
+6. Si tu BD no tiene la tabla `notificaciones` (dump atrasado, ver `HiloActualBack.md`
+   2026-08-12): ejecutar `bd-doc/migracion_2026-07-22_notificaciones.sql`. Aditiva,
+   `IF NOT EXISTS`, re-ejecutable sin romper nada.
 
 Verificación: en pgAdmin las tablas están en **Schemas → public → Tables** (deben ser 21).
 Por psql: `\dt`.
 
 ---
 
+## 2.1 Instalar PHP 8.3+ (una sola vez, sin tocar tu XAMPP)
+
+Desde 2026-08-12 el proyecto corre en **Laravel 13**, que exige PHP 8.3-8.5. Si tu
+`php -v` da 8.2 o menos (el XAMPP típico), instalá un PHP aparte — no reemplaces el
+del XAMPP, así no afectás otros proyectos ni phpMyAdmin:
+
+1. Descargar el zip **Thread Safe x64** de PHP 8.3 (o 8.4) desde
+   `https://downloads.php.net/~windows/releases/` (buscar `php-8.3.x-Win32-vs16-x64.zip`).
+2. Descomprimir en `C:\php83` (o el nombre que prefieras).
+3. Crear `C:\php83\php.ini` con al menos:
+   ```ini
+   [PHP]
+   extension_dir = "ext"
+   memory_limit = 512M
+   upload_max_filesize = 40M
+   post_max_size = 40M
+   date.timezone = America/Costa_Rica
+
+   extension=curl
+   extension=fileinfo
+   extension=gd
+   extension=mbstring
+   extension=openssl
+   extension=pdo_pgsql
+   extension=pgsql
+   extension=zip
+   extension=exif
+   ```
+4. Usar ese PHP explícitamente para todo lo de este proyecto (no hace falta tocar
+   el PATH del sistema): `C:\php83\php.exe artisan ...`, y Composer con
+   `C:\php83\php.exe C:\ProgramData\ComposerSetup\bin\composer.phar ...`
+   (ajustar la ruta del `composer.phar` si la tuya es distinta — buscarla con
+   `where composer` y mirar el `.bat`).
+
+Verificar: `C:\php83\php.exe -v` debe decir 8.3.x, y `C:\php83\php.exe -m` debe
+listar `pgsql`, `pdo_pgsql` y `zip` sin warnings.
+
+---
+
 ## 2. Backend (Laravel) → `http://127.0.0.1:8000`
 ```bash
 cd backend-integradorIII
-composer install
+C:\php83\php.exe C:\ProgramData\ComposerSetup\bin\composer.phar install
 cp .env.example .env          # luego editar .env (ver abajo)
-php artisan key:generate
-php artisan config:clear
-php artisan db:seed --class=RolesSeeder          # crea roles: super_admin, admin_sede, cliente
-php artisan db:seed --class=AdminTestUserSeeder  # crea admin@rooster.com de prueba (ver abajo)
-php artisan serve
+C:\php83\php.exe artisan key:generate
+C:\php83\php.exe artisan config:clear
+C:\php83\php.exe artisan db:seed --class=RolesSeeder          # crea roles: super_admin, admin_sede, cliente
+C:\php83\php.exe artisan db:seed --class=AdminTestUserSeeder  # crea admin@rooster.com de prueba (ver abajo)
+C:\php83\php.exe artisan serve
 ```
+También hay que correr `bd-doc/migracion_2026-07-22_notificaciones.sql` contra tu
+BD si todavía no tenés la tabla `notificaciones` (aditiva, re-ejecutable — ver
+sección 1).
 
 En `.env` setear (lo demás ya viene bien en `.env.example`):
 ```
@@ -140,20 +187,20 @@ tu `GOOGLE_ALLOWED_ORIGINS` y en Google Cloud Console → Clientes → `Rooster 
 ## 3.3 Correr los tests del backend
 
 ```
-C:	ools\php857\php.exe artisan test
+C:\php83\php.exe artisan test
 ```
 
-**Importante: NO uses `php artisan test` a secas.** El `php` del PATH suele ser 8.1
-y el proyecto exige 8.4+ (ver `AntierroresBack.md` EB-12), así que ni arranca. Usá
-el binario del PHP que sirve el 8000; para encontrarlo:
+**Importante: NO uses `php artisan test` a secas.** El `php` del PATH suele ser el
+del XAMPP (8.2) y el proyecto exige 8.3+ (Laravel 13), así que ni arranca. Usá
+el PHP standalone de la sección 2.1. Si no te acordás dónde lo instalaste, el que
+sirve el 8000 se identifica con:
 
 ```powershell
 Get-Process -Id (Get-NetTCPConnection -LocalPort 8000 -State Listen).OwningProcess | Select Path
 ```
 
-Estado esperado hoy: **18 pasan, 2 fallan** (`InventarioTest`: toma física y PUT
-normal). Esos dos son **deuda previa**, no algo que hayas roto — fallan igual en
-un checkout limpio. Ver EB-17.
+Estado esperado hoy (2026-08-12, tras el upgrade a Laravel 13 y aplicar la
+migración de `notificaciones` de la sección 1): **22/22 pasan**.
 
 ## 4. Probar el Módulo 1 — Autenticación (funcional)
 Con backend + frontend arriba:
