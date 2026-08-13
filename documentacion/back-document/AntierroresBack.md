@@ -179,3 +179,17 @@ Formato sugerido por entrada:
 - Solución (diagnóstico, no arreglo): se verificó con `git stash -u` que los 6 fallaban **igual sin los cambios**, confirmando que no había regresión. El arreglo de fondo — descomentar esas dos líneas — no se aplicó por ser configuración compartida de todo el equipo.
 - Regla: antes de atribuirse un fallo de tests, correr la suite con `git stash -u` y comparar. Y desconfiar de un conteo de fallos que cambia sin que cambie el código: en este repo eso apunta al estado de la BD, no al commit. Los tests **no** están aislados.
 - Fecha: 2026-08-11
+
+### EB-22 — "Instancia" no comparte datos: duplicar no es compartir
+- Qué pasó: se pidió que al crear una **instancia** nueva (ej. "Liberia") esa instancia compartiera el menú, los productos y las ofertas del negocio, y que solo cambiaran los pedidos del local. Se implementó primero como instancia, y el local nuevo nunca aparecía en el selector del cliente ni tenía menú.
+- Causa: `instancia_id` es justamente la columna que **separa** los datos — el global scope `PerteneceAInstancia` filtra productos, ofertas, clientes y pedidos por ella. Una instancia nueva nace vacía **por definición**; no hay forma de que "comparta". Copiarle los productos al crearla tampoco es compartir: serían copias, y cambiar un precio obligaría a editarlo en cada instancia a mano.
+- Solución: lo que se estaba describiendo era una **sede** (`sucursales`, con `instancia_id`), que ya existía en el esquema: varias sedes conviven en una instancia, comparten menú/precios/ofertas/clientes, y se separan solo por `pedidos.sucursal_id`. El panel de superadmin pasó a crear sedes en vez de instancias. Las instancias quedan para negocios realmente distintos (otro restaurante que compre el sistema).
+- Regla: antes de agregar una fila "para separar cosas", preguntarse **qué debe compartirse**. Si la respuesta incluye catálogo o clientes, NO es un tenant nuevo. Un tenant separa todo o no separa nada; para separar solo la operación existe la sucursal. Y ojo con "que se cree igual en la instancia nueva": si hay que copiar datos para que dos cosas se parezcan, el modelo está mal elegido.
+- Fecha: 2026-08-13
+
+### EB-23 — Middleware que decide con una relación ya cargada: no ve el cambio recién hecho
+- Qué pasó: al reabrir una sede cerrada, su administrador seguía bloqueado en modo solo lectura. El test `al reabrir la sede su admin recupera la escritura` fallaba con 403 donde se esperaba 422.
+- Causa: el middleware preguntaba por `$actor->sucursal`, una relación de Eloquent que ya venía **cargada en memoria** con el estado anterior (`activa = false`). Eloquent no la recarga sola: devuelve la instancia cacheada. En producción el efecto es más sutil que en tests —cada petición reconstruye el usuario— pero cualquier cosa que cargue la relación antes del middleware reproduce el bug.
+- Solución: consultar el estado fresco en el propio middleware (`SucursalRepository::buscarPorId($actor->sucursal_id)`) en vez de leer la relación del actor.
+- Regla: una decisión de autorización no debe apoyarse en relaciones que quizá vengan cacheadas del request. Consultar el dato en el momento, o refrescar explícitamente (`->fresh()` / `->load()`). Si un test de "cambio de estado y vuelve" falla, sospechar del modelo en memoria antes que de la lógica.
+- Fecha: 2026-08-13
