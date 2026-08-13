@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsurePasswordNoTemporal;
+use App\Http\Middleware\EnsureSedeAbiertaParaEscribir;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureUserHasRole;
 use Illuminate\Foundation\Application;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'superadmin' => EnsureSuperAdmin::class,
             'password.valida' => EnsurePasswordNoTemporal::class,
+            'sede.abierta' => EnsureSedeAbiertaParaEscribir::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

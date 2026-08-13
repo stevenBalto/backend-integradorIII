@@ -17,15 +17,9 @@ class UpdateSucursalRequest extends FormRequest
         return true;
     }
 
-    /** Normaliza booleanos (llegan como string "1"/"0"). */
-    protected function prepareForValidation(): void
-    {
-        if ($this->has('activa')) {
-            $this->merge(['activa' => filter_var($this->input('activa'), FILTER_VALIDATE_BOOLEAN)]);
-        }
-    }
-
     /**
+     * `activa` NO se acepta: una sede no se desactiva (ver comentario en el modelo).
+     *
      * @return array<string, mixed>
      */
     public function rules(): array
@@ -35,7 +29,6 @@ class UpdateSucursalRequest extends FormRequest
             // direccion es NOT NULL en la BD: obligatoria (aunque telefono si es opcional).
             'direccion' => ['required', 'string', 'max:200'],
             'telefono' => ['nullable', 'string', 'max:20'],
-            'activa' => ['nullable', 'boolean'],
         ];
     }
 

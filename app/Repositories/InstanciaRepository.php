@@ -27,7 +27,20 @@ final class InstanciaRepository
     }
 
     /**
-     * @param array<string, mixed> $datos
+     * Instancia mas antigua activa: el negocio "principal" del sistema.
+     * La usa el panel de superadmin para saber a que negocio pertenece una
+     * sede nueva, ya que el superadmin no tiene instancia propia.
+     */
+    public function primeraActiva(): ?Instancia
+    {
+        return Instancia::query()
+            ->where('estado', 'activa')
+            ->orderBy('id')
+            ->first();
+    }
+
+    /**
+     * @param  array<string, mixed>  $datos
      */
     public function crear(array $datos): Instancia
     {
@@ -35,7 +48,7 @@ final class InstanciaRepository
     }
 
     /**
-     * @param array<string, mixed> $datos
+     * @param  array<string, mixed>  $datos
      */
     public function actualizar(Instancia $instancia, array $datos): Instancia
     {

@@ -9,10 +9,11 @@ use App\DTOs\Instancia\CrearInstanciaDTO;
 use App\Models\Instancia;
 use App\Repositories\InstanciaRepository;
 use App\Repositories\RoleRepository;
+use App\Repositories\SucursalRepository;
 use App\Repositories\UserRepository;
+use App\Services\Concerns\GeneraCredenciales;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
@@ -22,12 +23,14 @@ use RuntimeException;
  */
 final class InstanciaService
 {
+    use GeneraCredenciales;
+
     public function __construct(
         private readonly InstanciaRepository $instancias,
         private readonly UserRepository $usuarios,
         private readonly RoleRepository $roles,
-    ) {
-    }
+        private readonly SucursalRepository $sucursales,
+    ) {}
 
     /** @return Collection<int, Instancia> */
     public function listar(): Collection
@@ -55,6 +58,14 @@ final class InstanciaService
                 'creada_por' => $superadminId,
             ]);
 
+            // Sede inicial de la instancia. Sin ella, el negocio no aparece en el
+            // selector del cliente (que lee `sucursales`) y no puede recibir pedidos.
+            // La direccion real la completa el admin desde Configuracion.
+            $this->sucursales->crearParaInstancia($instancia->id, [
+                'nombre' => $dto->nombre,
+                'direccion' => 'Pendiente de completar',
+            ]);
+
             // Credenciales temporales del admin inicial.
             $usuario = $this->generarUsuarioUnico($dto->nombre);
             $password = $this->generarPassword();
@@ -62,7 +73,7 @@ final class InstanciaService
             $this->usuarios->crear([
                 'instancia_id' => $instancia->id,
                 'role_id' => $rolAdminId,
-                'nombre' => 'Administrador ' . $dto->nombre,
+                'nombre' => 'Administrador '.$dto->nombre,
                 'usuario' => $usuario,
                 'email' => $dto->correoPrincipal,
                 'password' => $password, // cast 'hashed'
@@ -117,39 +128,5 @@ final class InstanciaService
         }
 
         return $instancia;
-    }
-
-    /** Deriva un usuario del nombre de la instancia y garantiza que sea unico. */
-    private function generarUsuarioUnico(string $nombre): string
-    {
-        $base = Str::slug($nombre, '');
-        $base = $base === '' ? 'admin' : Str::lower(Str::substr($base, 0, 20));
-
-        do {
-            $usuario = $base . '_' . random_int(100, 999);
-        } while ($this->usuarios->existeUsuario($usuario));
-
-        return $usuario;
-    }
-
-    /** Contraseña temporal fuerte (>=12, mayús/minús/número/símbolo). */
-    private function generarPassword(): string
-    {
-        $may = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-        $min = 'abcdefghijkmnpqrstuvwxyz';
-        $num = '23456789';
-        $sim = '#$%&*!?@';
-        $todos = $may . $min . $num . $sim;
-
-        $pass = $may[random_int(0, strlen($may) - 1)]
-            . $min[random_int(0, strlen($min) - 1)]
-            . $num[random_int(0, strlen($num) - 1)]
-            . $sim[random_int(0, strlen($sim) - 1)];
-
-        for ($i = 0; $i < 10; $i++) {
-            $pass .= $todos[random_int(0, strlen($todos) - 1)];
-        }
-
-        return str_shuffle($pass);
     }
 }

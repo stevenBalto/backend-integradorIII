@@ -17,15 +17,11 @@ class StoreSucursalRequest extends FormRequest
         return true;
     }
 
-    /** Normaliza booleanos (llegan como string "1"/"0"). */
-    protected function prepareForValidation(): void
-    {
-        if ($this->has('activa')) {
-            $this->merge(['activa' => filter_var($this->input('activa'), FILTER_VALIDATE_BOOLEAN)]);
-        }
-    }
-
     /**
+     * Una sede nace siempre operativa: `activa` NO se acepta del request (ver
+     * comentario en el modelo). El correo del admin si, porque al crear la sede
+     * se crea su administrador con credenciales temporales.
+     *
      * @return array<string, mixed>
      */
     public function rules(): array
@@ -35,7 +31,7 @@ class StoreSucursalRequest extends FormRequest
             // direccion es NOT NULL en la BD: obligatoria (aunque telefono si es opcional).
             'direccion' => ['required', 'string', 'max:200'],
             'telefono' => ['nullable', 'string', 'max:20'],
-            'activa' => ['nullable', 'boolean'],
+            'correo_admin' => ['required', 'email', 'max:150', 'unique:users,email'],
         ];
     }
 
@@ -50,6 +46,9 @@ class StoreSucursalRequest extends FormRequest
             'direccion.required' => 'La dirección es obligatoria.',
             'direccion.max' => 'La dirección no puede superar los 200 caracteres.',
             'telefono.max' => 'El teléfono no puede superar los 20 caracteres.',
+            'correo_admin.required' => 'El correo del administrador de la sede es obligatorio.',
+            'correo_admin.email' => 'Ingresá un correo válido (ej. liberia@rooster.com).',
+            'correo_admin.unique' => 'Ese correo ya está en uso por otro usuario.',
         ];
     }
 }

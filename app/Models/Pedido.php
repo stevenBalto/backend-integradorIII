@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\PerteneceAInstancia;
+use App\Models\Concerns\PerteneceASucursal;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Pedido extends Model
 {
-    use HasFactory, PerteneceAInstancia;
+    use HasFactory, PerteneceAInstancia, PerteneceASucursal;
 
     protected $table = 'pedidos';
 
