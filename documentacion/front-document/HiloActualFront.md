@@ -12,6 +12,12 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-14 (2) — Inventario por sede + bloqueo al escanear código de otra sede
+- Acompaña el cambio de backend de la misma fecha: inventario/notificaciones/clientes dejan de compartirse entre sedes (solo productos/ofertas/cupones se comparten).
+- **`admin/inventario`**: nuevo campo "Sede" en el modal "Nuevo insumo" — solo visible para un admin general (sin `sucursal_id` propia); un admin_sede no lo ve porque el backend le fuerza la suya igual. Se auto-selecciona si solo hay 1 sede.
+- **`admin/ofertas` (modal "Canjear código")**: ahora corta el canje ahí mismo si el cupón/oferta escaneado tiene sedes específicas y no incluye la sede del admin logueado (`AuthService.usuario.sucursal_id`) — antes dejaba avanzar hasta "Ir a pedido de mostrador" sin avisar nada.
+- Modelo `Insumo` actualizado: `sucursal_id`, `sucursal_nombre?`.
+
 ## Sesión 2026-08-14 — Alcance por sede en Ofertas y Cupones
 - **Contexto**: acompaña el cambio de backend de la misma fecha (ver `HiloActualBack.md`) — ofertas/cupones pasan a pertenecer al negocio completo (antes nacionales) y se les puede restringir a sedes específicas para canjear.
 - **Admin (`admin/ofertas`)**: nuevo picker de sedes (mismo patrón que el picker de clientes ya existente — `modalSedesOpen`/`ofertaSedesSel`/`cuponSedesSel`), con radio "Todas las sedes" / "Sedes específicas" en ambos formularios (Nueva/Editar oferta y cupón). Usa `SucursalService.listarAdmin()`.

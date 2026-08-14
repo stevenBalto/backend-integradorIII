@@ -12,6 +12,19 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-14 (2) — Inventario/notificaciones/clientes dejan de cruzarse entre sedes + bloqueo al escanear
+- **Contexto**: el usuario probó las sedes nuevas (Liberia/Tilarán) y encontró 2 problemas reales sobre lo de la sesión anterior:
+  1. Una sede nueva heredaba automáticamente inventario, notificaciones y la lista de clientes de las demás sedes del negocio — solo productos/ofertas/cupones deberían compartirse.
+  2. El modal de "Canjear código" (`admin/ofertas`) dejaba escanear/avanzar con un cupón u oferta restringido a otra sede sin avisar nada — el aviso solo aparecía después, al armar el pedido en Pedido de mostrador.
+- **Hecho — aislamiento por sede**:
+  - `insumos.sucursal_id` (NOT NULL, backfill a sede 1) — el inventario pasa a ser por sede, no por instancia. `Insumo` usa `PerteneceASucursal` (ya existía el trait, solo faltaba aplicarlo). `InsumoService::resolverSucursalId()`: a un admin_sede se le ignora cualquier `sucursal_id` que mande y se le fuerza la suya (anti sede-hopping); un admin general tiene que indicarla (nuevo selector en el modal de Inventario, solo visible para admin general).
+  - `notificaciones.sucursal_id` (nullable a propósito) — scope propio en el modelo (no reusa `PerteneceASucursal`, que exige igualdad estricta): `NULL` = visible para todas las sedes (tipos `producto_nuevo`/`cliente_nuevo`/`usuario_nuevo`, que son del negocio completo), o solo la sede del actor (`pedido_nuevo`/`resena_nueva`/`stock_bajo`, heredan la sede de su origen).
+  - `ClienteRepository::listarConEstadisticas()`: el bug real acá era que la query de estadísticas es RAW (`DB::table('pedidos')`), no pasa por Eloquent — el global scope de `Pedido` (`PerteneceASucursal`) no la tocaba. Se repitió el mismo criterio a mano + se cambió el join de `left` a `inner` cuando hay sede (un admin_sede ya no ve clientes que nunca compraron en su sede, aunque sean del mismo negocio).
+  - Migración: `migracion_2026-08-14_insumos_notificaciones_por_sede.sql`.
+  - Tests: `AislamientoInventarioNotificacionesClientesTest` (5 casos). Suite completa: 41/41.
+- **Hecho — bloqueo al escanear**: `admin/ofertas` (frontend) — `validarCuponEscaneado`/`validarOfertaEscaneada` ahora chequean `alcance_sedes`/`sucursales` contra la sede del admin logueado (`AuthService.usuario.sucursal_id`) apenas se valida el código, ANTES de dejar avanzar a "Ir a pedido de mostrador". Solo aplica si quien escanea es admin_sede — el admin general no está atado a ninguna sede.
+- **NO tocar / nota**: el dump `rooster_pizza_bd.sql` sigue sin la tabla `notificaciones` completa (gap preexistente, documentado desde 2026-08-08) — se le agregó `sucursal_id` a `insumos` nada más, que sí estaba presente.
+
 ## Sesión 2026-08-14 — Ofertas/cupones pasan a la instancia + alcance por sede
 - **Contexto**: pedido del usuario tras revisar el trabajo de sedes del compañero. Iteró varias veces sobre el alcance real (ver conversación) — la versión final, la única implementada:
   - Ofertas/cupones ya NO son nacionales/globales (`Oferta`/`Cupon` sin `instancia_id` obligatorio) — pasan a pertenecer a la instancia completa (el negocio), visibles/administrables desde cualquier sede por igual. Se descartó por completo una idea intermedia (clonar catálogo al crear una instancia nueva) — no llegó a mergearse, no hay rastro en el código final.

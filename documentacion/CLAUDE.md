@@ -90,6 +90,20 @@ intención es simple aunque toque un dominio pesado, bajá de tier automáticame
   `ofertas`/`cupones`/`sucursales` con ON DELETE CASCADE). Ver
   `migracion_2026-08-14_ofertas_cupones_por_instancia.sql` y
   `migracion_2026-08-14_ofertas_cupones_alcance_sedes.sql`.
+  **Cambio 2026-08-14 (aprobado): inventario y notificaciones dejan de
+  compartirse entre sedes del mismo negocio.** Regla explícita del usuario:
+  SOLO productos/ofertas/cupones son del negocio completo — todo lo demás es
+  exclusivo de cada sede. `insumos.sucursal_id` (bigint, **NOT NULL**, FK a
+  `sucursales`, backfill a sede 1) — el inventario ahora es por sede, no por
+  instancia; un admin general tiene que elegir la sede al crear un insumo, a
+  un admin_sede se le fuerza la suya (nunca confía en lo que mande el
+  request). `notificaciones.sucursal_id` (bigint, **nullable** a propósito)
+  — `pedido_nuevo`/`resena_nueva`/`stock_bajo` heredan la sede de su origen;
+  `producto_nuevo`/`cliente_nuevo`/`usuario_nuevo` quedan `NULL` (siguen
+  siendo del negocio completo, visibles para todas las sedes). No usa el
+  trait `PerteneceASucursal` genérico (ese exige igualdad estricta) — tiene
+  su propio scope en el modelo: `sucursal_id IS NULL OR sucursal_id = <sede
+  del actor>`. Ver `migracion_2026-08-14_insumos_notificaciones_por_sede.sql`.
   Ningún agente agrega tablas nuevas sin aprobación explícita del usuario.
 - **El conteo de 35 excluye `migrations`** (tabla de control de Laravel; el
   esquema se mantiene por SQL, no por migraciones — ver `COMO-CORRER.md`).
