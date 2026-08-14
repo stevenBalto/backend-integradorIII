@@ -27,6 +27,9 @@ class StoreInsumoRequest extends FormRequest
             'unidad_medida' => ['required', 'string', 'max:20'],
             'cantidad_actual' => ['nullable', 'numeric', 'min:0'],
             'stock_minimo' => ['nullable', 'numeric', 'min:0'],
+            // Solo la usa un admin general (sin sede propia). El service ignora este
+            // valor y fuerza la sede propia si quien crea es un admin_sede.
+            'sucursal_id' => ['nullable', 'integer', 'exists:sucursales,id'],
         ];
     }
 

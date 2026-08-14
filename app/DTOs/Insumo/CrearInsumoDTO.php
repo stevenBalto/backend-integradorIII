@@ -11,8 +11,9 @@ final class CrearInsumoDTO
         public readonly string $unidadMedida,
         public readonly float $cantidadActual,
         public readonly ?float $stockMinimo,
-    ) {
-    }
+        /** Solo la usa un admin general (sin sede propia); a un admin_sede se le ignora y se fuerza la suya. */
+        public readonly ?int $sucursalId,
+    ) {}
 
     public static function fromArray(array $data): self
     {
@@ -21,6 +22,7 @@ final class CrearInsumoDTO
             unidadMedida: (string) $data['unidad_medida'],
             cantidadActual: isset($data['cantidad_actual']) ? (float) $data['cantidad_actual'] : 0.0,
             stockMinimo: isset($data['stock_minimo']) ? (float) $data['stock_minimo'] : null,
+            sucursalId: isset($data['sucursal_id']) ? (int) $data['sucursal_id'] : null,
         );
     }
 

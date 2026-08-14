@@ -17,6 +17,7 @@ final class InsumoRepository
     {
         return Insumo::query()
             ->withCount('movimientos')
+            ->with('sucursal')
             ->orderBy('nombre')
             ->get();
     }
@@ -26,9 +27,15 @@ final class InsumoRepository
         return Insumo::query()->find($id);
     }
 
-    public function crear(array $datos): Insumo
+    /** sucursal_id NO esta en $fillable a proposito (anti sede-hopping, mismo
+     *  criterio que instancia_id) — se fija a mano, ya resuelto por el service. */
+    public function crear(array $datos, int $sucursalId): Insumo
     {
-        return Insumo::create($datos);
+        $insumo = new Insumo($datos);
+        $insumo->sucursal_id = $sucursalId;
+        $insumo->save();
+
+        return $insumo;
     }
 
     /** Solo actualiza nombre / unidad_medida / stock_minimo (nunca cantidad_actual). */

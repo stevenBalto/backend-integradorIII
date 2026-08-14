@@ -28,8 +28,7 @@ final class NotificacionService
     public function __construct(
         private readonly NotificacionRepository $notificaciones,
         private readonly ConfiguracionService $configuracion,
-    ) {
-    }
+    ) {}
 
     /**
      * Crea la notificacion "pedido nuevo" para los admins de la instancia del pedido.
@@ -51,6 +50,7 @@ final class NotificacionService
 
         return $this->notificaciones->crear([
             'instancia_id' => $pedido->instancia_id,
+            'sucursal_id' => $pedido->sucursal_id,
             'tipo' => 'pedido_nuevo',
             'pedido_id' => $pedido->id,
             'titulo' => "Nuevo pedido #{$pedido->codigo}",
@@ -68,7 +68,7 @@ final class NotificacionService
     /**
      * Notifica una o varias reseñas recién dejadas por un cliente (1 aviso por envio).
      *
-     * @param Collection<int, Resena> $resenas
+     * @param  Collection<int, Resena>  $resenas
      */
     public function notificarResenaNueva(Collection $resenas): ?Notificacion
     {
@@ -87,6 +87,7 @@ final class NotificacionService
 
         return $this->notificaciones->crear([
             'instancia_id' => $primera->instancia_id,
+            'sucursal_id' => optional($primera->pedido)->sucursal_id,
             'tipo' => 'resena_nueva',
             'pedido_id' => $primera->pedido_id,
             'titulo' => 'Nueva reseña',
@@ -105,6 +106,7 @@ final class NotificacionService
 
         return $this->notificaciones->crear([
             'instancia_id' => $insumo->instancia_id,
+            'sucursal_id' => $insumo->sucursal_id,
             'tipo' => 'stock_bajo',
             'pedido_id' => null,
             'titulo' => "Stock bajo: {$insumo->nombre}",
@@ -178,7 +180,7 @@ final class NotificacionService
             'instancia_id' => $usuario->instancia_id,
             'tipo' => 'usuario_nuevo',
             'pedido_id' => null,
-            'titulo' => 'Nuevo ' . $rolLabel,
+            'titulo' => 'Nuevo '.$rolLabel,
             'mensaje' => $usuario->nombre,
             'data' => ['usuario_id' => $usuario->id, 'nombre' => $usuario->nombre, 'rol' => $rol],
             'leida' => false,

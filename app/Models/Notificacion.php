@@ -5,17 +5,22 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\PerteneceAInstancia;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Notificacion para administradores. Mapea `notificaciones`.
- * Aislada por instancia (multi-tenant) via PerteneceAInstancia: cada sucursal
- * ve solo SUS avisos.
+ * Aislada por instancia (multi-tenant) via PerteneceAInstancia.
  *
- * Hoy el unico `tipo` es 'pedido_nuevo' (se crea 1 fila al nacer un pedido),
- * pero el campo deja la puerta abierta a futuros avisos (stock bajo, etc).
+ * `sucursal_id` es NULLABLE a proposito (no reutiliza PerteneceASucursal, que
+ * exige igualdad estricta): hay tipos que SI son de una sede puntual
+ * (pedido_nuevo/resena_nueva heredan la sede del pedido; stock_bajo la del
+ * insumo) y tipos que son del negocio completo (producto_nuevo/cliente_nuevo/
+ * usuario_nuevo -> sucursal_id NULL, visibles para todas las sedes). Un
+ * admin_sede ve las suyas + las que no son de ninguna sede en particular.
  */
 class Notificacion extends Model
 {
@@ -26,6 +31,7 @@ class Notificacion extends Model
     /** @var list<string> */
     protected $fillable = [
         'instancia_id',
+        'sucursal_id',
         'tipo',
         'pedido_id',
         'titulo',
@@ -34,6 +40,20 @@ class Notificacion extends Model
         'leida',
         'leida_en',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('sucursal', function (Builder $builder): void {
+            $actor = Auth::user();
+            if (! $actor instanceof User || ! $actor->esAdminSede() || $actor->sucursal_id === null) {
+                return;
+            }
+
+            $tabla = $builder->getModel()->getTable();
+            $builder->where(fn ($q) => $q->whereNull("{$tabla}.sucursal_id")
+                ->orWhere("{$tabla}.sucursal_id", $actor->sucursal_id));
+        });
+    }
 
     protected function casts(): array
     {

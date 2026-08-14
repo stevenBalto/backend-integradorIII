@@ -7,6 +7,7 @@ namespace App\Repositories;
 use App\Models\Pedido;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,19 +22,23 @@ final class ClienteRepository
      * Lista clientes de la instancia con estadisticas agregadas de compra.
      * Excluye pedidos cancelados de los calculos.
      *
-     * @param int|null $porPagina Si viene, devuelve un LengthAwarePaginator en vez de la Collection completa.
-     * @return Collection<int, User>|\Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @param  int|null  $porPagina  Si viene, devuelve un LengthAwarePaginator en vez de la Collection completa.
+     * @return Collection<int, User>|LengthAwarePaginator
      */
     public function listarConEstadisticas(?int $porPagina = null, int $pagina = 1)
     {
         $instanciaId = $this->instanciaActual();
+        $sucursalId = $this->sucursalActual();
         $roleCliente = Role::query()->where('nombre', 'cliente')->first();
 
         if ($roleCliente === null) {
-            return new Collection();
+            return new Collection;
         }
 
-        // Subconsulta de estadisticas por cliente (excluye 'cancelado')
+        // Subconsulta de estadisticas por cliente (excluye 'cancelado'). Esta
+        // query es RAW (DB::table), no pasa por Eloquent -> el global scope
+        // de Pedido (PerteneceASucursal) NO la filtra sola, hay que repetir
+        // el mismo criterio a mano aca.
         $subquery = DB::table('pedidos')
             ->select(
                 'cliente_id',
@@ -43,6 +48,7 @@ final class ClienteRepository
             )
             ->where('estado', '!=', 'cancelado')
             ->when($instanciaId !== null, fn ($q) => $q->where('instancia_id', $instanciaId))
+            ->when($sucursalId !== null, fn ($q) => $q->where('sucursal_id', $sucursalId))
             ->groupBy('cliente_id');
 
         $query = User::query()
@@ -57,9 +63,17 @@ final class ClienteRepository
                 DB::raw('COALESCE(stats.cantidad_pedidos, 0) as cantidad_pedidos'),
                 DB::raw('stats.ultimo_pedido_en'),
             ])
-            ->leftJoinSub($subquery, 'stats', 'users.id', '=', 'stats.cliente_id')
             ->where('users.role_id', $roleCliente->id)
             ->whereNull('users.deleted_at');
+
+        if ($sucursalId !== null) {
+            // Admin de sede: solo clientes que YA compraron en su sede (inner
+            // join) — no tiene sentido listarle clientes que nunca pisaron
+            // esa sede en particular, aunque sean del mismo negocio.
+            $query->joinSub($subquery, 'stats', 'users.id', '=', 'stats.cliente_id');
+        } else {
+            $query->leftJoinSub($subquery, 'stats', 'users.id', '=', 'stats.cliente_id');
+        }
 
         if ($instanciaId !== null) {
             $query->where('users.instancia_id', $instanciaId);
@@ -119,6 +133,18 @@ final class ClienteRepository
 
         if ($actor instanceof User && $actor->instancia_id !== null) {
             return (int) $actor->instancia_id;
+        }
+
+        return null;
+    }
+
+    /** Sede del admin_sede autenticado; null para admin general, cliente o superadmin. */
+    private function sucursalActual(): ?int
+    {
+        $actor = Auth::user();
+
+        if ($actor instanceof User && $actor->esAdminSede() && $actor->sucursal_id !== null) {
+            return (int) $actor->sucursal_id;
         }
 
         return null;

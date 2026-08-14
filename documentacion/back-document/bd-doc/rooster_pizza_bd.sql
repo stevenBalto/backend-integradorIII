@@ -431,7 +431,8 @@ CREATE TABLE public.insumos (
     created_at timestamp without time zone,
     updated_at timestamp without time zone,
     deleted_at timestamp without time zone,
-    instancia_id bigint NOT NULL
+    instancia_id bigint NOT NULL,
+    sucursal_id bigint NOT NULL
 );
 
 

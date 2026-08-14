@@ -7,9 +7,11 @@ namespace App\Services;
 use App\DTOs\Insumo\ActualizarInsumoDTO;
 use App\DTOs\Insumo\CrearInsumoDTO;
 use App\Models\Insumo;
+use App\Models\InsumoMovimiento;
 use App\Repositories\InsumoMovimientoRepository;
 use App\Repositories\InsumoRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -26,8 +28,7 @@ final class InsumoService
         private readonly InsumoRepository $insumos,
         private readonly InsumoMovimientoRepository $movimientos,
         private readonly NotificacionService $notificaciones,
-    ) {
-    }
+    ) {}
 
     /** @return Collection<int, Insumo> */
     public function listarTodos(): Collection
@@ -47,7 +48,7 @@ final class InsumoService
 
         // Asegura que 'movimientos_count' este disponible para InsumoResource
         // (listarTodos() ya lo trae via withCount; esto cubre show/update/toma fisica).
-        if (!array_key_exists('movimientos_count', $insumo->getAttributes())) {
+        if (! array_key_exists('movimientos_count', $insumo->getAttributes())) {
             $insumo->loadCount('movimientos');
         }
 
@@ -56,7 +57,36 @@ final class InsumoService
 
     public function crear(CrearInsumoDTO $dto): Insumo
     {
-        return $this->insumos->crear($dto->toArray());
+        return $this->insumos->crear($dto->toArray(), $this->resolverSucursalId($dto->sucursalId));
+    }
+
+    /**
+     * El inventario es exclusivo de cada sede (no se comparte como productos/
+     * ofertas/cupones). Un admin_sede NUNCA puede elegir la sede (se ignora
+     * cualquier valor recibido y se fuerza la suya — anti sede-hopping, mismo
+     * criterio que PerteneceASucursal). Un admin general SI debe indicarla.
+     */
+    private function resolverSucursalId(?int $sucursalIdSolicitado): int
+    {
+        $actor = Auth::user();
+
+        if ($actor !== null && method_exists($actor, 'esAdminSede') && $actor->esAdminSede()) {
+            if ($actor->sucursal_id === null) {
+                throw ValidationException::withMessages([
+                    'sucursal_id' => ['Tu usuario no tiene una sede asignada.'],
+                ]);
+            }
+
+            return (int) $actor->sucursal_id;
+        }
+
+        if ($sucursalIdSolicitado === null) {
+            throw ValidationException::withMessages([
+                'sucursal_id' => ['Elegí a cuál sede pertenece este insumo.'],
+            ]);
+        }
+
+        return $sucursalIdSolicitado;
     }
 
     public function actualizar(int $id, ActualizarInsumoDTO $dto): Insumo
@@ -77,7 +107,7 @@ final class InsumoService
      * Registra una toma fisica: fija la cantidad contada como nueva cantidad_actual
      * del insumo y deja el ajuste auditado en insumo_movimientos.
      *
-     * @return array{insumo: Insumo, movimiento: \App\Models\InsumoMovimiento}
+     * @return array{insumo: Insumo, movimiento: InsumoMovimiento}
      */
     public function registrarTomaFisica(int $insumoId, float $cantidadContada, ?string $nota, int $userId): array
     {
@@ -117,7 +147,7 @@ final class InsumoService
         return $resultado;
     }
 
-    /** @return Collection<int, \App\Models\InsumoMovimiento> */
+    /** @return Collection<int, InsumoMovimiento> */
     public function listarMovimientos(int $insumoId): Collection
     {
         // Valida que el insumo exista antes de listar su historial.
