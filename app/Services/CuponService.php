@@ -18,8 +18,7 @@ final class CuponService
 {
     public function __construct(
         private readonly CuponRepository $cupones,
-    ) {
-    }
+    ) {}
 
     /** @return Collection<int, Cupon> */
     public function listarTodos(): Collection
@@ -55,7 +54,7 @@ final class CuponService
         $datos = $dto->toArray();
         $datos['imagen_url'] = $imagenUrl;
 
-        return $this->cupones->crear($datos, $dto->clienteIds);
+        return $this->cupones->crear($datos, $dto->clienteIds, $dto->sucursalIds);
     }
 
     /** $imagenUrl: si es null, se conserva la imagen actual del cupon (no se pisa). */
@@ -71,7 +70,7 @@ final class CuponService
             $datos['imagen_url'] = $imagenUrl;
         }
 
-        return $this->cupones->actualizar($cupon, $datos, $dto->clienteIds);
+        return $this->cupones->actualizar($cupon, $datos, $dto->clienteIds, $dto->sucursalIds);
     }
 
     public function eliminar(int $id): void

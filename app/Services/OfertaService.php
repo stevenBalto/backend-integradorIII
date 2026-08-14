@@ -20,8 +20,7 @@ final class OfertaService
     public function __construct(
         private readonly OfertaRepository $ofertas,
         private readonly ProductoRepository $productos,
-    ) {
-    }
+    ) {}
 
     /** @return Collection<int, Oferta> */
     public function listarTodos(): Collection
@@ -57,7 +56,7 @@ final class OfertaService
         $datos = $dto->toArray();
         $datos['imagen_url'] = $imagenUrl;
 
-        return $this->ofertas->crear($datos, $dto->productoIds, $dto->clienteIds);
+        return $this->ofertas->crear($datos, $dto->productoIds, $dto->clienteIds, $dto->sucursalIds);
     }
 
     /** $imagenUrl: si es null, se conserva la imagen actual de la oferta (no se pisa). */
@@ -73,7 +72,7 @@ final class OfertaService
             $datos['imagen_url'] = $imagenUrl;
         }
 
-        return $this->ofertas->actualizar($oferta, $datos, $dto->productoIds, $dto->clienteIds);
+        return $this->ofertas->actualizar($oferta, $datos, $dto->productoIds, $dto->clienteIds, $dto->sucursalIds);
     }
 
     public function eliminar(int $id): void
@@ -113,7 +112,7 @@ final class OfertaService
      * el subtotal de los productos incluidos en la oferta (los demas items del
      * pedido no se ven afectados).
      *
-     * @param array<int, array{producto_id: int, subtotal: float}> $itemsProcesados
+     * @param  array<int, array{producto_id: int, subtotal: float}>  $itemsProcesados
      */
     public function calcularDescuento(Oferta $oferta, array $itemsProcesados): float
     {
@@ -150,7 +149,7 @@ final class OfertaService
     }
 
     /**
-     * @param array<int> $productoIds
+     * @param  array<int>  $productoIds
      */
     private function validarProductosExisten(array $productoIds): void
     {

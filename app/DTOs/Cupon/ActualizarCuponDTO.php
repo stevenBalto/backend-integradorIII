@@ -6,7 +6,10 @@ namespace App\DTOs\Cupon;
 
 final class ActualizarCuponDTO
 {
-    /** @param array<int> $clienteIds */
+    /**
+     * @param  array<int>  $clienteIds
+     * @param  array<int>  $sucursalIds
+     */
     public function __construct(
         public readonly string $codigo,
         public readonly string $tipo,
@@ -18,8 +21,9 @@ final class ActualizarCuponDTO
         public readonly bool $activo,
         public readonly string $alcance,
         public readonly array $clienteIds,
-    ) {
-    }
+        public readonly string $alcanceSedes,
+        public readonly array $sucursalIds,
+    ) {}
 
     public static function fromArray(array $data): self
     {
@@ -34,6 +38,8 @@ final class ActualizarCuponDTO
             activo: (bool) ($data['activo'] ?? true),
             alcance: (string) ($data['alcance'] ?? 'todos'),
             clienteIds: array_map('intval', $data['cliente_ids'] ?? []),
+            alcanceSedes: (string) ($data['alcance_sedes'] ?? 'todas'),
+            sucursalIds: array_map('intval', $data['sucursal_ids'] ?? []),
         );
     }
 
@@ -49,6 +55,7 @@ final class ActualizarCuponDTO
             'usos_max' => $this->usosMax,
             'activo' => $this->activo,
             'alcance' => $this->alcance,
+            'alcance_sedes' => $this->alcanceSedes,
         ];
     }
 }

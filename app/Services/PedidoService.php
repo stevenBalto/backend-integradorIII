@@ -17,6 +17,7 @@ use App\Repositories\PedidoHistorialRepository;
 use App\Repositories\PedidoRepository;
 use App\Repositories\PuntosMovimientoRepository;
 use App\Repositories\SucursalRepository;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -49,8 +50,7 @@ final class PedidoService
         private readonly CuponService $cupones,
         private readonly OfertaService $ofertas,
         private readonly ConfiguracionService $configuracion,
-    ) {
-    }
+    ) {}
 
     /**
      * Crea un nuevo pedido con todos sus detalles.
@@ -100,7 +100,7 @@ final class PedidoService
             $montoMinimo = $operacion['pedido_monto_minimo'];
             if ($montoMinimo > 0 && $subtotalPedido < $montoMinimo) {
                 throw ValidationException::withMessages([
-                    'items' => ['El pedido mínimo es de ₡' . number_format($montoMinimo, 0, ',', '.') . '.'],
+                    'items' => ['El pedido mínimo es de ₡'.number_format($montoMinimo, 0, ',', '.').'.'],
                 ]);
             }
 
@@ -130,6 +130,12 @@ final class PedidoService
                     ]);
                 }
 
+                if (! $cupon->aplicaEnSucursal($dto->sucursalId)) {
+                    throw ValidationException::withMessages([
+                        'cupon_codigo' => ['Este cupón no está disponible en esta sede.'],
+                    ]);
+                }
+
                 $descuentoCupon = $this->cupones->calcularDescuento($cupon, $subtotalPedido);
                 $descuento = min($descuento + $descuentoCupon, $subtotalPedido);
             }
@@ -150,9 +156,15 @@ final class PedidoService
                     ]);
                 }
 
+                if (! $oferta->aplicaEnSucursal($dto->sucursalId)) {
+                    throw ValidationException::withMessages([
+                        'oferta_id' => ['Esta oferta no está disponible en esta sede.'],
+                    ]);
+                }
+
                 $descuentoOferta = $this->ofertas->calcularDescuento($oferta, $itemsProcesados);
                 $descuento = min($descuento + $descuentoOferta, $subtotalPedido);
-                $notasFinal = trim("[Oferta: {$oferta->nombre}] " . ($notasFinal ?? ''));
+                $notasFinal = trim("[Oferta: {$oferta->nombre}] ".($notasFinal ?? ''));
             }
 
             $total = $subtotalPedido - $descuento;
@@ -262,7 +274,7 @@ final class PedidoService
     /**
      * Procesa un item del pedido: valida producto, tamano, extras y calcula precios.
      *
-     * @param array{producto_id: int, cantidad: int, producto_tamano_id: ?int, extra_ids: int[], notas: ?string} $item
+     * @param  array{producto_id: int, cantidad: int, producto_tamano_id: ?int, extra_ids: int[], notas: ?string}  $item
      * @return array Item procesado con todos los datos calculados.
      */
     private function procesarItem(array $item): array
@@ -366,7 +378,7 @@ final class PedidoService
             }
 
             // Formatear como XXXX-XXXX
-            $codigoFormateado = substr($codigo, 0, 4) . '-' . substr($codigo, 4);
+            $codigoFormateado = substr($codigo, 0, 4).'-'.substr($codigo, 4);
 
             if (! $this->pedidos->existeCodigo($codigoFormateado)) {
                 return $codigoFormateado;
@@ -550,7 +562,7 @@ final class PedidoService
         return $pedido;
     }
 
-    /** @return Collection<int, Pedido>|\Illuminate\Contracts\Pagination\LengthAwarePaginator */
+    /** @return Collection<int, Pedido>|LengthAwarePaginator */
     public function listarAdmin(array $filtros, ?int $porPagina = null, int $pagina = 1)
     {
         return $this->pedidos->listarAdmin($filtros, $porPagina, $pagina);

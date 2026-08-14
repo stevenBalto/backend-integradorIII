@@ -57,6 +57,9 @@ class UpdateCuponRequest extends FormRequest
             'alcance' => ['nullable', 'string', Rule::in(['todos', 'especifico'])],
             'cliente_ids' => ['nullable', 'array'],
             'cliente_ids.*' => ['integer', 'exists:users,id'],
+            'alcance_sedes' => ['nullable', 'string', Rule::in(['todas', 'especifica'])],
+            'sucursal_ids' => ['nullable', 'array'],
+            'sucursal_ids.*' => ['integer', 'exists:sucursales,id'],
         ];
     }
 

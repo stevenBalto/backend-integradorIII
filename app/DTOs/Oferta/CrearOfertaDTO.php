@@ -7,8 +7,9 @@ namespace App\DTOs\Oferta;
 final class CrearOfertaDTO
 {
     /**
-     * @param array<int> $productoIds
-     * @param array<int> $clienteIds
+     * @param  array<int>  $productoIds
+     * @param  array<int>  $clienteIds
+     * @param  array<int>  $sucursalIds
      */
     public function __construct(
         public readonly string $nombre,
@@ -21,8 +22,9 @@ final class CrearOfertaDTO
         public readonly array $productoIds,
         public readonly string $alcance,
         public readonly array $clienteIds,
-    ) {
-    }
+        public readonly string $alcanceSedes,
+        public readonly array $sucursalIds,
+    ) {}
 
     public static function fromArray(array $data): self
     {
@@ -37,6 +39,8 @@ final class CrearOfertaDTO
             productoIds: array_map('intval', $data['producto_ids'] ?? []),
             alcance: (string) ($data['alcance'] ?? 'todos'),
             clienteIds: array_map('intval', $data['cliente_ids'] ?? []),
+            alcanceSedes: (string) ($data['alcance_sedes'] ?? 'todas'),
+            sucursalIds: array_map('intval', $data['sucursal_ids'] ?? []),
         );
     }
 
@@ -51,6 +55,7 @@ final class CrearOfertaDTO
             'fecha_fin' => $this->fechaFin,
             'activa' => $this->activa,
             'alcance' => $this->alcance,
+            'alcance_sedes' => $this->alcanceSedes,
         ];
     }
 }

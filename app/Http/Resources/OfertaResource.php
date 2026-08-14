@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\Oferta;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Oferta */
+/** @mixin Oferta */
 final class OfertaResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -31,6 +32,11 @@ final class OfertaResource extends JsonResource
             'clientes' => $this->whenLoaded('clientes', fn () => $this->clientes->map(fn ($c) => [
                 'id' => $c->id,
                 'nombre' => $c->nombre,
+            ])),
+            'alcance_sedes' => $this->alcance_sedes,
+            'sucursales' => $this->whenLoaded('sucursales', fn () => $this->sucursales->map(fn ($s) => [
+                'id' => $s->id,
+                'nombre' => $s->nombre,
             ])),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

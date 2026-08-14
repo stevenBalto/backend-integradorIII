@@ -141,10 +141,12 @@ CREATE TABLE public.cupones (
     activo boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone,
     updated_at timestamp without time zone,
-    instancia_id bigint,
+    instancia_id bigint NOT NULL,
     alcance character varying(20) DEFAULT 'todos'::character varying NOT NULL,
     imagen_url character varying(255),
-    CONSTRAINT cupones_alcance_check CHECK (((alcance)::text = ANY ((ARRAY['todos'::character varying, 'especifico'::character varying])::text[])))
+    alcance_sedes character varying(20) DEFAULT 'todas'::character varying NOT NULL,
+    CONSTRAINT cupones_alcance_check CHECK (((alcance)::text = ANY ((ARRAY['todos'::character varying, 'especifico'::character varying])::text[]))),
+    CONSTRAINT cupones_alcance_sedes_check CHECK (((alcance_sedes)::text = ANY ((ARRAY['todas'::character varying, 'especifica'::character varying])::text[])))
 );
 
 
@@ -156,6 +158,19 @@ CREATE TABLE public.cupon_cliente (
     id bigint NOT NULL,
     cupon_id bigint NOT NULL,
     cliente_id bigint NOT NULL
+);
+
+
+--
+-- Name: cupon_sucursal; Type: TABLE; Schema: public; Owner: -
+-- Alcance por sede: si el cupon tiene alcance_sedes='especifica', solo se
+-- puede canjear en las sedes listadas aca (ver migracion_2026-08-14_ofertas_cupones_alcance_sedes.sql).
+--
+
+CREATE TABLE public.cupon_sucursal (
+    id bigint NOT NULL,
+    cupon_id bigint NOT NULL,
+    sucursal_id bigint NOT NULL
 );
 
 
@@ -554,10 +569,12 @@ CREATE TABLE public.ofertas (
     activa boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone,
     updated_at timestamp without time zone,
-    instancia_id bigint,
+    instancia_id bigint NOT NULL,
     alcance character varying(20) DEFAULT 'todos'::character varying NOT NULL,
     imagen_url character varying(255),
-    CONSTRAINT ofertas_alcance_check CHECK (((alcance)::text = ANY ((ARRAY['todos'::character varying, 'especifico'::character varying])::text[])))
+    alcance_sedes character varying(20) DEFAULT 'todas'::character varying NOT NULL,
+    CONSTRAINT ofertas_alcance_check CHECK (((alcance)::text = ANY ((ARRAY['todos'::character varying, 'especifico'::character varying])::text[]))),
+    CONSTRAINT ofertas_alcance_sedes_check CHECK (((alcance_sedes)::text = ANY ((ARRAY['todas'::character varying, 'especifica'::character varying])::text[])))
 );
 
 
@@ -569,6 +586,19 @@ CREATE TABLE public.oferta_cliente (
     id bigint NOT NULL,
     oferta_id bigint NOT NULL,
     cliente_id bigint NOT NULL
+);
+
+
+--
+-- Name: oferta_sucursal; Type: TABLE; Schema: public; Owner: -
+-- Alcance por sede: si la oferta tiene alcance_sedes='especifica', solo se
+-- puede canjear en las sedes listadas aca (ver migracion_2026-08-14_ofertas_cupones_alcance_sedes.sql).
+--
+
+CREATE TABLE public.oferta_sucursal (
+    id bigint NOT NULL,
+    oferta_id bigint NOT NULL,
+    sucursal_id bigint NOT NULL
 );
 
 
@@ -1411,11 +1441,11 @@ ALTER TABLE ONLY public.cupon_uso
 
 
 --
--- Name: cupones cupones_codigo_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: cupones cupones_instancia_codigo_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.cupones
-    ADD CONSTRAINT cupones_codigo_key UNIQUE (codigo);
+    ADD CONSTRAINT cupones_instancia_codigo_key UNIQUE (instancia_id, codigo);
 
 
 --

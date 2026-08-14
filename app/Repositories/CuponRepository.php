@@ -16,21 +16,22 @@ final class CuponRepository
     public function listarTodos(): Collection
     {
         return Cupon::query()
-            ->with('clientes')
+            ->with(['clientes', 'sucursales'])
             ->orderBy('codigo')
             ->get();
     }
 
     /**
      * @return Collection<int, Cupon>
-     * $clienteId: si viene, incluye cupones 'todos' + los 'especifico' asignados a ese cliente.
-     * Si es null (invitado), excluye los 'especifico'.
+     *                                $clienteId: si viene, incluye cupones 'todos' + los 'especifico' asignados a ese cliente.
+     *                                Si es null (invitado), excluye los 'especifico'.
      */
     public function listarActivos(?int $clienteId = null): Collection
     {
         $hoy = now('America/Costa_Rica')->toDateString();
 
         return Cupon::query()
+            ->with('sucursales')
             ->where('activo', true)
             ->where(function ($query) use ($hoy): void {
                 $query->whereNull('fecha_inicio')
@@ -56,7 +57,7 @@ final class CuponRepository
 
     public function buscarPorId(int $id): ?Cupon
     {
-        return Cupon::query()->with('clientes')->find($id);
+        return Cupon::query()->with(['clientes', 'sucursales'])->find($id);
     }
 
     public function buscarPorCodigo(string $codigo): ?Cupon
@@ -74,7 +75,7 @@ final class CuponRepository
         $hoy = now('America/Costa_Rica')->toDateString();
 
         return Cupon::query()
-            ->with('clientes')
+            ->with(['clientes', 'sucursales'])
             ->where('codigo', strtoupper($codigo))
             ->where('activo', true)
             ->where(function ($query) use ($hoy): void {
@@ -99,23 +100,26 @@ final class CuponRepository
     }
 
     /**
-     * @param array<string, mixed> $datos
-     * @param array<int> $clienteIds
+     * @param  array<string, mixed>  $datos
+     * @param  array<int>  $clienteIds
+     * @param  array<int>  $sucursalIds
      */
-    public function crear(array $datos, array $clienteIds = []): Cupon
+    public function crear(array $datos, array $clienteIds = [], array $sucursalIds = []): Cupon
     {
         $cupon = Cupon::create($datos);
         $cupon->clientes()->sync($clienteIds);
-        $cupon->load('clientes');
+        $cupon->sucursales()->sync($sucursalIds);
+        $cupon->load(['clientes', 'sucursales']);
 
         return $cupon;
     }
 
     /**
-     * @param array<string, mixed> $datos
-     * @param array<int>|null $clienteIds si es null, no se tocan las relaciones
+     * @param  array<string, mixed>  $datos
+     * @param  array<int>|null  $clienteIds  si es null, no se tocan las relaciones
+     * @param  array<int>|null  $sucursalIds  si es null, no se tocan las relaciones
      */
-    public function actualizar(Cupon $cupon, array $datos, ?array $clienteIds = null): Cupon
+    public function actualizar(Cupon $cupon, array $datos, ?array $clienteIds = null, ?array $sucursalIds = null): Cupon
     {
         $cupon->update($datos);
 
@@ -123,7 +127,11 @@ final class CuponRepository
             $cupon->clientes()->sync($clienteIds);
         }
 
-        $cupon->load('clientes');
+        if ($sucursalIds !== null) {
+            $cupon->sucursales()->sync($sucursalIds);
+        }
+
+        $cupon->load(['clientes', 'sucursales']);
 
         return $cupon;
     }
@@ -132,6 +140,7 @@ final class CuponRepository
     public function eliminar(Cupon $cupon): void
     {
         $cupon->clientes()->detach();
+        $cupon->sucursales()->detach();
         $cupon->delete();
     }
 

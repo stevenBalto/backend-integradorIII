@@ -16,22 +16,22 @@ final class OfertaRepository
     public function listarTodos(): Collection
     {
         return Oferta::query()
-            ->with(['productos', 'clientes'])
+            ->with(['productos', 'clientes', 'sucursales'])
             ->orderBy('nombre')
             ->get();
     }
 
     /**
      * @return Collection<int, Oferta>
-     * $clienteId: si viene, incluye ofertas 'todos' + las 'especifico' asignadas a ese cliente.
-     * Si es null (invitado), excluye las 'especifico'.
+     *                                 $clienteId: si viene, incluye ofertas 'todos' + las 'especifico' asignadas a ese cliente.
+     *                                 Si es null (invitado), excluye las 'especifico'.
      */
     public function listarActivas(?int $clienteId = null): Collection
     {
         $hoy = now('America/Costa_Rica')->toDateString();
 
         return Oferta::query()
-            ->with('productos')
+            ->with(['productos', 'sucursales'])
             ->where('activa', true)
             ->where(function ($query) use ($hoy): void {
                 $query->whereNull('fecha_inicio')
@@ -53,31 +53,39 @@ final class OfertaRepository
 
     public function buscarPorId(int $id): ?Oferta
     {
-        return Oferta::query()->with(['productos', 'clientes'])->find($id);
+        return Oferta::query()->with(['productos', 'clientes', 'sucursales'])->find($id);
     }
 
     /**
-     * @param array<string, mixed> $datos
-     * @param array<int> $productoIds
-     * @param array<int> $clienteIds
+     * @param  array<string, mixed>  $datos
+     * @param  array<int>  $productoIds
+     * @param  array<int>  $clienteIds
+     * @param  array<int>  $sucursalIds
      */
-    public function crear(array $datos, array $productoIds = [], array $clienteIds = []): Oferta
+    public function crear(array $datos, array $productoIds = [], array $clienteIds = [], array $sucursalIds = []): Oferta
     {
         $oferta = Oferta::create($datos);
         $oferta->productos()->sync($productoIds);
         $oferta->clientes()->sync($clienteIds);
-        $oferta->load(['productos', 'clientes']);
+        $oferta->sucursales()->sync($sucursalIds);
+        $oferta->load(['productos', 'clientes', 'sucursales']);
 
         return $oferta;
     }
 
     /**
-     * @param array<string, mixed> $datos
-     * @param array<int>|null $productoIds si es null, no se tocan las relaciones
-     * @param array<int>|null $clienteIds si es null, no se tocan las relaciones
+     * @param  array<string, mixed>  $datos
+     * @param  array<int>|null  $productoIds  si es null, no se tocan las relaciones
+     * @param  array<int>|null  $clienteIds  si es null, no se tocan las relaciones
+     * @param  array<int>|null  $sucursalIds  si es null, no se tocan las relaciones
      */
-    public function actualizar(Oferta $oferta, array $datos, ?array $productoIds = null, ?array $clienteIds = null): Oferta
-    {
+    public function actualizar(
+        Oferta $oferta,
+        array $datos,
+        ?array $productoIds = null,
+        ?array $clienteIds = null,
+        ?array $sucursalIds = null,
+    ): Oferta {
         $oferta->update($datos);
 
         if ($productoIds !== null) {
@@ -88,7 +96,11 @@ final class OfertaRepository
             $oferta->clientes()->sync($clienteIds);
         }
 
-        $oferta->load(['productos', 'clientes']);
+        if ($sucursalIds !== null) {
+            $oferta->sucursales()->sync($sucursalIds);
+        }
+
+        $oferta->load(['productos', 'clientes', 'sucursales']);
 
         return $oferta;
     }
@@ -98,6 +110,7 @@ final class OfertaRepository
     {
         $oferta->productos()->detach();
         $oferta->clientes()->detach();
+        $oferta->sucursales()->detach();
         $oferta->delete();
     }
 }
