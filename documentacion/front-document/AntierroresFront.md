@@ -13,6 +13,13 @@ Formato sugerido por entrada:
 - Fecha: YYYY-MM-DD
 ```
 
+### EF-32 — `margin:0 auto` en un hijo de `display:flex` desactiva el stretch por defecto (se encoge a su contenido)
+- Qué pasó: en Pedido de mostrador, la card de "Pedido" en el layout de 1 sola columna (oferta escaneada) tenía `max-width:760px; margin:0 auto` para centrarla — pero renderizaba a solo ~300px de ancho (su contenido mínimo), no 760px, en pantallas grandes.
+- Causa: el padre (`.admin-page`) es `display:flex; flex-direction:column`. Por default, `align-items:stretch` estira los hijos al ancho completo del eje cruzado — PERO si el hijo tiene **auto-margins en ese eje** (`margin-left`/`margin-right: auto`, que es justo lo que hace `margin:0 auto` para centrar), la spec de Flexbox le da prioridad a los auto-margins: el navegador calcula el ancho del hijo por su CONTENIDO (shrink-to-fit) en vez de estirarlo, y reparte el espacio sobrante entre los márgenes. Con `width` en `auto` (sin especificar), ese contenido no fuerza los 760px (inputs con `width:100%` son circulares en ese cálculo) y termina en ~300px.
+- Solución: agregar `width:100%` explícito ANTES del `max-width`. Con un `width` definido (no `auto`), el navegador resuelve el ancho a 100% del contenedor primero, el `max-width` lo capea a 760px, y RECIÉN AHÍ el margen `auto` reparte el sobrante para centrar — ya no depende del contenido.
+- Regla: si vas a centrar con `margin:0 auto` un elemento que es HIJO DIRECTO de un `display:flex` (fila o columna, el eje cruzado es el que importa), agregale siempre `width:100%` junto al `max-width` — si no, el stretch por defecto se pierde y el elemento se encoge a su contenido en vez de usar el ancho tope. No pasa con contenedores `block` normales (ahí `margin:auto` sí centra un `max-width` sin necesitar `width:100%`), es específico de ser hijo de flex.
+- Fecha: 2026-08-13
+
 ### EF-29 — `window.confirm()` saca a Chrome del fullscreen (rompía el modo extendido de Pedidos)
 - Qué pasó: en el modo extendido de Pedidos ("expandir todos", que entra en fullscreen del navegador), confirmar el pago de un pedido sacaba al usuario del modo extendido y le hacía perder el foco.
 - Causa: **Chrome sale del fullscreen apenas se abre un diálogo nativo de JS** (`confirm`/`alert`/`prompt`). Como `abrirPantallaCompleta()` escucha `fullscreenchange` para sincronizarse (`onFullscreenChange` → `cerrarPantallaCompleta()` si el usuario salió con Esc/F11), el `window.confirm()` disparaba ese mismo evento y cerraba el modo. No había nada mal en la lógica de Pedidos: el culpable era el diálogo nativo.
