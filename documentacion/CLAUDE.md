@@ -58,7 +58,7 @@ intención es simple aunque toque un dominio pesado, bajá de tier automáticame
 | Pregunta general, arquitectura, planificación | Respuesta directa (sin agente) | liviano | bajo | no |
 
 ## Reglas del esquema
-- 33 tablas (21/28 originales del ERD + `insumos`/`insumo_movimientos` del
+- 35 tablas (21/28 originales del ERD + `insumos`/`insumo_movimientos` del
   módulo Inventario 2026-07-13 + 6 tablas del multi-tenant/superadmin del
   compañero 2026-07-12/13 [`instancias`, `superadministradores`, `modulos`,
   `usuario_modulo`, `password_reset_tokens`, más columnas `instancia_id` en
@@ -75,8 +75,23 @@ intención es simple aunque toque un dominio pesado, bajá de tier automáticame
   `ofertas.alcance`/`cupones.alcance` (varchar(20), NOT NULL, DEFAULT 'todos',
   CHECK ('todos','especifico')) + las puente `oferta_cliente`/`cupon_cliente`
   (UNIQUE del par, FK a `ofertas`/`cupones`/`users` con ON DELETE CASCADE).
+  **Cambio 2026-08-14 (aprobado): ofertas y cupones dejan de ser
+  nacionales/globales.** `ofertas.instancia_id`/`cupones.instancia_id` pasan
+  de nullable a **NOT NULL** (las filas preexistentes quedaron asignadas a la
+  instancia 1, Rooster Pizza). `cupones.codigo` pasa de UNIQUE global a
+  **UNIQUE(instancia_id, codigo)** — dos negocios distintos ya pueden repetir
+  código. Se agregó `alcance_sedes` (varchar(20), NOT NULL, DEFAULT 'todas',
+  CHECK ('todas','especifica')) a ambas tablas — no confundir con `alcance`
+  (por CLIENTE): `alcance_sedes` restringe en cuáles SEDES del negocio se
+  puede *canjear* la oferta/cupón (se sigue viendo/administrando desde
+  cualquier sede, solo el canje se valida contra la sucursal del pedido). Se
+  agregaron las puente `oferta_sucursal`/`cupon_sucursal` (mismo patrón que
+  `oferta_cliente`/`cupon_cliente`: UNIQUE del par, FK a
+  `ofertas`/`cupones`/`sucursales` con ON DELETE CASCADE). Ver
+  `migracion_2026-08-14_ofertas_cupones_por_instancia.sql` y
+  `migracion_2026-08-14_ofertas_cupones_alcance_sedes.sql`.
   Ningún agente agrega tablas nuevas sin aprobación explícita del usuario.
-- **El conteo de 33 excluye `migrations`** (tabla de control de Laravel; el
+- **El conteo de 35 excluye `migrations`** (tabla de control de Laravel; el
   esquema se mantiene por SQL, no por migraciones — ver `COMO-CORRER.md`).
 - **Las dos fuentes del esquema tienen que actualizarse SIEMPRE juntas**: el
   `.sql` incremental en `bd-doc/` y el dump `bd-doc/rooster_pizza_bd.sql`.

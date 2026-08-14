@@ -12,6 +12,21 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-14 — Ofertas/cupones pasan a la instancia + alcance por sede
+- **Contexto**: pedido del usuario tras revisar el trabajo de sedes del compañero. Iteró varias veces sobre el alcance real (ver conversación) — la versión final, la única implementada:
+  - Ofertas/cupones ya NO son nacionales/globales (`Oferta`/`Cupon` sin `instancia_id` obligatorio) — pasan a pertenecer a la instancia completa (el negocio), visibles/administrables desde cualquier sede por igual. Se descartó por completo una idea intermedia (clonar catálogo al crear una instancia nueva) — no llegó a mergearse, no hay rastro en el código final.
+  - Nuevo: alcance POR SEDE opcional (`alcance_sedes` + puente `oferta_sucursal`/`cupon_sucursal`) — al crear la oferta/cupón se puede restringir en cuáles sedes se puede CANJEAR (default `'todas'`). No confundir con `alcance` (ya existente, por CLIENTE específico).
+- **Hecho**:
+  - Migración `migracion_2026-08-14_ofertas_cupones_por_instancia.sql`: `ofertas.instancia_id`/`cupones.instancia_id` pasan de nullable a NOT NULL (backfill a instancia 1 = Rooster). `cupones.codigo` pasa de `UNIQUE(codigo)` global a `UNIQUE(instancia_id, codigo)` — dos negocios ya pueden repetir código.
+  - Migración `migracion_2026-08-14_ofertas_cupones_alcance_sedes.sql`: columna `alcance_sedes` (default `'todas'`, CHECK) + tablas `oferta_sucursal`/`cupon_sucursal` (mismo patrón que `oferta_cliente`/`cupon_cliente`).
+  - Modelos `Oferta`/`Cupon`: agregado `PerteneceAInstancia` + relación `sucursales()` + helper `aplicaEnSucursal(int $sucursalId): bool`.
+  - `OfertaRepository`/`CuponRepository`: `crear()`/`actualizar()` reciben `$sucursalIds`, hacen `sync()` sobre `sucursales()`, cargan la relación en todos los `with()` (incluidos los de canje/checkout).
+  - DTOs (`Crear`/`Actualizar` de Oferta y Cupón): agregado `alcanceSedes`/`sucursalIds`. Requests: `alcance_sedes` (in: todas/especifica) + `sucursal_ids` (exists:sucursales,id). Resources: exponen `alcance_sedes` + `sucursales` (id+nombre).
+  - **Validación real en el canje**: `PedidoService::crear()` (usado tanto por el checkout normal como por Pedido de mostrador) valida `$cupon->aplicaEnSucursal($dto->sucursalId)` / `$oferta->aplicaEnSucursal(...)` — 422 con mensaje claro si la sede no aplica. Es el ÚNICO punto real de bloqueo; el resto del sistema solo informa.
+  - Tests: `tests/Feature/OfertaCuponAlcanceSedeTest.php` (5 casos: alcance 'todas'/'especifica' a nivel modelo, alta por API con sedes). Suite completa: 35/36 (la única falla, `PedidoTest`, es preexistente y depende de la hora real — fuera de horario de negocio, no relacionada).
+- **NO tocar / nota**: `ofertas.alcance`/`cupones.alcance` (por CLIENTE) y `alcance_sedes` (por SEDE) son conceptos independientes, ambos pueden estar activos a la vez en la misma oferta/cupón. Las ofertas/cupones con `alcance_sedes='especifica'` clonados o creados desde cero SIEMPRE deberían arrancar en `'todas'` si no se especifica nada — no asumir que existe lógica de sede por defecto en otro lado.
+- **Pendiente / gap conocido (no es de esta sesión, no se tocó)**: los endpoints PÚBLICOS de listado (`GET /api/ofertas`, `/api/cupones`, `/api/productos`) no resuelven "instancia actual" para invitados/guests sin sesión — el `PerteneceAInstancia` solo filtra cuando hay un `User` autenticado. No se investigó más a fondo cómo la app cliente resuelve qué instancia le corresponde a un visitante sin cuenta; queda fuera del alcance de este cambio.
+
 ## Sesión 2026-06-28 — Módulo 1: Auth (backend)
 - Hecho:
   - `personal_access_tokens` alineada a Sanctum (polimórfica). Ver `bd-doc/migracion_2026-06-28_sanctum_personal_access_tokens.sql` y `AntierroresBack EB-01`.

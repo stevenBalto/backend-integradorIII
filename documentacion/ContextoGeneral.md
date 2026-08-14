@@ -51,6 +51,23 @@ propias sucursales, usuarios, productos, pedidos, etc. (aislados por
 `instancia_id` vía el trait `PerteneceAInstancia`). Detalle de diseño:
 `back-document/ARQUITECTURA-SUPERADMIN-MULTITENANT.md`.
 
+**Sedes = sucursales de la MISMA instancia (2026-08-13, compañero):** una sede
+(La Fortuna, Liberia, Cañas...) comparte catálogo, precios, ofertas y cupones
+del negocio completo — solo se aísla la operación diaria (pedidos/analíticas)
+vía `PerteneceASucursal`. El alta de sedes vive únicamente en
+`/superadmin/sedes` (antes `/superadmin/instancias`, redirigido). Ver
+`HiloActualBack.md` sesión 2026-08-13.
+
+**Ofertas y cupones (2026-08-14): dejaron de ser nacionales/globales, pasan a
+pertenecer a la instancia (todo el negocio, no a una sede puntual) — se ven y
+administran desde cualquier sede por igual.** Además se agregó un alcance
+POR SEDE opcional (`alcance_sedes`/`oferta_sucursal`/`cupon_sucursal`, no
+confundir con `alcance` que es por cliente): al crearla se puede restringir
+en cuáles sedes se puede *canjear*; si no se restringe, aplica en todas. El
+canje (Pedido de mostrador) valida la sede elegida contra esa lista y
+bloquea con error si no coincide. Ver `HiloActualBack.md`/`HiloActualFront.md`
+sesión 2026-08-14.
+
 ## Roles
 - super_admin: acceso total, configuración global, todas las sucursales.
 - admin_sede: solo su sucursal.

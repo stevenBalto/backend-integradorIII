@@ -12,6 +12,15 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-14 — Alcance por sede en Ofertas y Cupones
+- **Contexto**: acompaña el cambio de backend de la misma fecha (ver `HiloActualBack.md`) — ofertas/cupones pasan a pertenecer al negocio completo (antes nacionales) y se les puede restringir a sedes específicas para canjear.
+- **Admin (`admin/ofertas`)**: nuevo picker de sedes (mismo patrón que el picker de clientes ya existente — `modalSedesOpen`/`ofertaSedesSel`/`cuponSedesSel`), con radio "Todas las sedes" / "Sedes específicas" en ambos formularios (Nueva/Editar oferta y cupón). Usa `SucursalService.listarAdmin()`.
+- **Cliente (`app/ofertas` — tabs Ofertas/Cupones)**: cada tarjeta ahora muestra una etiqueta informativa — "Disponible en todas las sedes" o "Disponible en: X, Y". Es solo texto, no filtra ni cambia según ninguna "sede actual" (el cliente no tiene una hasta que arma el pedido — se decidió así explícitamente, más simple que intentar resolver contexto de sede en la navegación).
+- **Pedido de mostrador (`admin/pedidos-mostrador`)**: si el cupón/oferta escaneado tiene sedes específicas y la sucursal elegida en el formulario no está en esa lista, se bloquea — no se puede confirmar el pedido. Nuevo getter reactivo `sedeNoDisponible` (cambia con solo tocar el selector de sucursal, sin re-escanear). El selector de sucursal se mantiene visible/usable para poder corregirlo; lo que se oculta es el botón "Confirmar pedido", reemplazado por un mensaje claro. Badge rojo duplicado arriba (header/mobile) para que se vea sin bajar hasta el botón.
+- **Modelos actualizados**: `Oferta`/`Cupon` (`alcance_sedes`, `sucursales?`), `OfertaPayload`/`CuponPayload` (`alcance_sedes`, `sucursal_ids`) — cualquier lugar que arme un payload a mano tiene que incluir estos 2 campos (ya se corrigió `admin/inicio` que también los arma para el toggle activar/desactivar rápido).
+- Verificado end-to-end con Chrome real (CDP directo): creado un cupón restringido a 1 sola sede, confirmado que bloquea con una sede distinta y libera con la correcta — capturas revisadas, datos de prueba limpiados después.
+- **NO tocar / nota**: la idea de "cargar catálogo de productos al crear una sede/instancia nueva" se descartó por completo tras revisar que ya comparten catálogo automáticamente (mismo `instancia_id`) — no quedó código de eso en el frontend.
+
 ## Sesión 2026-08-13 — Pedido de mostrador (`admin/pedidos-mostrador`): rediseño responsive + reglas de oferta vs. cupón
 - **Contexto**: pantalla que se abre al escanear (por QR) una oferta o un cupón desde `admin/ofertas` — el staff arma ahí el pedido de un cliente de mostrador. Tenía varios problemas de responsive y de reglas de negocio no implementadas.
 - **Regla de negocio nueva — oferta vs. cupón**:
