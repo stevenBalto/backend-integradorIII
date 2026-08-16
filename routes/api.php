@@ -22,6 +22,7 @@ use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\PuntosController;
+use App\Http\Controllers\PushTokenController;
 use App\Http\Controllers\ResenaController;
 use App\Http\Controllers\SucursalController;
 use App\Http\Controllers\SuperAdmin\InstanciaController;
@@ -72,6 +73,11 @@ Route::middleware([LogRequestTiming::class])->group(function () {
         // 'mios/buscar' debe registrarse ANTES que 'mios/{id}', si no Laravel toma "buscar" como {id}.
         Route::get('/pedidos/mios/buscar', [PedidoController::class, 'misPedidosBuscar']);
         Route::get('/pedidos/mios/{id}', [PedidoController::class, 'misPedidosShow']);
+
+        // Notificaciones push (FCM): la app registra su dispositivo al entrar y
+        // lo da de baja al salir, para no seguir avisandole al telefono equivocado.
+        Route::post('/push/token', [PushTokenController::class, 'store']);
+        Route::delete('/push/token', [PushTokenController::class, 'destroy']);
 
         // Reseñas del cliente (solo pedidos propios ya entregados).
         Route::get('/resenas/pendientes', [ResenaController::class, 'pendientes']);

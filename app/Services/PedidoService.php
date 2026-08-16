@@ -41,12 +41,31 @@ final class PedidoService
         'cancelado' => [],
     ];
 
+    /** Estado tal como se le muestra al CLIENTE en el push (no el valor tecnico). */
+    private const ESTADO_LABEL = [
+        'pendiente' => 'pendiente',
+        'en_proceso' => 'en preparación',
+        'listo' => 'listo',
+        'entregado' => 'entregado',
+        'cancelado' => 'cancelado',
+    ];
+
+    /** Cuerpo del push por estado. */
+    private const ESTADO_MENSAJE = [
+        'pendiente' => 'Recibimos tu pedido, ya lo estamos revisando.',
+        'en_proceso' => 'Tu pedido ya está en la cocina.',
+        'listo' => '¡Tu pedido está listo! Pasá a retirarlo.',
+        'entregado' => '¡Buen provecho! Gracias por tu compra.',
+        'cancelado' => 'Tu pedido fue cancelado. Consultanos si necesitás ayuda.',
+    ];
+
     public function __construct(
         private readonly PedidoRepository $pedidos,
         private readonly PedidoHistorialRepository $historial,
         private readonly PuntosMovimientoRepository $puntos,
         private readonly SucursalRepository $sucursales,
         private readonly NotificacionService $notificaciones,
+        private readonly PushNotificationService $push,
         private readonly CuponService $cupones,
         private readonly OfertaService $ofertas,
         private readonly ConfiguracionService $configuracion,
@@ -393,7 +412,7 @@ final class PedidoService
      */
     public function cambiarEstado(int $pedidoId, string $nuevoEstado, ?string $comentario, ?int $cambiadoPor): Pedido
     {
-        return DB::transaction(function () use ($pedidoId, $nuevoEstado, $comentario, $cambiadoPor): Pedido {
+        $pedido = DB::transaction(function () use ($pedidoId, $nuevoEstado, $comentario, $cambiadoPor): Pedido {
             $pedido = $this->pedidos->buscarPorId($pedidoId);
 
             if ($pedido === null) {
@@ -431,6 +450,48 @@ final class PedidoService
                 'historial.cambiadoPor',
             ]);
         });
+
+        // Avisarle al cliente en el telefono (fuera de la transaccion: un fallo de
+        // push NUNCA debe tumbar el cambio de estado que el admin ya confirmo).
+        try {
+            $this->notificarPushCambioEstado($pedido);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo enviar el push de cambio de estado', [
+                'pedido_id' => $pedido->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $pedido;
+    }
+
+    /**
+     * Push al cliente duenio del pedido con su nuevo estado.
+     *
+     * Los pedidos de invitado se saltean: se guardan a nombre del usuario centinela
+     * "Invitado", que no es una persona con la app instalada.
+     */
+    private function notificarPushCambioEstado(Pedido $pedido): void
+    {
+        $cliente = $pedido->cliente;
+
+        if ($cliente === null || $cliente->esInvitado()) {
+            return;
+        }
+
+        $estado = $pedido->estado;
+
+        $this->push->enviarAUsuario(
+            (int) $cliente->id,
+            "Tu pedido {$pedido->codigo} está ".(self::ESTADO_LABEL[$estado] ?? $estado),
+            self::ESTADO_MENSAJE[$estado] ?? "Tu pedido {$pedido->codigo} cambió de estado.",
+            [
+                'tipo' => 'pedido_estado',
+                'pedido_id' => $pedido->id,
+                'codigo' => $pedido->codigo,
+                'estado' => $estado,
+            ],
+        );
     }
 
     /**

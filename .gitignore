@@ -5,6 +5,10 @@
 /public/storage
 /storage/*.key
 /storage/pail
+# Cuenta de servicio de Firebase (private key RSA para mandar los push por FCM).
+# Es un secreto: cada dev/servidor pone el suyo, nunca va al repo. Ya lo cubre el
+# '*' de storage/app/.gitignore; se explicita para que se vea que es un secreto.
+/storage/app/firebase-service-account.json
 /vendor
 .env
 .env.backup
