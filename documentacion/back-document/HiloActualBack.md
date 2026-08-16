@@ -12,6 +12,17 @@ Formato sugerido:
 - Pendiente: <qué sigue>
 ```
 
+## Sesión 2026-08-16 (2) — Convención de tamaños de pizza (Grande/Mediana/Pequeña)
+- **ACCIÓN REQUERIDA PARA TODO EL EQUIPO**: correr `bd-doc/datos_2026-08-16_tamanos_pizzas_grande_mediana_pequena.sql` contra tu BD local (`psql -h 127.0.0.1 -U postgres -d rooster_pizza -f documentacion/back-document/bd-doc/datos_2026-08-16_tamanos_pizzas_grande_mediana_pequena.sql`). Es SQL directo (INSERT de datos, no migración de esquema — `producto_tamanos` ya existía, sin cambios de estructura); si ya corriste el script no vuelve a duplicar porque filtra por `p.id IN (...)`, pero si agregaste tamaños a mano a esas 8 pizzas en tu BD, revisá antes de correrlo para no duplicar filas.
+- **Motivo (pedido explícito del usuario)**: el botón "Añadir al carrito" salía deshabilitado/opaco al abrir un platillo con tamaños, porque no había ninguno preseleccionado (fix en frontend, ver `HiloActualFront.md`). De paso, el usuario pidió agregar tamaños a las pizzas que no tenían.
+- **Convención nueva para pizzas, de acá en adelante**: toda pizza del menú debe tener 3 filas en `producto_tamanos`:
+  - `Grande` — `precio` = `precio_base` de la pizza — `descripcion` = `12"` — `orden` = 1
+  - `Mediana` — `precio` = `precio_base - 2000` — `descripcion` = `8"` — `orden` = 2
+  - `Pequeña` — `precio` = `precio_base - 4000` — `descripcion` = `6"` — `orden` = 3
+  - El frontend ya muestra `nombre` + `descripcion` juntos en el picker (`"Grande — 12\""`), no hace falta meter las pulgadas en el nombre.
+- **Alcance de este cambio**: se aplicó SOLO a las 8 pizzas reales que no tenían ningún tamaño (Brazileña Rooster, Camarones Rooster, Fire Rooster Pizza, Hawaiana Rooster, Jamón & Hongos, Margarita Rooster, Pizza Lomito Rooster, Prosciutto Rooster). **NO se tocaron** las 6 pizzas que ya usaban el esquema viejo `Regular`/`Personal` (Pancetta, Pepperoni, Tres Carnes, Salame, Vegetariana, White/Red Rooster) — decisión explícita del usuario para no perder el detalle de pedidos históricos que ya referencian esos tamaños por FK. Si en algún momento se quiere migrar esas 6 al esquema nuevo, es una decisión aparte (hay que decidir qué hacer con los pedidos que apuntan a `Regular`/`Personal`).
+- Cuando alguien dé de alta una pizza nueva desde el panel admin, debe seguir esta misma convención (3 tamaños, misma regla de precio) para que quede consistente con el resto del menú.
+
 ## Sesión 2026-08-14 (2) — Inventario/notificaciones/clientes dejan de cruzarse entre sedes + bloqueo al escanear
 - **Contexto**: el usuario probó las sedes nuevas (Liberia/Tilarán) y encontró 2 problemas reales sobre lo de la sesión anterior:
   1. Una sede nueva heredaba automáticamente inventario, notificaciones y la lista de clientes de las demás sedes del negocio — solo productos/ofertas/cupones deberían compartirse.
