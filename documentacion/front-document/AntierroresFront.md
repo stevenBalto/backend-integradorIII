@@ -282,3 +282,31 @@ Formato sugerido por entrada:
 - Solución: validador propio `formatoEmail` que corta la cadena en la primera `@` y rechaza si la local-part pasa de 64, más bajar el total a 120. Espejado en el backend con `regex:/^[^@]{1,64}@/`, porque la validación que cuenta es la del servidor.
 - Regla: `Validators.email` es una comprobación de forma, no de tamaño — si el campo puede recibir basura, ponerle tope total **y** tope de local-part. Y todo límite del frontend tiene que existir igual en el backend: el del cliente es comodidad, no defensa.
 - Fecha: 2026-08-11
+
+### EF-33 — Un breakpoint de tabla no se elige por convención (767px), se elige midiendo las columnas
+- Qué pasó: se convirtió la tabla de Pedidos a tarjetas en móvil con el corte habitual del proyecto (`max-width: 767px`). A 795px la tabla volvía a su forma normal y seguía sin caber: el campo Pago se leía "NO PA" en vez de "NO PAGADO".
+- Causa: 767px es el corte de "móvil" del sistema, pero no dice nada del ancho que necesita ESTA tabla. Con 7-8 columnas hacen falta ~900px de ancho útil, y desde 1024px aparece además el sidebar del panel (~250px), así que el viewport tiene que ser bastante mayor para que las columnas entren completas.
+- Solución: correr el corte a `max-width: 1199px`. La tabla aparece solo cuando de verdad hay lugar; por debajo, tarjetas.
+- Regla: el breakpoint de una tabla se calcula sumando el ancho mínimo de sus columnas y restando lo que ocupa el chrome de la página (sidebar, paddings), no copiando el breakpoint "de móvil" del proyecto. Si el diseño se rompe justo por encima del corte, el corte está mal puesto.
+- Fecha: 2026-08-16
+
+### EF-34 — Un estilo de componente le gana al patrón global aunque tenga la misma especificidad
+- Qué pasó: el patrón `.admin-table--cards` (global.scss) funcionaba en Pedidos y Dashboard, pero en Menú, Ofertas e Inicio la tarjeta salía más ancha que su contenedor y aparecía cortada por la derecha ("D PEDIDO" en vez de "ID PEDIDO", valores fuera de vista).
+- Causa: esas tres páginas tenían en su propio `.scss` un `@media (max-width:767px) { .admin-table { width: max-content } }` — puesto en su momento para conservar el `thead` sticky en móvil (**EF-27**). Angular añade el atributo de encapsulación a los selectores del componente, así que ese selector pesa más que el `.admin-table--cards` global y ganaba, sin importar el orden de los archivos.
+- Solución: acotar esas reglas con `:not(.admin-table--cards)`. En modo tarjeta no hay `thead` que fijar ni scroll horizontal que habilitar, así que la exclusión no les quita nada. Mismo tratamiento para el `display: table` que Pedidos y Dashboard fuerzan con la lista vacía.
+- Regla: antes de dar por bueno un patrón global sobre `.admin-table` (o cualquier clase compartida), buscar overrides locales con `grep -rn "max-content\|display: table" src/app/**/*.scss`. Un estilo de componente le gana al global aunque la especificidad "en papel" sea la misma.
+- Fecha: 2026-08-16
+
+### EF-35 — El cartel de "press Esc to exit full screen" es UI del navegador: no se puede estilizar
+- Qué pasó: al abrir el modo extendido de Pedidos, Chrome mostraba encima su cartel gris "localhost:4200 – To exit full screen, press Esc". Se pidió que tuviera el estilo del sistema.
+- Causa: ese aviso lo dibuja el navegador **fuera del documento** cuando la página llama a `requestFullscreen()`. Es una advertencia de seguridad (igual que el indicador de "compartiendo pantalla"): no está en el DOM, no lo alcanza ningún CSS y no hay API para ocultarlo o moverlo.
+- Solución: dejar de pedir fullscreen del navegador. El overlay propio ya oculta el sidebar y ocupa todo el panel, así que el modo se siente igual de inmersivo; lo único que se pierde es esconder la barra de direcciones. El aviso de cómo salir lo damos nosotros con el **toast del sistema** (`ion-toast`, ya tematizado en global.scss), no con una píldora a medida.
+- Regla: lo que dibuja el navegador (diálogos nativos, cartel de fullscreen, autocompletado, `alert`) no se estiliza — si el diseño lo exige, hay que evitar la API que lo provoca y recrear el aviso dentro de la app. Y al recrearlo, usar el componente de aviso que ya existe en el sistema antes de inventar uno nuevo.
+- Fecha: 2026-08-16
+
+### EF-36 — Cerrar por "clic fuera" con el evento `click`: al arrastrar, el clic cae en el ancestro común
+- Qué pasó: en el buscador colapsable del panel, si se escribía un texto largo, se hacía Ctrl+A y luego se seleccionaba fuera del campo, el buscador se quedaba abierto con el texto desbordando.
+- Causa: el cierre escuchaba `document:click` y comparaba `host.contains(ev.target)`. Cuando el gesto empieza dentro del input y termina fuera (arrastrar para seleccionar), el navegador dispara el `click` en el **ancestro común** de los dos puntos, no en el elemento donde se soltó: `contains()` daba verdadero y no cerraba.
+- Solución: escuchar `document:pointerdown`, que se evalúa donde **empieza** el gesto. Además, al cerrar se sueltan foco, selección y `scrollLeft` del input: con el texto seleccionado el navegador seguía pintando la selección fuera del contenedor pese al `overflow: hidden`.
+- Regla: para "cerrar al tocar fuera" usar `pointerdown`/`mousedown`, nunca `click`. Con `click` cualquier arrastre que cruce el borde del componente se evalúa contra el ancestro común y el cierre no ocurre.
+- Fecha: 2026-08-16
