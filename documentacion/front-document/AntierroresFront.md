@@ -320,3 +320,26 @@ Formato sugerido por entrada:
 - Solución: escuchar `document:pointerdown`, que se evalúa donde **empieza** el gesto. Además, al cerrar se sueltan foco, selección y `scrollLeft` del input: con el texto seleccionado el navegador seguía pintando la selección fuera del contenedor pese al `overflow: hidden`.
 - Regla: para "cerrar al tocar fuera" usar `pointerdown`/`mousedown`, nunca `click`. Con `click` cualquier arrastre que cruce el borde del componente se evalúa contra el ancestro común y el cierre no ocurre.
 - Fecha: 2026-08-16
+
+### EF-37 — `display:flex` en el scroll de un `ion-content` rompe el ancho de TODA la lista
+- Qué pasó: en Mi cuenta (logueado), de 768px para arriba las tarjetas salían con anchos distintos entre sí y desalineadas: la barra roja de Roosters ancha, la tarjeta de perfil mediana, y cada grupo con un ancho propio. En móvil se veía bien, lo que despista.
+- Causa: para centrar verticalmente la pantalla de **invitado** se le había puesto `::part(scroll) { display:flex; flex-direction:column }` a **todo** el `ion-content`, que las dos vistas comparten. Eso convierte a cada bloque de la lista en *flex item*, y ahí está el detalle que no es obvio: **un `margin: 0 auto` en un flex item deja de estirar y pasa a shrink-to-fit**. Resultado: cada tarjeta se dimensionaba por su propio contenido (la de perfil por el largo del nombre, cada grupo por su label más largo), mientras `.rooster-card` seguía ancha porque tenía `width: 100%` explícito. En móvil no pasaba porque ahí ningún bloque usa `margin auto`.
+- Solución: scopear el flex a la vista que lo necesita — `[class.cuenta-content--invitado]="(usuario$ | async) === null"` en el `ion-content` y `.cuenta-content--invitado::part(scroll)` en el SCSS. La lista logueada vuelve a layout de bloque.
+- Cómo verificar este tipo de cosas: medir, no mirar. Con `getBoundingClientRect()` sobre todos los bloques en varios anchos y comparando que `left` y `right` sean únicos, el problema (y el arreglo) quedan en evidencia sin depender del ojo.
+- Regla: no cambiar el `display` del scroll de un `ion-content` que sirve a dos vistas distintas. Si una necesita centrado vertical, scopealo con una clase. Y si aparecen anchos raros dentro de un contenedor, revisar primero si algo lo volvió flex: los `margin auto` cambian de significado.
+- Fecha: 2026-08-16
+
+### EF-38 — Una imagen protegida por token no se puede mostrar con `<img src="/api/...">`
+- Qué pasó: la foto de perfil se sirve desde un endpoint con `auth:sanctum`. Puesta directo como `<img src="/api/cuenta/foto">` volvía 401 y el avatar quedaba roto.
+- Causa: la petición de un `<img>` la dispara el navegador por su cuenta, **por fuera de Angular**. No pasa por el `HttpInterceptor` que agrega el header `Authorization`, así que llega sin credenciales.
+- Solución: bajar la imagen con `HttpClient` usando `responseType: 'blob'` (ahí sí corre el interceptor) y envolverla con `URL.createObjectURL(blob)` para el `src`.
+- Cuidado con la fuga de memoria: los object URL viven hasta que se revocan a mano. Hay que guardar el último y llamar `URL.revokeObjectURL()` antes de crear otro y en `ngOnDestroy`; si no, cada recarga de la foto deja el blob anterior colgado.
+- Regla: cualquier recurso que exija token (imagen, PDF, export) se descarga como blob por `HttpClient`, nunca por `src`/`href` directo.
+- Fecha: 2026-08-16
+
+### EF-39 — `tsc --noEmit` no valida los templates: un binding con `undefined` pasa y luego rompe el build
+- Qué pasó: `npx tsc --noEmit` daba verde, pero `ng serve` fallaba con `TS2322: Type 'boolean | undefined' is not assignable to type 'string | boolean'` en `[disabled]="u.es_google"`.
+- Causa: `tsc` solo mira los `.ts`. El chequeo de tipos **dentro de los templates HTML** lo hace el compilador de Angular, en una pasada aparte. Una propiedad opcional (`es_google?: boolean`) es `boolean | undefined`, y `[disabled]` no acepta `undefined`.
+- Solución: normalizar en el binding (`[disabled]="!!u.es_google"`).
+- Regla: `tsc --noEmit` no alcanza para dar por bueno un cambio que toca templates. La verificación real es que `ng serve`/`ng build` compile. Y toda propiedad opcional usada en un binding va con `!!` o con un default.
+- Fecha: 2026-08-16

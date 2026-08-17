@@ -64,6 +64,18 @@ Route::middleware([LogRequestTiming::class])->group(function () {
         // debe poder entrar aquí justamente para cambiarla).
         Route::post('/cuenta/cambiar-password', [CuentaController::class, 'cambiarPassword']);
 
+        // Perfil propio: nombre / teléfono / correo. El saldo de Roosters NO se
+        // edita por aquí (solo se mueve con pedidos y canjes).
+        Route::put('/cuenta/perfil', [CuentaController::class, 'actualizarPerfil']);
+
+        // Foto de perfil. Es dato PRIVADO: siempre se resuelve contra el usuario
+        // del token, nunca por un id en la URL, así que nadie puede pedir la de
+        // otra persona. Por eso tampoco va a Cloudinary (una URL pública la
+        // vería cualquiera que la tenga).
+        Route::get('/cuenta/foto', [CuentaController::class, 'verFoto']);
+        Route::post('/cuenta/foto', [CuentaController::class, 'subirFoto'])->middleware('throttle:20,1');
+        Route::delete('/cuenta/foto', [CuentaController::class, 'eliminarFoto']);
+
         // Roosters (puntos de fidelidad) del cliente.
         Route::get('/puntos/mios', [PuntosController::class, 'mios']);
 

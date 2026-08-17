@@ -2374,3 +2374,25 @@ CREATE INDEX IF NOT EXISTS request_timings_path_index    ON public.request_timin
 CREATE INDEX IF NOT EXISTS request_timings_route_index   ON public.request_timings (route);
 CREATE INDEX IF NOT EXISTS request_timings_user_id_index ON public.request_timings (user_id);
 
+
+
+--
+-- Name: usuario_fotos; Type: TABLE; Schema: public; Owner: -
+-- Agregada 2026-08-16 (aprobada por el usuario). Foto de perfil PRIVADA:
+-- se guarda en BD y no en Cloudinary porque solo la puede ver su dueno
+-- autenticado. Tabla aparte de `users` para que el bytea no viaje en los
+-- "SELECT *" de Eloquent. Ver migracion_2026-08-16_usuario_fotos.sql
+--
+
+CREATE TABLE IF NOT EXISTS public.usuario_fotos (
+    user_id      bigint       NOT NULL,
+    contenido    bytea        NOT NULL,
+    mime         varchar(40)  NOT NULL,
+    tamano_bytes integer      NOT NULL,
+    created_at   timestamp    NULL,
+    updated_at   timestamp    NULL,
+    CONSTRAINT usuario_fotos_pkey PRIMARY KEY (user_id),
+    CONSTRAINT fk_usuario_fotos_user FOREIGN KEY (user_id) REFERENCES public.users (id) ON DELETE CASCADE,
+    CONSTRAINT chk_usuario_fotos_mime CHECK (mime IN ('image/jpeg', 'image/png', 'image/webp')),
+    CONSTRAINT chk_usuario_fotos_tamano CHECK (tamano_bytes > 0 AND tamano_bytes <= 3145728)
+);

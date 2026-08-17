@@ -27,9 +27,7 @@ use Throwable;
  */
 final class GoogleAuthController extends Controller
 {
-    public function __construct(private readonly GoogleAuthService $google)
-    {
-    }
+    public function __construct(private readonly GoogleAuthService $google) {}
 
     /**
      * GET /api/auth/google/redirect — manda al usuario a elegir su cuenta.
@@ -113,7 +111,7 @@ final class GoogleAuthController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return (new UserResource($resultado['user']))
+        return (new UserResource($resultado['user']->loadExists('foto')))
             ->additional(['token' => $resultado['token']])
             ->response();
     }

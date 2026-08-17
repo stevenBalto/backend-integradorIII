@@ -193,3 +193,26 @@ Formato sugerido por entrada:
 - Solución: consultar el estado fresco en el propio middleware (`SucursalRepository::buscarPorId($actor->sucursal_id)`) en vez de leer la relación del actor.
 - Regla: una decisión de autorización no debe apoyarse en relaciones que quizá vengan cacheadas del request. Consultar el dato en el momento, o refrescar explícitamente (`->fresh()` / `->load()`). Si un test de "cambio de estado y vuelve" falla, sospechar del modelo en memoria antes que de la lógica.
 - Fecha: 2026-08-13
+
+### EB-24 — Guardar binario en Postgres con PDO: el error real llega disfrazado de "Malformed UTF-8"
+- Qué pasó: al guardar la foto de perfil (`bytea`) el endpoint devolvía 500 con `InvalidArgumentException: Malformed UTF-8 characters, possibly incorrectly encoded`. El mensaje apunta a JSON, así que la sospecha natural es el request o el response — y ahí se pierde tiempo.
+- Causa real: **un `QueryException`**. PDO manda los parámetros como TEXTO, así que al bindear el binario crudo contra una columna `bytea` Postgres intenta leerlo como UTF-8 y falla con `invalid byte sequence`. Lo confuso es lo que pasa después: Laravel intenta serializar ese `QueryException` a JSON para responder, el mensaje de la excepción **lleva el binario adentro**, y `json_encode` revienta. El error que se ve es el del serializador, no el de la base.
+- Cómo se detectó: mirando la traza completa en vez del mensaje. Ahí aparecía `Handler->prepareJsonResponse(..., Object(Illuminate\Database\QueryException))` — la excepción original iba de pasajera.
+- Solución: escribir el bytea en formato hex (`'\x'.bin2hex($binario)`), que es ASCII puro y Postgres decodifica solo. Al leer, el driver devuelve un **stream**, no un string. Ambas conversiones quedaron encapsuladas en un cast `Attribute` del modelo `UsuarioFoto` para que ningún llamador tenga que acordarse.
+- Regla: si aparece `Malformed UTF-8` en una operación que toca datos binarios, no es el JSON — es una excepción con binario adentro que no se pudo serializar. Leé la traza para encontrar la excepción original. Y todo `bytea` se escribe hexeado, nunca crudo.
+- Fecha: 2026-08-16
+
+### EB-25 — La regla `image` de Laravel NO garantiza que la imagen se pueda abrir
+- Qué pasó: un PNG malformado pasó la validación `['foto' => 'required|image|mimes:jpeg,jpg,png,webp']` y recién falló al procesarlo con GD.
+- Causa: `image` se apoya en `getimagesize`, que lee la **cabecera** del archivo. Un archivo con cabecera válida y datos corruptos (o preparados a mano) la pasa sin problema. Comprobado: `getimagesize` devolvía `2x2 mime=image/png` y `imagecreatefromstring` sobre los mismos bytes devolvía `false`.
+- Solución: dejar la validación de Laravel como primer filtro barato, pero tratar como verdadera prueba el que **GD logre decodificar y re-encodear** la imagen (`FotoPerfilService::normalizar`). Si `imagecreatefromstring` falla, se responde 422.
+- Beneficio extra del re-encode: descarta los metadatos EXIF. En una foto de celular eso incluye **GPS**, así que guardar el archivo tal cual filtraría la ubicación del usuario dentro de un dato que él cree que es solo su cara.
+- Regla: para archivos subidos por el usuario, validar por cabecera no alcanza. Si el archivo se va a guardar, hay que decodificarlo y re-generarlo desde cero — eso valida y sanea de una sola vez.
+- Fecha: 2026-08-16
+
+### EB-26 — Windows: sin `upload_tmp_dir` en php.ini, TODA subida multipart falla
+- Qué pasó: `POST /api/cuenta/foto` devolvía `"The foto failed to upload."` con un warning de PHP en el cuerpo: `File upload error - unable to create a temporary file`. El archivo salía bien desde el frontend (se verificó el multipart en la red).
+- Causa: el `php.ini` no definía `upload_tmp_dir`, y el servidor embebido que levanta `php artisan serve` en Windows no logra crear el temporal de la subida. Despista bastante: `sys_get_temp_dir()` devuelve una ruta que existe y que `is_writable()` reporta como escribible, así que "parece" que está todo bien. Tampoco se arregla cambiando la shell desde la que se lanza el server (se probó).
+- Solución: crear una carpeta (ej. `C:\php83\tmp`) y declararla explícitamente en `php.ini` (`upload_tmp_dir = "C:\php83\tmp"`), después reiniciar `artisan serve`.
+- Regla: si una subida falla con "unable to create a temporary file", el problema no es Laravel ni la validación — es `upload_tmp_dir` sin definir. Afecta a cualquier endpoint con archivos, no solo a este.
+- Fecha: 2026-08-16

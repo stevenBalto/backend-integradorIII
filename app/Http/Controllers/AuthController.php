@@ -27,8 +27,7 @@ final class AuthController extends Controller
     public function __construct(
         private readonly AuthService $auth,
         private readonly SuperAdminAuthService $superAuth,
-    ) {
-    }
+    ) {}
 
     /** POST /api/register — crea un cliente y devuelve usuario + token. */
     public function register(RegisterRequest $request): JsonResponse
@@ -103,7 +102,7 @@ final class AuthController extends Controller
         }
 
         // Login exitoso normal.
-        return (new UserResource($result['user']))
+        return (new UserResource($result['user']->loadExists('foto')))
             ->additional(['token' => $result['token'], 'tipo' => 'usuario'])
             ->response()
             ->setStatusCode(200);
@@ -142,7 +141,11 @@ final class AuthController extends Controller
     /** GET /api/me — usuario autenticado. */
     public function me(Request $request): UserResource
     {
-        return new UserResource($request->user()->load('role', 'modulos'));
+        // loadExists (no load) para el flag de foto: resuelve con un EXISTS y
+        // evita traer el bytea de la imagen en cada /me.
+        return new UserResource(
+            $request->user()->load('role', 'modulos')->loadExists('foto'),
+        );
     }
 
     /**
