@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-const DIR = 'C:\\Users\\CHRIST~1\\AppData\\Local\\Temp\\claude\\c--xampp-htdocs-Back-Integradorlll\\3ac3dfb9-7b3d-436f-924d-10a1dd9bcba0\\scratchpad\\perf';
+const DIR = process.env.PERF_DIR || 'C:\\Users\\CHRIST~1\\AppData\\Local\\Temp\\claude\\c--xampp-htdocs-Back-Integradorlll\\3ac3dfb9-7b3d-436f-924d-10a1dd9bcba0\\scratchpad\\perf';
 const ROL = { cliente: 'Cliente (usuario)', admin: 'Admin', superadmin: 'Superadmin' };
 
 const pct = (arr, p) => { const s = [...arr].sort((a, b) => a - b); return s[Math.max(0, Math.ceil((p / 100) * s.length) - 1)]; };
